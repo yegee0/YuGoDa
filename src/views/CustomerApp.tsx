@@ -1,0 +1,892 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  MapPin,
+  Filter,
+  Search,
+  Clock,
+  Star,
+  ShoppingBag,
+  ChevronRight,
+  Heart,
+  ArrowRight,
+  X,
+  CheckCircle2,
+  Store,
+  Map as MapIcon,
+  Grid,
+  Navigation,
+  Truck,
+  Camera,
+  DollarSign as DollarIcon,
+  Leaf,
+  Info,
+  Plus,
+  CreditCard,
+  Wallet,
+  LocateFixed,
+  Loader2,
+  MessageCircle
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
+import GoogleMapsView from '../components/GoogleMapsView';
+import LocationPickerMap from '../components/LocationPickerMap';
+import { useCountdown } from '../hooks/useCountdown';
+import { useStore } from '../store/useStore';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp, onSnapshot, query, where, doc, updateDoc, increment, getDocs, orderBy, limit } from 'firebase/firestore';
+import FilterPanel from '../components/FilterPanel';
+import CartDrawer from '../components/CartDrawer';
+
+const GOOGLE_MAPS_API_KEY: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ?? '';
+const GOOGLE_MAPS_MAP_ID: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_MAP_ID ?? '';
+
+function BagCard({ bag, onClick }: any) {
+  const countdown = useCountdown(bag.countdown || '');
+  const { favorites, toggleFavorite, addToCart } = useStore();
+  const isFavorite = favorites.includes(bag.id);
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className="eco-card group cursor-pointer flex flex-col h-full overflow-hidden bag-card-enter"
+      onClick={onClick}
+    >
+      <div className="relative h-48 w-full overflow-hidden">
+        <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
+          <img
+            src={bag.image}
+            alt={bag.restaurantName}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            referrerPolicy="no-referrer"
+          />
+        </Link>
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleFavorite(bag.id); }}
+            className={`p-2 rounded-full backdrop-blur-md transition-all ${isFavorite ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-600 hover:bg-white'}`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+          <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-[#1A4D2E] flex items-center gap-1 shadow-sm">
+            <Star className="w-3 h-3 fill-current text-[#FF9F1C]" /> {bag.rating || 4.5}
+          </div>
+        </div>
+
+        {bag.isLastChance && (
+          <div className="absolute bottom-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse shadow-lg">
+            <Clock className="w-3 h-3" /> {countdown}
+          </div>
+        )}
+
+        <div className="absolute top-3 left-3 bg-[#1A4D2E] text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
+          {bag.available} {t('left')}
+        </div>
+      </div>
+
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-1">
+          <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight group-hover:text-[#1A4D2E] transition-colors">{bag.restaurantName}</h3>
+          </Link>
+          <div className="text-right">
+            <span className="font-bold text-[#1A4D2E] dark:text-[#2D6A4F] text-lg">${bag.price.toFixed(2)}</span>
+            <p className="text-[10px] text-gray-400 line-through">${bag.originalPrice?.toFixed(2)}</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-2">{bag.category} • {bag.distance || '0.5 miles'}</p>
+
+        {/* Tags & Dietary */}
+        <div className="flex flex-wrap gap-1 mb-4">
+          {bag.dietaryType && (
+            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-full flex items-center gap-1">
+              <Leaf className="w-2 h-2" /> {bag.dietaryType}
+            </span>
+          )}
+          {bag.merchantType && (
+            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-full flex items-center gap-1">
+              <Store className="w-2 h-2" /> {bag.merchantType}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+            <Clock className="w-4 h-4 text-[#FF9F1C]" />
+            <span>{t('Pickup')}: {bag.pickupTime}</span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart({
+                id: bag.id,
+                restaurantId: bag.restaurantId || 'mock',
+                restaurantName: bag.restaurantName,
+                name: `${bag.category} Magic Bag`,
+                price: bag.price,
+                quantity: 1,
+                image: bag.image
+              });
+            }}
+            className="px-4 py-2 bg-[#1A4D2E]/10 text-[#1A4D2E] rounded-xl hover:bg-[#1A4D2E] hover:text-white transition-all text-xs font-bold"
+          >
+            {t('Add')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 'discover' | 'browse' | 'favorites' }) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<'discover' | 'browse' | 'favorites'>(initialTab);
+  const [selectedBag, setSelectedBag] = useState<any | null>(null);
+  const [checkoutStep, setCheckoutStep] = useState<'reserve' | 'pay' | 'tracking' | 'success' | 'review'>('reserve');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [mapInfoBag, setMapInfoBag] = useState<any | null>(null);
+  const [bags, setBags] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [userLocation, setUserLocation] = useState({ lat: 47.6062, lng: -122.3321 });
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [checkoutData, setCheckoutData] = useState<any>(null);
+
+  const [showSetLocation, setShowSetLocation] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationName, setLocationName] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [mapSearch, setMapSearch] = useState('');
+  const [mapSuggestions, setMapSuggestions] = useState<any[]>([]);
+  const [showMapSuggestions, setShowMapSuggestions] = useState(false);
+  const [mapSearchLoading, setMapSearchLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const mapSearchRef = useRef<HTMLDivElement>(null);
+  const mapSearchTimer = useRef<any>(null);
+
+  const { user, favorites, userProfile, filters, cart, clearCart } = useStore();
+
+  // Auto-detect location on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('yugoda_location');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setUserLocation(parsed.coords);
+        setLocationName(parsed.name || '');
+        return;
+      } catch { }
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        () => { }
+      );
+    }
+  }, []);
+
+  // Build autocomplete suggestions from bags data
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    const seen = new Set<string>();
+    const suggestions: any[] = [];
+    bags.forEach(bag => {
+      if (bag.restaurantName.toLowerCase().includes(q) && !seen.has(bag.restaurantName)) {
+        seen.add(bag.restaurantName);
+        suggestions.push({ type: 'restaurant', label: bag.restaurantName, sublabel: bag.category, bag });
+      }
+    });
+    const categories = [...new Set(bags.map((b: any) => b.category))].filter((c: any) => c.toLowerCase().includes(q));
+    categories.forEach((c: any) => {
+      if (!seen.has(c)) {
+        seen.add(c);
+        suggestions.push({ type: 'category', label: c, sublabel: 'Category' });
+      }
+    });
+    setSearchSuggestions(suggestions.slice(0, 6));
+    setShowSuggestions(suggestions.length > 0);
+  }, [searchQuery, bags]);
+
+  // Map search: query Nominatim + local bags (Places-style, debounced)
+  useEffect(() => {
+    if (!mapSearch.trim()) {
+      setMapSuggestions([]);
+      setShowMapSuggestions(false);
+      return;
+    }
+    clearTimeout(mapSearchTimer.current);
+    mapSearchTimer.current = setTimeout(async () => {
+      setMapSearchLoading(true);
+      const q = mapSearch.toLowerCase();
+      const results: any[] = [];
+
+      // Local restaurant matches
+      bags.forEach(bag => {
+        if (bag.restaurantName.toLowerCase().includes(q) || (bag.category || '').toLowerCase().includes(q)) {
+          results.push({ type: 'restaurant', label: bag.restaurantName, sublabel: `${bag.category} • ${bag.distance || ''}`, coords: bag.coordinates, bag });
+        }
+      });
+
+      // Nominatim geocoding (Places API equivalent, free)
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(mapSearch)}&format=json&limit=5&addressdetails=1`,
+          { headers: { 'Accept-Language': 'tr,en' } }
+        );
+        const data = await res.json();
+        data.forEach((item: any) => {
+          const name = item.display_name?.split(',').slice(0, 2).join(', ') || item.display_name;
+          results.push({
+            type: 'place',
+            label: name,
+            sublabel: item.type || 'Location',
+            coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) }
+          });
+        });
+      } catch { }
+
+      setMapSuggestions(results.slice(0, 8));
+      setShowMapSuggestions(results.length > 0);
+      setMapSearchLoading(false);
+    }, 350);
+  }, [mapSearch, bags]);
+
+  // Close map suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (mapSearchRef.current && !mapSearchRef.current.contains(e.target as Node)) setShowMapSuggestions(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const detectLocation = () => {
+    setLocationLoading(true);
+    if (!navigator.geolocation) {
+      setLocationLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude: lat, longitude: lng } = position.coords;
+        setUserLocation({ lat, lng });
+        // Reverse geocode with Nominatim (free, no API key)
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+          const data = await res.json();
+          const name = data.address?.city || data.address?.town || data.address?.village || data.display_name?.split(',')[0] || 'Current Location';
+          setLocationName(name);
+          localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name }));
+        } catch {
+          setLocationName('Current Location');
+        }
+        setLocationLoading(false);
+        setShowSetLocation(false);
+      },
+      () => setLocationLoading(false)
+    );
+  };
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    // Local fallback data — shown instantly when Firestore is empty or seeding fails
+    const FALLBACK_BAGS = [
+      { id: 'local-1', restaurantName: 'Green Bakery', restaurantId: 'green-bakery', category: 'Bakery', price: 4.99, originalPrice: 15.0, distance: '0.8 km', pickupTime: 'Today, 18:00 – 20:00', available: 3, rating: 4.8, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', dietaryType: 'Vegetarian', merchantType: 'Bakery', coordinates: { lat: 41.015, lng: 28.979 }, isLastChance: false },
+      { id: 'local-2', restaurantName: 'Sushi Daily', restaurantId: 'sushi-daily', category: 'Hot Meals', price: 6.5, originalPrice: 20.0, distance: '1.2 km', pickupTime: 'Today, 21:00 – 22:30', available: 1, rating: 4.5, image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=800', dietaryType: 'Pescatarian', merchantType: 'Sushi Bar', coordinates: { lat: 41.018, lng: 28.982 }, isLastChance: true, countdown: '00:45:00' },
+      { id: 'local-3', restaurantName: 'Fresh Market', restaurantId: 'fresh-market', category: 'Groceries', price: 3.99, originalPrice: 12.0, distance: '2.5 km', pickupTime: 'Tomorrow, 08:00 – 10:00', available: 5, rating: 4.2, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', dietaryType: 'Vegan', merchantType: 'Supermarket', coordinates: { lat: 41.011, lng: 28.975 }, isLastChance: false },
+      { id: 'local-4', restaurantName: 'The Vegan Bowl', restaurantId: 'vegan-bowl', category: 'Vegan', price: 5.5, originalPrice: 16.5, distance: '0.5 km', pickupTime: 'Today, 14:00 – 15:00', available: 2, rating: 4.9, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', dietaryType: 'Vegan', merchantType: 'Restaurant', coordinates: { lat: 41.016, lng: 28.977 }, isLastChance: true, countdown: '01:15:00' },
+      { id: 'local-5', restaurantName: 'Pizza Bulls', restaurantId: 'pizza-bulls', category: 'Hot Meals', price: 7.99, originalPrice: 24.0, distance: '1.0 km', pickupTime: 'Today, 22:00 – 23:00', available: 4, rating: 4.7, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=800', dietaryType: 'Meat', merchantType: 'Pizza', coordinates: { lat: 41.013, lng: 28.98 }, isLastChance: false },
+      { id: 'local-6', restaurantName: 'Café Lumière', restaurantId: 'cafe-lumiere', category: 'Bakery', price: 3.49, originalPrice: 10.0, distance: '0.3 km', pickupTime: 'Today, 17:00 – 18:00', available: 6, rating: 4.6, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=800', dietaryType: 'Vegetarian', merchantType: 'Café', coordinates: { lat: 41.017, lng: 28.981 }, isLastChance: false },
+      { id: 'local-7', restaurantName: 'Thai Garden', restaurantId: 'thai-garden', category: 'Hot Meals', price: 8.5, originalPrice: 25.0, distance: '1.8 km', pickupTime: 'Today, 20:30 – 21:30', available: 2, rating: 4.8, image: 'https://images.unsplash.com/photo-1562565652-a0d8f0c59eb4?auto=format&fit=crop&q=80&w=800', dietaryType: 'Gluten-Free', merchantType: 'Restaurant', coordinates: { lat: 41.019, lng: 28.984 }, isLastChance: true, countdown: '02:00:00' },
+      { id: 'local-8', restaurantName: 'La Panadería', restaurantId: 'la-panaderia', category: 'Bakery', price: 4.25, originalPrice: 13.0, distance: '0.9 km', pickupTime: 'Today, 16:00 – 17:30', available: 8, rating: 4.4, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=800', dietaryType: 'Vegetarian', merchantType: 'Bakery', coordinates: { lat: 41.012, lng: 28.978 }, isLastChance: false },
+      { id: 'local-9', restaurantName: 'Halal Grill House', restaurantId: 'halal-grill', category: 'Hot Meals', price: 9.99, originalPrice: 28.0, distance: '1.4 km', pickupTime: 'Today, 19:00 – 21:00', available: 3, rating: 4.7, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', dietaryType: 'Halal', merchantType: 'Restaurant', coordinates: { lat: 41.014, lng: 28.983 }, isLastChance: false },
+      { id: 'local-10', restaurantName: 'Keto Kitchen', restaurantId: 'keto-kitchen', category: 'Hot Meals', price: 11.5, originalPrice: 32.0, distance: '2.0 km', pickupTime: 'Today, 18:30 – 20:00', available: 2, rating: 4.6, image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=800', dietaryType: 'Keto', merchantType: 'Restaurant', coordinates: { lat: 41.020, lng: 28.976 }, isLastChance: true, countdown: '01:30:00' },
+      { id: 'local-11', restaurantName: 'Pure Deli', restaurantId: 'pure-deli', category: 'Sandwiches', price: 5.99, originalPrice: 14.0, distance: '0.7 km', pickupTime: 'Today, 15:00 – 16:30', available: 7, rating: 4.3, image: 'https://images.unsplash.com/photo-1481070555726-e2fe8357725c?auto=format&fit=crop&q=80&w=800', dietaryType: 'Dairy-Free', merchantType: 'Deli', coordinates: { lat: 41.016, lng: 28.974 }, isLastChance: false },
+      { id: 'local-12', restaurantName: 'BurgerBros', restaurantId: 'burgerbros', category: 'Fast Food', price: 6.99, originalPrice: 18.0, distance: '1.6 km', pickupTime: 'Today, 23:00 – 23:59', available: 5, rating: 4.1, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800', dietaryType: 'Meat', merchantType: 'Fast Food', coordinates: { lat: 41.012, lng: 28.981 }, isLastChance: true, countdown: '00:30:00' },
+    ];
+
+
+    const q = query(collection(db, 'bags'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) {
+        // Firestore has no bags — use local fallback data immediately so UI is never blank
+        setBags(FALLBACK_BAGS);
+      } else {
+        const bagsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBags(bagsData);
+      }
+      setLoading(false);
+    }, (_err) => {
+      // On permission error (e.g. not authenticated yet), still show fallback
+      setBags(FALLBACK_BAGS);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+
+  }, []);
+
+  const filteredBags = bags
+    .filter(bag => {
+      const matchesSearch = bag.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bag.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrice = bag.price >= filters.priceRange[0] && bag.price <= filters.priceRange[1];
+      const matchesFavorites = activeTab !== 'favorites' || favorites.includes(bag.id);
+      const matchesDietary = filters.dietary.length === 0 || filters.dietary.includes(bag.dietaryType);
+      const matchesMerchant = filters.merchantType.length === 0 || filters.merchantType.includes(bag.merchantType);
+      return matchesSearch && matchesPrice && matchesFavorites && matchesDietary && matchesMerchant;
+    })
+    .sort((a, b) => {
+      if (filters.sortBy === 'lowest') return a.price - b.price;
+      if (filters.sortBy === 'highest') return (b.rating || 0) - (a.rating || 0);
+      if (filters.sortBy === 'nearest') return (parseFloat(a.distance) || 0) - (parseFloat(b.distance) || 0);
+      if (filters.sortBy === 'fastest') return (a.prepTime || 30) - (b.prepTime || 30);
+      return 0;
+    });
+
+  const handleCheckout = async (data: any) => {
+    setCheckoutData(data);
+    setIsCartOpen(false);
+    setCheckoutStep('pay');
+    // For the flow, we need a selected bag if it's a single item, 
+    // but here we might have multiple. For now, let's pick the first one for the UI.
+    if (data.items.length > 0) {
+      const bag = bags.find(b => b.id === data.items[0].id) || data.items[0];
+      setSelectedBag(bag);
+    }
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!user || !checkoutData) return;
+
+    try {
+      // 1. Create Order
+      const newOrder = {
+        userId: user.uid,
+        restaurantId: checkoutData.items[0].restaurantId,
+        bagId: checkoutData.items[0].id,
+        restaurantName: checkoutData.items[0].restaurantName,
+        price: checkoutData.subtotal,
+        tipAmount: checkoutData.tip,
+        tax: checkoutData.tax,
+        bookingFee: checkoutData.bookingFee,
+        total: checkoutData.total,
+        status: 'preparing',
+        deliveryType: checkoutData.deliveryType,
+        pickupTime: checkoutData.pickupTime,
+        paymentMethod: checkoutData.paymentMethod,
+        leaveAtDoor: checkoutData.leaveAtDoor,
+        promoCode: checkoutData.promoCode,
+        createdAt: serverTimestamp(),
+      };
+      const orderRef = await addDoc(collection(db, 'orders'), newOrder);
+      setOrderId(orderRef.id);
+
+      // 2. Create Transaction Log
+      await addDoc(collection(db, 'transactions'), {
+        orderId: orderRef.id,
+        amount: checkoutData.total,
+        tip: checkoutData.tip,
+        status: 'completed',
+        paymentMethod: checkoutData.paymentMethod,
+        createdAt: serverTimestamp()
+      });
+
+      // 3. Update Stock
+      for (const item of checkoutData.items) {
+        if (item.id.length > 10) {
+          const bagRef = doc(db, 'bags', item.id);
+          await updateDoc(bagRef, {
+            available: increment(-item.quantity)
+          });
+        }
+      }
+
+      // 4. Send Notification
+      await addDoc(collection(db, 'notifications'), {
+        userId: checkoutData.items[0].restaurantId,
+        title: 'New Order Received!',
+        message: `A new order has been placed by ${userProfile?.displayName || 'a customer'}.`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+
+      clearCart();
+      setCheckoutStep('tracking');
+    } catch (error) {
+      console.error('Error placing order:', error);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user || !selectedBag) return;
+    try {
+      await addDoc(collection(db, 'reviews'), {
+        userId: user.uid,
+        restaurantId: selectedBag.restaurantId || 'mock-restaurant-id',
+        orderId: orderId || 'mock-order-id',
+        rating: reviewRating,
+        comment: reviewComment,
+        createdAt: serverTimestamp(),
+      });
+      setSelectedBag(null);
+      setCheckoutStep('reserve');
+      setReviewComment('');
+    } catch (error) {
+      console.error('Error submitting review:', error);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#F9F9F9] dark:bg-[#0A0A0A] overflow-hidden">
+      {/* Top Header / Filter Bar — hidden on Browse Map tab (has its own floating search) */}
+      <div className={`bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800 px-8 py-4 flex items-center justify-between gap-4 sticky top-0 z-20 ${activeTab === 'browse' ? 'hidden' : ''}`}>
+        <div className="flex items-center gap-4 flex-1 max-w-2xl">
+          {/* Search with Autocomplete */}
+          <div className="relative flex-1" ref={searchRef}>
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder={t('Search for restaurants, meals, or categories...')}
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); }}
+              onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+              className="w-full bg-gray-100 dark:bg-gray-800 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A4D2E]/20 transition-all dark:text-white"
+            />
+            {searchQuery && (
+              <button onClick={() => { setSearchQuery(''); setShowSuggestions(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            {/* Autocomplete Dropdown */}
+            <AnimatePresence>
+              {showSuggestions && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50"
+                >
+                  {searchSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                      onClick={() => { setSearchQuery(s.label); setShowSuggestions(false); }}
+                    >
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1A4D2E]/10' : 'bg-blue-100 dark:bg-blue-900/30'
+                        }`}>
+                        {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1A4D2E]" /> : <Search className="w-4 h-4 text-blue-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{s.label}</p>
+                        <p className="text-[11px] text-gray-400">{s.sublabel}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+          >
+            <Filter className="w-4 h-4" />
+            {t('Filters')}
+            {(filters.dietary.length > 0 || filters.merchantType.length > 0) && (
+              <span className="w-2 h-2 bg-[#1A4D2E] rounded-full" />
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+            <button onClick={() => setActiveTab('discover')} className={`p-2 rounded-lg transition-all ${activeTab === 'discover' ? 'bg-white dark:bg-gray-700 text-[#1A4D2E] shadow-sm' : 'text-gray-400'}`}>
+              <Grid className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('browse')} className={`p-2 rounded-lg transition-all ${activeTab === 'browse' ? 'bg-white dark:bg-gray-700 text-[#1A4D2E] shadow-sm' : 'text-gray-400'}`}>
+              <MapIcon className="w-5 h-5" />
+            </button>
+            <button onClick={() => setActiveTab('favorites')} className={`p-2 rounded-lg transition-all ${activeTab === 'favorites' ? 'bg-white dark:bg-gray-700 text-[#1A4D2E] shadow-sm' : 'text-gray-400'}`}>
+              <Heart className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative p-2.5 bg-[#1A4D2E] text-white rounded-xl shadow-lg shadow-[#1A4D2E]/20 hover:scale-105 transition-all"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-[#111111]">
+                {cart.reduce((acc, i) => acc + i.quantity, 0)}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Active Filter Chips */}
+      <AnimatePresence>
+        {(filters.dietary.length > 0 || filters.merchantType.length > 0) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-white dark:bg-[#111111] px-8 py-2 flex flex-wrap gap-2 overflow-hidden"
+          >
+            {filters.dietary.map(d => (
+              <span key={d} className="flex items-center gap-1 px-3 py-1 bg-[#1A4D2E]/10 text-[#1A4D2E] text-xs font-bold rounded-full">
+                {d} <X className="w-3 h-3 cursor-pointer" onClick={() => useStore.getState().setFilters({ dietary: filters.dietary.filter(i => i !== d) })} />
+              </span>
+            ))}
+            {filters.merchantType.map(m => (
+              <span key={m} className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full">
+                {m} <X className="w-3 h-3 cursor-pointer" onClick={() => useStore.getState().setFilters({ merchantType: filters.merchantType.filter(i => i !== m) })} />
+              </span>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 overflow-hidden relative">
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A4D2E]"></div>
+          </div>
+        ) : (activeTab === 'discover' || activeTab === 'favorites' ? (
+          <div className="h-full overflow-y-auto p-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+                    {activeTab === 'favorites' ? t('Your Favorites') : t('Discover Surplus Meals')}
+                  </h1>
+                  <p className="text-gray-500 mt-1">
+                    {activeTab === 'favorites' ? t('Quickly access the meals you love.') : t('Save delicious food from going to waste near you.')}
+                  </p>
+                </div>
+              </div>
+
+              {filteredBags.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredBags.map(bag => (
+                    <BagCard key={bag.id} bag={bag} onClick={() => setSelectedBag(bag)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
+                    <Search className="w-10 h-10 text-gray-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('No meals found')}</h3>
+                  <p className="text-gray-500 max-w-xs">{t('Try adjusting your filters or search terms to find what you\'re looking for.')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="relative h-full w-full">
+            {/* Floating Map Search */}
+            <div className="absolute top-20 left-4 right-4 z-[1001] max-w-md mx-auto" ref={mapSearchRef}>
+              <div className="relative">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder={t('Search on map...')}
+                  value={mapSearch}
+                  onChange={(e) => setMapSearch(e.target.value)}
+                  onFocus={() => mapSuggestions.length > 0 && setShowMapSuggestions(true)}
+                  className="w-full bg-white dark:bg-[#1a1a1a] shadow-lg rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A4D2E] transition-all dark:text-white"
+                />
+                {mapSearchLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1A4D2E]">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                )}
+                {!mapSearchLoading && mapSearch && (
+                  <button onClick={() => { setMapSearch(''); setShowMapSuggestions(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <AnimatePresence>
+                {showMapSuggestions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                  >
+                    {mapSuggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                        onClick={() => {
+                          setMapSearch(s.label);
+                          setShowMapSuggestions(false);
+                          if (s.coords) {
+                            setUserLocation(s.coords);
+                            setLocationName(s.label);
+                          }
+                        }}
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1A4D2E]/10' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                          {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1A4D2E]" /> : <MapPin className="w-4 h-4 text-blue-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{s.label}</p>
+                          <p className="text-[11px] text-gray-400">{s.sublabel}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <LocationPickerMap
+              initialLocation={userLocation}
+              initialName={locationName}
+              onConfirm={(coords, name) => {
+                setUserLocation(coords);
+                setLocationName(name);
+                localStorage.setItem('yugoda_location', JSON.stringify({ coords, name }));
+                setActiveTab('discover');
+              }}
+              onClose={() => setActiveTab('discover')}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Panel */}
+      <FilterPanel isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
+
+      {/* Cart Drawer */}
+      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} onCheckout={handleCheckout} />
+
+      {/* Checkout Flow Overlay */}
+      <AnimatePresence>
+        {selectedBag && checkoutStep !== 'reserve' && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => { setSelectedBag(null); setCheckoutStep('reserve'); }}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative z-10"
+            >
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <h3 className="font-bold text-xl dark:text-white">{t('Order Details')}</h3>
+                <button
+                  onClick={() => { setSelectedBag(null); setCheckoutStep('reserve'); }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors dark:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-8">
+                {checkoutStep === 'pay' && checkoutData && (
+                  <div className="flex flex-col items-center py-12 space-y-8">
+                    <div className="text-center">
+                      <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">${checkoutData.total.toFixed(2)}</h2>
+                      <p className="text-gray-500">{t('Secure Payment with EcoPay')}</p>
+                    </div>
+
+                    <div className="w-full max-w-sm space-y-4">
+                      <div className="p-4 border-2 border-[#1A4D2E] rounded-2xl flex items-center justify-between bg-[#1A4D2E]/5">
+                        <div className="flex items-center gap-3">
+                          {checkoutData.paymentMethod === 'card' ? <CreditCard className="w-5 h-5 text-[#1A4D2E]" /> : checkoutData.paymentMethod === 'wallet' ? <Wallet className="w-5 h-5 text-[#1A4D2E]" /> : <ShoppingBag className="w-5 h-5 text-[#1A4D2E]" />}
+                          <span className="font-bold dark:text-white capitalize">{checkoutData.paymentMethod}</span>
+                        </div>
+                        <span className="text-xs font-bold text-[#1A4D2E]">{t('Selected')}</span>
+                      </div>
+
+                      {checkoutData.paymentMethod === 'wallet' && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl flex items-center gap-3">
+                          <Info className="w-4 h-4 text-emerald-600" />
+                          <p className="text-xs text-emerald-600 font-medium">
+                            {t('Current balance')}: ${userProfile?.walletBalance?.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleConfirmOrder}
+                      className="w-full max-w-sm eco-button-primary py-4 text-lg flex items-center justify-center gap-2"
+                    >
+                      {t('Confirm Payment')} <ArrowRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {checkoutStep === 'tracking' && (
+                  <div className="py-8 space-y-6">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Live Tracking')}</h2>
+                      <p className="text-gray-500">{t('Driver is on the way')}</p>
+                    </div>
+
+                    <div className="h-64 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+                      <GoogleMapsView
+                        bags={[]}
+                        userLocation={userLocation}
+                        selectedBag={null}
+                        onBagSelect={() => { }}
+                        apiKey={GOOGLE_MAPS_API_KEY}
+                        mapId={GOOGLE_MAPS_MAP_ID || undefined}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                        <div className="w-12 h-12 rounded-full bg-[#1A4D2E] flex items-center justify-center text-white">
+                          <Truck className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-bold dark:text-white">EcoDriver John</p>
+                          <p className="text-xs text-gray-500">Toyota Prius • ABC-123</p>
+                        </div>
+                        <button className="ml-auto p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm">
+                          <MessageCircle className="w-5 h-5 text-[#1A4D2E]" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">{t('Pickup Time')}</span>
+                        <span className="font-bold dark:text-white capitalize">{checkoutData.pickupTime}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">{t('Estimated Arrival')}</span>
+                        <span className="font-bold dark:text-white">12 mins</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setCheckoutStep('success')}
+                      className="w-full eco-button-primary py-4"
+                    >
+                      {t('Simulate Delivery Completion')}
+                    </button>
+                  </div>
+                )}
+
+                {checkoutStep === 'success' && (
+                  <div className="text-center py-12 space-y-6">
+                    <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle2 className="w-12 h-12 text-green-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('Order Delivered')}!</h2>
+                      <p className="text-gray-500 mt-2">{t('Your Magic Bag has been delivered. Enjoy your meal!')}</p>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl space-y-3">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center justify-center gap-2">
+                        <Camera className="w-4 h-4" /> {t('Proof of Delivery')}
+                      </p>
+                      <img
+                        src="https://picsum.photos/seed/delivery/400/300"
+                        alt="Proof of Delivery"
+                        className="w-full h-40 object-cover rounded-xl"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl max-w-xs mx-auto">
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">{t('Order ID')}</p>
+                      <p className="text-3xl font-mono font-bold text-gray-900 dark:text-white">#ECO-{Math.floor(Math.random() * 9000) + 1000}</p>
+                    </div>
+                    <button
+                      onClick={() => setCheckoutStep('review')}
+                      className="eco-button-primary px-12 py-3"
+                    >
+                      {t('Leave a Review')}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedBag(null); setCheckoutStep('reserve'); }}
+                      className="block mx-auto text-sm text-gray-500 hover:underline"
+                    >
+                      {t('Skip for now')}
+                    </button>
+                  </div>
+                )}
+
+                {checkoutStep === 'review' && (
+                  <div className="py-8 space-y-8">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('How was your experience?')}</h2>
+                      <p className="text-gray-500 mt-1">{t('Rate your pickup from')} {selectedBag.restaurantName}</p>
+                    </div>
+
+                    <div className="flex justify-center gap-4">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setReviewRating(star)}
+                          className={`p-2 transition-all ${reviewRating >= star ? 'text-[#FF9F1C]' : 'text-gray-300'}`}
+                        >
+                          <Star className={`w-10 h-10 ${reviewRating >= star ? 'fill-current' : ''}`} />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('Comments')}</label>
+                      <textarea
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder={t('Tell us about the food quality and pickup experience...')}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none dark:text-white min-h-[120px]"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleSubmitReview}
+                      className="w-full eco-button-primary py-4 text-lg flex items-center justify-center gap-2"
+                    >
+                      {t('Submit Review')} <MessageCircle className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

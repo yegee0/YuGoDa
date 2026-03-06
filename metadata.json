@@ -1,0 +1,5 @@
+{
+  "name": "YuGoDa - Food Waste Prevention",
+  "description": "A platform connecting customers with restaurants to rescue surplus food, featuring customer, restaurant, and admin interfaces.",
+  "requestFramePermissions": ["geolocation"]
+}

@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-eco-primary: #1A4D2E;
+  --color-eco-secondary: #FF9F1C;
+  --color-eco-bg: var(--bg-color);
+  --color-eco-surface: var(--surface-color);
+  --color-eco-text: var(--text-color);
+  --color-eco-muted: var(--muted-color);
+  --color-eco-border: var(--border-color);
+
+  --radius-eco: 16px;
+  --shadow-eco: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-color: #F9F9F9;
+  --surface-color: #FFFFFF;
+  --text-color: #1F2937;
+  --muted-color: #6B7280;
+  --border-color: #F3F4F6;
+}
+
+.dark {
+  --bg-color: #0A0A0A;
+  --surface-color: #1A1A1A;
+  --text-color: #F9F9F9;
+  --muted-color: #9CA3AF;
+  --border-color: #2D2D2D;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom utility classes for the Eco-Modernism design system */
+.eco-card {
+  background-color: var(--surface-color);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Bag card entrance animation — CSS only, immune to re-render cycles */
+@keyframes bagCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bag-card-enter {
+  animation: bagCardIn 0.35s ease forwards;
+}
+
+
+.eco-button-primary {
+  @apply bg-[#1A4D2E] text-white rounded-[16px] px-6 py-3 font-medium transition-transform active:scale-95 hover:bg-[#133b23] flex items-center justify-center gap-2;
+}
+
+.eco-button-secondary {
+  @apply bg-[#FF9F1C] text-white rounded-[16px] px-6 py-3 font-medium transition-transform active:scale-95 hover:bg-[#e68a19] flex items-center justify-center gap-2;
+}
+
+.eco-button-outline {
+  border: 2px solid #1A4D2E;
+  color: #1A4D2E;
+  border-radius: 16px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.eco-button-outline:hover {
+  background-color: rgba(26, 77, 46, 0.05);
+}
+
+.dark .eco-button-outline {
+  border-color: #2D6A4F;
+  color: #2D6A4F;
+}
