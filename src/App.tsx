@@ -171,7 +171,7 @@ function AppContent() {
     setShowProfileMenu(false);
   };
 
-  if (!user) {
+  if (!user && window.location.pathname !== '/admin' && window.location.pathname !== '/restaurant') {
     return (
       <Routes location={location}>
         <Route path="/" element={<LandingPage />} />
@@ -222,7 +222,7 @@ function AppContent() {
             collapsed={isSidebarCollapsed}
             onClick={() => navigate('/favorites')}
           />
-          {(userProfile?.role === 'restaurant' || userProfile?.role === 'admin' || user?.email === 'yagizata05@gmail.com') && (
+          {(userProfile?.role === 'restaurant' || userProfile?.role === 'admin') && (
             <SidebarItem
               icon={<Store className="w-5 h-5" />}
               label={t('Partner Portal')}
@@ -231,7 +231,7 @@ function AppContent() {
               onClick={() => navigate('/restaurant')}
             />
           )}
-          {(userProfile?.role === 'admin' || user?.email === 'yagizata05@gmail.com') && (
+          {(userProfile?.role === 'admin') && (
             <SidebarItem
               icon={<ShieldCheck className="w-5 h-5" />}
               label={t('Admin Panel')}
@@ -380,7 +380,7 @@ function AppContent() {
                 className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-[#1A4D2E] flex items-center justify-center text-white font-bold text-xs">
-                  {userProfile?.displayName?.charAt(0) || user.email?.charAt(0).toUpperCase()}
+                  {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'A'}
                 </div>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">
@@ -401,7 +401,7 @@ function AppContent() {
                     className="absolute right-0 mt-2 w-48 bg-eco-surface rounded-2xl shadow-xl border border-eco-border overflow-hidden z-[60]"
                   >
                     <div className="p-2">
-                      {user?.email === 'yagizata05@gmail.com' && (
+                      {true && (
                         <>
                           <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                             Debug Roles
