@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   Gift
 } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/app/store/useStore';
 
 interface CartDrawerProps {
   isOpen: boolean;

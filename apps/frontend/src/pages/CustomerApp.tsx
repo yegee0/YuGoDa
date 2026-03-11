@@ -30,14 +30,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import GoogleMapsView from '../components/GoogleMapsView';
-import LocationPickerMap from '../components/LocationPickerMap';
-import { useCountdown } from '../hooks/useCountdown';
-import { useStore } from '../store/useStore';
-import { db } from '../lib/firebase';
+import GoogleMapsView from '@/widgets/GoogleMapsView';
+import LocationPickerMap from '@/widgets/LocationPickerMap';
+import { useCountdown } from '@/shared/hooks/useCountdown';
+import { useStore } from '@/app/store/useStore';
+import { db } from '@/shared/lib/firebase';
 import { collection, addDoc, serverTimestamp, onSnapshot, query, where, doc, updateDoc, increment, getDocs, orderBy, limit } from 'firebase/firestore';
-import FilterPanel from '../components/FilterPanel';
-import CartDrawer from '../components/CartDrawer';
+import FilterPanel from '@/widgets/FilterPanel';
+import CartDrawer from '@/widgets/CartDrawer';
 
 const GOOGLE_MAPS_API_KEY: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ?? '';
 const GOOGLE_MAPS_MAP_ID: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_MAP_ID ?? '';

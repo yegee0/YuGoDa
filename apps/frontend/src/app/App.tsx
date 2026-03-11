@@ -22,23 +22,23 @@ import {
   X
 } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth, db } from './lib/firebase';
+import { auth, db } from '@/shared/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
-import { useStore } from './store/useStore';
-import CustomerApp from './views/CustomerApp';
-import RestaurantPortal from './views/StorePanel';
-import AdminDashboard from './views/AdminPanel';
-import ProfileView from './views/ProfileView';
-import StorePage from './views/StorePage';
-import CheckoutPage from './views/CheckoutPage';
-import FoodChatbot from './components/FoodChatbot';
-import CookieBanner from './components/CookieBanner';
-import SupportTicketModal from './components/SupportTicketModal';
-import Auth from './components/Auth';
-import LandingPage from './views/LandingPage';
-import RestaurantAuth from './views/RestaurantAuth';
+import { useStore } from '@/app/store/useStore';
+import CustomerApp from '@/pages/CustomerApp';
+import RestaurantPortal from '@/pages/StorePanel';
+import AdminDashboard from '@/pages/AdminPanel';
+import ProfileView from '@/pages/ProfileView';
+import StorePage from '@/pages/StorePage';
+import CheckoutPage from '@/pages/CheckoutPage';
+import FoodChatbot from '@/widgets/FoodChatbot';
+import CookieBanner from '@/widgets/CookieBanner';
+import SupportTicketModal from '@/widgets/SupportTicketModal';
+import Auth from '@/widgets/Auth';
+import LandingPage from '@/pages/LandingPage';
+import RestaurantAuth from '@/pages/RestaurantAuth';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { seedIfEmpty } from './lib/seedFirestore';
+import { seedIfEmpty } from '@/shared/lib/seedFirestore';
 
 export default function App() {
   return (

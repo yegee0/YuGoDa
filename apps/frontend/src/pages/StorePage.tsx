@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, Heart, ShoppingBag, Plus, Minus, ChevronRight, ChevronDown, MapPin, Clock, FileText, CreditCard, Truck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/app/store/useStore';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const storeData = {
