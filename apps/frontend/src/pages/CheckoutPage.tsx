@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/app/store/useStore';
 import { Trash2, Plus, Minus, CreditCard, Banknote, Wallet, ChevronRight, X } from 'lucide-react';
 
 export default function CheckoutPage() {

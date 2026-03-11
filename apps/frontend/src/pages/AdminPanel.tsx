@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, ShieldCheck, MessageSquare, Search, Filter, MoreVertical, CheckCircle, XCircle, ExternalLink, Activity, BarChart3, TrendingUp, AlertCircle, Store } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db } from '@/shared/lib/firebase';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, limit, getDocs } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';

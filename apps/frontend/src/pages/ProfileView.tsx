@@ -15,9 +15,9 @@ import {
   ChevronRight,
   Wallet
 } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/app/store/useStore';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '@/shared/lib/firebase';
 
 export default function ProfileView() {
   const { t, i18n } = useTranslation();

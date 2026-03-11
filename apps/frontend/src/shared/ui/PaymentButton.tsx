@@ -9,8 +9,8 @@
  */
 
 import React, { useState } from "react";
-import { useIyzicoPayment } from "../hooks/useIyzicoPayment";
-import IyzicoPaymentModal from "./IyzicoPaymentModal";
+import { useIyzicoPayment } from '@/shared/hooks/useIyzicoPayment';
+import IyzicoPaymentModal from "@/widgets/IyzicoPaymentModal";
 
 interface CartItem {
     id: string;
