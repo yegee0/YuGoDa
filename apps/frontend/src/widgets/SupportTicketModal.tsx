@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Ticket, CheckCircle2, Loader2, Paperclip, ChevronDown } from 'lucide-react';
-import { useStore } from '../store/useStore';
-import { db } from '../lib/firebase';
+import { useStore } from '@/app/store/useStore';
+import { db } from '@/shared/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Props {

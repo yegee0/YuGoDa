@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Package, Clock, Truck, BarChart3, Plus, Search, Filter, MoreVertical, CheckCircle, XCircle, ChevronRight, MapPin, Camera, MessageSquare, Star, TrendingUp, DollarSign } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db } from '@/shared/lib/firebase';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, limit, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { useStore } from '../store/useStore';
+import { useStore } from '@/app/store/useStore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function StorePanel() {
