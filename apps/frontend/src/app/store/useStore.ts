@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User } from 'firebase/auth';
-import { db } from '../lib/firebase';
+import { db } from '@/shared/lib/firebase';
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebase/firestore';
 
 interface UserProfile {
