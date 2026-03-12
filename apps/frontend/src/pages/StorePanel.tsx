@@ -5,7 +5,7 @@ import { collection, query, onSnapshot, doc, updateDoc, orderBy, limit, where, a
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function StorePanel() {
   const { t } = useTranslation();
@@ -87,6 +87,12 @@ export default function StorePanel() {
     }
   };
 
+  const mockChartData = Array.from({ length: 7 }, (_, i) => ({
+    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+    revenue: Math.floor(Math.random() * 800) + 200,
+    orders: Math.floor(Math.random() * 30) + 5,
+  }));
+
   const stats = [
     { label: 'Today\'s Sales', value: `$${orders.filter(o => o.status === 'delivered').reduce((acc, o) => acc + (o.price || 0), 0).toFixed(2)}`, icon: DollarSign, color: 'text-emerald-500' },
     { label: 'Active Orders', value: orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)).length.toString(), icon: Package, color: 'text-blue-500' },
@@ -151,9 +157,48 @@ export default function StorePanel() {
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="p-8 space-y-8"
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-lg dark:text-white">{t('Recent Orders')}</h3>
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('Weekly Revenue')}</h3>
+                        <p className="text-xs text-gray-400 mb-4">{t('Daily revenue overview')}</p>
+                        <div className="h-52">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={mockChartData}>
+                              <defs>
+                                <linearGradient id="storeRevenueGr" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#1A4D2E" stopOpacity={0.15} />
+                                  <stop offset="95%" stopColor="#1A4D2E" stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                              <YAxis hide />
+                              <Tooltip />
+                              <Area type="monotone" dataKey="revenue" stroke="#1A4D2E" strokeWidth={2} fillOpacity={1} fill="url(#storeRevenueGr)" />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('Orders Volume')}</h3>
+                        <p className="text-xs text-gray-400 mb-4">{t('Weekly order volume')}</p>
+                        <div className="h-52">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={mockChartData}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+                              <YAxis hide />
+                              <Tooltip />
+                              <Bar dataKey="orders" fill="#1A4D2E" radius={[6, 6, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                      <h3 className="font-bold text-lg dark:text-white mb-4">{t('Recent Orders')}</h3>
                       <div className="space-y-3">
                         {orders.slice(0, 5).map(order => (
                           <div key={order.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl flex items-center justify-between">
@@ -169,20 +214,6 @@ export default function StorePanel() {
                             <span className="font-bold dark:text-white">${order.price?.toFixed(2)}</span>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-lg dark:text-white">{t('Sales Analytics')}</h3>
-                      <div className="h-64 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={orders.slice(0, 10).reverse()}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                            <XAxis dataKey="createdAt" hide />
-                            <YAxis hide />
-                            <Tooltip />
-                            <Line type="monotone" dataKey="price" stroke="#1A4D2E" strokeWidth={3} dot={false} />
-                          </LineChart>
-                        </ResponsiveContainer>
                       </div>
                     </div>
                   </div>
