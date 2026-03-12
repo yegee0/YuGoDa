@@ -64,13 +64,19 @@ function AppContent() {
   const [showTicketModal, setShowTicketModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const headerRef = useRef<HTMLElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setShowLangMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
     }
@@ -305,7 +311,7 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header ref={headerRef} className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
+        <header className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
               {currentView === 'discover' ? t('Discover') : t(currentView.replace('-', ' '))}
@@ -313,7 +319,7 @@ function AppContent() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div className="relative" ref={langRef}>
               <button
                 onClick={() => setShowLangMenu(!showLangMenu)}
                 className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors flex items-center gap-2"
@@ -364,7 +370,7 @@ function AppContent() {
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <div className="relative">
+            <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors relative"
@@ -407,7 +413,7 @@ function AppContent() {
               </AnimatePresence>
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
