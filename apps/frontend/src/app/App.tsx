@@ -440,19 +440,19 @@ function AppContent() {
                             Debug Roles
                           </div>
                           <button
-                            onClick={() => { localStorage.setItem('debug_role', 'customer'); setUserProfile({ ...userProfile!, role: 'customer' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'customer'); setUserProfile({ ...userProfile!, role: 'customer' }); navigate('/discover'); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'customer' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <UserIcon className="w-4 h-4" /> Customer View
                           </button>
                           <button
-                            onClick={() => { localStorage.setItem('debug_role', 'restaurant'); setUserProfile({ ...userProfile!, role: 'restaurant' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'restaurant'); setUserProfile({ ...userProfile!, role: 'restaurant' }); navigate('/restaurant'); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'restaurant' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <Store className="w-4 h-4" /> Restaurant View
                           </button>
                           <button
-                            onClick={() => { localStorage.setItem('debug_role', 'admin'); setUserProfile({ ...userProfile!, role: 'admin' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'admin'); setUserProfile({ ...userProfile!, role: 'admin' }); navigate('/admin'); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'admin' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <ShieldCheck className="w-4 h-4" /> Admin View
