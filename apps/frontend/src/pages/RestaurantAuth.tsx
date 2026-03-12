@@ -126,7 +126,7 @@ export default function RestaurantAuth() {
                             )}
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300">First Name</label>
