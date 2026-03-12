@@ -202,7 +202,7 @@ function AppContent() {
         </div>
 
         <nav className="flex-1 py-6 px-3 space-y-2">
-          {userProfile?.role !== 'admin' && (
+          {userProfile?.role === 'customer' && (
             <>
               <SidebarItem
                 icon={<LayoutDashboard className="w-5 h-5" />}
@@ -246,7 +246,7 @@ function AppContent() {
             />
           )}
 
-          {userProfile?.role !== 'admin' && (
+          {userProfile?.role === 'customer' && (
             <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
               <SidebarItem
                 icon={<HelpCircle className="w-5 h-5" />}
@@ -440,9 +440,11 @@ function AppContent() {
                       >
                         <UserIcon className="w-4 h-4" /> Profile
                       </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                        <Heart className="w-4 h-4" /> Favorites
-                      </button>
+                      {userProfile?.role === 'customer' && (
+                        <button className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                          <Heart className="w-4 h-4" /> Favorites
+                        </button>
+                      )}
                       <hr className="my-1 border-gray-100 dark:border-gray-800" />
                       <button
                         onClick={handleLogout}
