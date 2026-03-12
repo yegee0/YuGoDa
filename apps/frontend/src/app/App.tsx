@@ -169,9 +169,10 @@ function AppContent() {
   const handleLogout = async () => {
     await signOut(auth);
     setShowProfileMenu(false);
+    navigate('/');
   };
 
-  if (!user && window.location.pathname !== '/admin' && window.location.pathname !== '/restaurant') {
+  if (!user) {
     return (
       <Routes location={location}>
         <Route path="/" element={<LandingPage />} />
@@ -201,62 +202,68 @@ function AppContent() {
         </div>
 
         <nav className="flex-1 py-6 px-3 space-y-2">
-          <SidebarItem
-            icon={<LayoutDashboard className="w-5 h-5" />}
-            label={t('Discover')}
-            active={currentView === 'discover'}
-            collapsed={isSidebarCollapsed}
-            onClick={() => navigate('/discover')}
-          />
-          <SidebarItem
-            icon={<MapIcon className="w-5 h-5" />}
-            label={t('Browse Map')}
-            active={currentView === 'browse'}
-            collapsed={isSidebarCollapsed}
-            onClick={() => navigate('/browse')}
-          />
-          <SidebarItem
-            icon={<Heart className="w-5 h-5" />}
-            label={t('Favorites')}
-            active={currentView === 'favorites'}
-            collapsed={isSidebarCollapsed}
-            onClick={() => navigate('/favorites')}
-          />
-          {(userProfile?.role === 'restaurant' || userProfile?.role === 'admin') && (
+          {userProfile?.role !== 'admin' && (
+            <>
+              <SidebarItem
+                icon={<LayoutDashboard className="w-5 h-5" />}
+                label="Discover"
+                active={currentView === 'discover'}
+                collapsed={isSidebarCollapsed}
+                onClick={() => navigate('/discover')}
+              />
+              <SidebarItem
+                icon={<MapIcon className="w-5 h-5" />}
+                label="Browse Map"
+                active={currentView === 'browse'}
+                collapsed={isSidebarCollapsed}
+                onClick={() => navigate('/browse')}
+              />
+              <SidebarItem
+                icon={<Heart className="w-5 h-5" />}
+                label="Favorites"
+                active={currentView === 'favorites'}
+                collapsed={isSidebarCollapsed}
+                onClick={() => navigate('/favorites')}
+              />
+            </>
+          )}
+          {userProfile?.role === 'restaurant' && (
             <SidebarItem
               icon={<Store className="w-5 h-5" />}
-              label={t('Partner Portal')}
+              label="Partner Portal"
               active={currentView === 'restaurant'}
               collapsed={isSidebarCollapsed}
               onClick={() => navigate('/restaurant')}
             />
           )}
-          {(userProfile?.role === 'admin') && (
+          {userProfile?.role === 'admin' && (
             <SidebarItem
               icon={<ShieldCheck className="w-5 h-5" />}
-              label={t('Admin Panel')}
+              label="Admin Panel"
               active={currentView === 'admin'}
               collapsed={isSidebarCollapsed}
               onClick={() => navigate('/admin')}
             />
           )}
 
-          <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
-            <SidebarItem
-              icon={<HelpCircle className="w-5 h-5" />}
-              label={t('Help Center')}
-              active={false}
-              collapsed={isSidebarCollapsed}
-              onClick={() => setShowHelpCenter(true)}
-            />
-            <SidebarItem
-              icon={<MessageCircle className="w-5 h-5" />}
-              label={t('Live Chat')}
-              active={false}
-              collapsed={isSidebarCollapsed}
-              onClick={() => setShowLiveChat(true)}
-            />
-          </div>
+          {userProfile?.role !== 'admin' && (
+            <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-800">
+              <SidebarItem
+                icon={<HelpCircle className="w-5 h-5" />}
+                label="Help Center"
+                active={false}
+                collapsed={isSidebarCollapsed}
+                onClick={() => setShowHelpCenter(true)}
+              />
+              <SidebarItem
+                icon={<MessageCircle className="w-5 h-5" />}
+                label="Live Chat"
+                active={false}
+                collapsed={isSidebarCollapsed}
+                onClick={() => setShowLiveChat(true)}
+              />
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-eco-border">
