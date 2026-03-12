@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +64,21 @@ function AppContent() {
   const [showTicketModal, setShowTicketModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setShowLangMenu(false);
+        setShowNotifications(false);
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const isRTL = i18n.language === 'ar';
   const currentView = location.pathname.split('/')[1] || 'discover';
@@ -80,14 +95,16 @@ function AppContent() {
       if (currentUser) {
         const userRef = doc(db, 'users', currentUser.uid);
         const userDoc = await getDoc(userRef);
+        const debugRole = localStorage.getItem('debug_role') as any;
 
         if (userDoc.exists()) {
           const profile = userDoc.data() as any;
+          const finalRole = debugRole || profile.role || 'customer';
           setUserProfile({
             uid: currentUser.uid,
             email: currentUser.email!,
             displayName: profile.displayName || currentUser.displayName || 'User',
-            role: profile.role || 'customer',
+            role: finalRole,
             favorites: profile.favorites || [],
             walletBalance: profile.walletBalance || 0,
             addresses: profile.addresses || []
@@ -95,14 +112,15 @@ function AppContent() {
           setFavorites(profile.favorites || []);
 
           // Set initial view based on role
-          if (profile.role === 'restaurant') navigate('/restaurant');
-          if (profile.role === 'admin') navigate('/admin');
+          if (finalRole === 'restaurant') navigate('/restaurant');
+          if (finalRole === 'admin') navigate('/admin');
         } else {
+          const finalRole = debugRole || 'customer';
           const newProfile = {
             uid: currentUser.uid,
             email: currentUser.email!,
             displayName: currentUser.displayName || 'User',
-            role: 'customer' as const,
+            role: finalRole,
             favorites: [],
             createdAt: serverTimestamp(),
           };
@@ -111,7 +129,7 @@ function AppContent() {
             uid: currentUser.uid,
             email: currentUser.email!,
             displayName: newProfile.displayName,
-            role: 'customer',
+            role: finalRole,
             favorites: [],
             walletBalance: 0,
             addresses: []
@@ -171,6 +189,14 @@ function AppContent() {
     setShowProfileMenu(false);
     navigate('/');
   };
+
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-[#1A4D2E] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -279,7 +305,7 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
+        <header ref={headerRef} className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
               {currentView === 'discover' ? t('Discover') : t(currentView.replace('-', ' '))}
@@ -414,19 +440,19 @@ function AppContent() {
                             Debug Roles
                           </div>
                           <button
-                            onClick={() => { setUserProfile({ ...userProfile!, role: 'customer' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'customer'); setUserProfile({ ...userProfile!, role: 'customer' }); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'customer' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <UserIcon className="w-4 h-4" /> Customer View
                           </button>
                           <button
-                            onClick={() => { setUserProfile({ ...userProfile!, role: 'restaurant' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'restaurant'); setUserProfile({ ...userProfile!, role: 'restaurant' }); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'restaurant' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <Store className="w-4 h-4" /> Restaurant View
                           </button>
                           <button
-                            onClick={() => { setUserProfile({ ...userProfile!, role: 'admin' }); setShowProfileMenu(false); }}
+                            onClick={() => { localStorage.setItem('debug_role', 'admin'); setUserProfile({ ...userProfile!, role: 'admin' }); setShowProfileMenu(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${userProfile?.role === 'admin' ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                           >
                             <ShieldCheck className="w-4 h-4" /> Admin View
