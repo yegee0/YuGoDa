@@ -9,10 +9,13 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useStore } from '@/app/store/useStore';
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { userProfile } = useStore();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,6 +27,14 @@ export default function Auth() {
   useEffect(() => {
     setIsLogin(searchParams.get('mode') !== 'signup');
   }, [searchParams]);
+
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.role === 'admin') navigate('/admin', { replace: true });
+      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
+      else navigate('/discover', { replace: true });
+    }
+  }, [userProfile, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,12 +165,18 @@ export default function Auth() {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center flex flex-col gap-2">
           <button
             onClick={() => setIsLogin(!isLogin)}
             className="text-sm text-[#1A4D2E] dark:text-[#2D6A4F] font-bold hover:underline"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+          </button>
+          <button
+            onClick={() => navigate('/business-auth')}
+            className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            Are you a restaurant partner? Login here
           </button>
         </div>
       </motion.div>
