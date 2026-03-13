@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -32,7 +32,54 @@ export default function ProfileView() {
     mobileNumber: userProfile?.mobileNumber || '',
   });
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [newAddress, setNewAddress] = useState({ label: '', address: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLanguageChange = async (lang: string) => {
+    if (!userProfile) return;
+    const userRef = doc(db, 'users', userProfile.uid);
+    try {
+      await i18n.changeLanguage(lang);
+      await updateDoc(userRef, { preferredLanguage: lang });
+      setUserProfile({ ...userProfile, preferredLanguage: lang });
+      setShowLanguageModal(false);
+    } catch (error) {
+      console.error('Error changing language:', error);
+    }
+  };
+
+  const handleNotificationToggle = async () => {
+    if (!userProfile) return;
+    const userRef = doc(db, 'users', userProfile.uid);
+    const newValue = !userProfile.notificationsEnabled;
+    try {
+      await updateDoc(userRef, { notificationsEnabled: newValue });
+      setUserProfile({ ...userProfile, notificationsEnabled: newValue });
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userProfile) return;
+
+    // In a real app, you would upload to Firebase Storage and get a URL.
+    // Here we simulate with a localized blob URL or base64.
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      const userRef = doc(db, 'users', userProfile.uid);
+      try {
+        await updateDoc(userRef, { photoURL: base64String });
+        setUserProfile({ ...userProfile, photoURL: base64String });
+      } catch (error) {
+        console.error('Error updating photo:', error);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = async () => {
     if (!userProfile) return;
@@ -102,10 +149,24 @@ export default function ProfileView() {
           <div className="space-y-8">
             <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-8 border border-gray-100 dark:border-gray-800 text-center">
               <div className="relative inline-block">
-                <div className="w-32 h-32 rounded-full bg-[#1A4D2E] flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4 border-4 border-white dark:border-[#1A1A1A] shadow-xl">
-                  {userProfile?.displayName?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase()}
+                <div className="w-32 h-32 rounded-full bg-[#1A4D2E] flex items-center justify-center text-white text-4xl font-bold mx-auto mb-4 border-4 border-white dark:border-[#1A1A1A] shadow-xl overflow-hidden">
+                  {userProfile?.photoURL ? (
+                    <img src={userProfile.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    userProfile?.displayName?.charAt(0) || userProfile?.email?.charAt(0).toUpperCase()
+                  )}
                 </div>
-                <button className="absolute bottom-4 right-0 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-100 dark:border-gray-700 text-[#1A4D2E]">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-4 right-0 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-100 dark:border-gray-700 text-[#1A4D2E]"
+                >
                   <Camera className="w-5 h-5" />
                 </button>
               </div>
@@ -133,7 +194,10 @@ export default function ProfileView() {
             <div className="bg-white dark:bg-[#1A1A1A] rounded-3xl p-6 border border-gray-100 dark:border-gray-800">
               <h3 className="font-bold text-gray-900 dark:text-white mb-4">{t('Settings')}</h3>
               <div className="space-y-2">
-                <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                <button 
+                  onClick={() => setShowLanguageModal(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                >
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-gray-400 group-hover:text-[#1A4D2E]" />
                     <span className="text-sm font-medium dark:text-gray-300">{t('Language')}</span>
@@ -143,13 +207,24 @@ export default function ProfileView() {
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
                 </button>
-                <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                <div className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                   <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-gray-400 group-hover:text-[#1A4D2E]" />
+                    <CheckCircle2 className={`w-5 h-5 ${userProfile?.notificationsEnabled ? 'text-green-500' : 'text-gray-400'}`} />
                     <span className="text-sm font-medium dark:text-gray-300">{t('Notifications')}</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </button>
+                  <button
+                    onClick={handleNotificationToggle}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                      userProfile?.notificationsEnabled ? 'bg-[#1A4D2E]' : 'bg-gray-200 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        userProfile?.notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -339,6 +414,43 @@ export default function ProfileView() {
                   {t('Add Address')}
                 </button>
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+      {/* Language Selection Modal */}
+      {showLanguageModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLanguageModal(false)} />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-2xl w-full max-w-sm p-8 relative z-10"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 font-display">{t('Select Language')}</h3>
+            <div className="space-y-2">
+              {[
+                { code: 'en', name: 'English', flag: '🇺🇸' },
+                { code: 'ar', name: 'العربية', flag: '🇸🇦' },
+                { code: 'es', name: 'Español', flag: '🇪🇸' },
+                { code: 'pt', name: 'Português', flag: '🇧🇷' },
+              ].map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => handleLanguageChange(lang.code)}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                    i18n.language === lang.code
+                      ? 'bg-[#1A4D2E] text-white'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{lang.flag}</span>
+                    <span className="font-bold">{lang.name}</span>
+                  </div>
+                  {i18n.language === lang.code && <CheckCircle2 className="w-5 h-5" />}
+                </button>
+              ))}
             </div>
           </motion.div>
         </div>
