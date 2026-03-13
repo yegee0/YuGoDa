@@ -113,7 +113,9 @@ function AppContent() {
             role: finalRole,
             favorites: profile.favorites || [],
             walletBalance: profile.walletBalance || 0,
-            addresses: profile.addresses || []
+            addresses: profile.addresses || [],
+            notificationsEnabled: profile.notificationsEnabled ?? true,
+            preferredLanguage: profile.preferredLanguage || i18n.language
           });
           setFavorites(profile.favorites || []);
 
@@ -128,6 +130,10 @@ function AppContent() {
             displayName: currentUser.displayName || 'User',
             role: finalRole,
             favorites: [],
+            walletBalance: 0,
+            addresses: [],
+            notificationsEnabled: true,
+            preferredLanguage: i18n.language,
             createdAt: serverTimestamp(),
           };
           await setDoc(userRef, newProfile);
@@ -135,10 +141,12 @@ function AppContent() {
             uid: currentUser.uid,
             email: currentUser.email!,
             displayName: newProfile.displayName,
-            role: finalRole,
+            role: finalRole as any,
             favorites: [],
             walletBalance: 0,
-            addresses: []
+            addresses: [],
+            notificationsEnabled: true,
+            preferredLanguage: i18n.language
           });
           setFavorites([]);
         }
