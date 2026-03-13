@@ -18,6 +18,7 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
     const [step, setStep] = useState<'form' | 'success'>('form');
     const [loading, setLoading] = useState(false);
     const [ticketId, setTicketId] = useState('');
+    const [attachments, setAttachments] = useState<File[]>([]);
 
     const [form, setForm] = useState({
         category: '',
@@ -48,6 +49,7 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
                 userEmail: user?.email || 'anonymous',
                 userName: userProfile?.displayName || 'Anonymous',
                 ...form,
+                attachments: attachments.map(f => ({ name: f.name, size: f.size, type: f.type })),
                 status: 'open',
                 createdAt: serverTimestamp(),
             });
@@ -65,8 +67,20 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
     const handleClose = () => {
         setStep('form');
         setForm({ category: '', priority: 'Medium', subject: '', description: '', orderRef: '' });
+        setAttachments([]);
         setErrors({});
         onClose();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            setAttachments(prev => [...prev, ...newFiles]);
+        }
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
     };
 
     return (
@@ -193,13 +207,37 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
                                         />
                                     </div>
 
-                                    {/* Attachment UI (visual) */}
-                                    <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:border-[#1A4D2E] transition-colors">
-                                        <Paperclip className="w-5 h-5 text-gray-400" />
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Attach files</p>
-                                            <p className="text-[11px] text-gray-400">PNG, JPG, PDF up to 10MB</p>
-                                        </div>
+                                    {/* Attachment UI */}
+                                    <div className="space-y-3">
+                                        <label className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:border-[#1A4D2E] transition-colors">
+                                            <Paperclip className="w-5 h-5 text-gray-400" />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Attach files</p>
+                                                <p className="text-[11px] text-gray-400">PNG, JPG, PDF up to 10MB</p>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        {attachments.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {attachments.map((file, i) => (
+                                                    <div key={i} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-xl text-xs">
+                                                        <span className="max-w-[120px] truncate dark:text-gray-300">{file.name}</span>
+                                                        <button
+                                                            onClick={() => removeAttachment(i)}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Submit */}

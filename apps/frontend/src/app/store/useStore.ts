@@ -15,6 +15,8 @@ interface UserProfile {
   walletBalance: number;
   countryCode?: string;
   mobileNumber?: string;
+  notificationsEnabled: boolean;
+  preferredLanguage: string;
   addresses: any[];
 }
 
