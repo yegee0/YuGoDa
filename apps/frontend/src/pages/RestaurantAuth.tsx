@@ -5,12 +5,15 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '@/shared/lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useStore } from '@/app/store/useStore';
+import { useEffect } from 'react';
 
 export default function RestaurantAuth() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [msg, setMsg] = useState('');
     const navigate = useNavigate();
+    const { userProfile } = useStore();
 
     const faqs = [
         { q: "How much does it cost?", a: "Joining YuGoDa is free. We only charge a small commission on the surprise bags you successfully sell through our platform." },
@@ -18,6 +21,14 @@ export default function RestaurantAuth() {
         { q: "How do I pack a Surprise Bag?", a: "You simply pack surplus food into a bag. The contents are a surprise, but the value should be roughly 3x the price paid." },
         { q: "When do customers pick up?", a: "You set a specific pickup window (e.g., the last 30 minutes before closing) that works best for your operations." }
     ];
+
+    useEffect(() => {
+        if (userProfile) {
+            if (userProfile.role === 'admin') navigate('/admin', { replace: true });
+            else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
+            else navigate('/discover', { replace: true });
+        }
+    }, [userProfile, navigate]);
 
 
     const [formData, setFormData] = useState({
