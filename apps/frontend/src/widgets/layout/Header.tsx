@@ -8,7 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Header() {
   const { t, i18n } = useTranslation();
-  const { user, userProfile, setUserProfile, notifications, isDarkMode, setIsDarkMode } = useStore();
+  const { user, userProfile, setUserProfile, setUser, notifications, isDarkMode, setIsDarkMode } = useStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -40,6 +40,8 @@ export default function Header() {
 
   const handleLogout = async () => {
     await Promise.all([authCustomer.signOut(), authPartner.signOut(), authAdmin.signOut()]);
+    setUser(null);
+    setUserProfile(null);
     setShowProfileMenu(false);
     navigate('/');
   };

@@ -69,9 +69,17 @@ function AppContent() {
       }
     };
 
-    const unsubC = onAuthStateChanged(authCustomer, (u) => { if (u) handleAuth(u, 'customer'); else if(!user) setUserProfile(null); isReadyCustomer = true; checkReady(); });
-    const unsubP = onAuthStateChanged(authPartner, (u) => { if (u) handleAuth(u, 'restaurant'); else if(!user) setUserProfile(null); isReadyPartner = true; checkReady(); });
-    const unsubA = onAuthStateChanged(authAdmin, (u) => { if (u) handleAuth(u, 'admin'); else if(!user) setUserProfile(null); isReadyAdmin = true; checkReady(); });
+    const handleSignOut = () => {
+      // If NO ONE is logged into any of the 3 portals, completely wipe the memory.
+      if (!authCustomer.currentUser && !authPartner.currentUser && !authAdmin.currentUser) {
+        setUser(null);
+        setUserProfile(null);
+      }
+    };
+
+    const unsubC = onAuthStateChanged(authCustomer, (u) => { if (u) handleAuth(u, 'customer'); else handleSignOut(); isReadyCustomer = true; checkReady(); });
+    const unsubP = onAuthStateChanged(authPartner, (u) => { if (u) handleAuth(u, 'restaurant'); else handleSignOut(); isReadyPartner = true; checkReady(); });
+    const unsubA = onAuthStateChanged(authAdmin, (u) => { if (u) handleAuth(u, 'admin'); else handleSignOut(); isReadyAdmin = true; checkReady(); });
 
     return () => { unsubC(); unsubP(); unsubA(); };
   }, [setUser, setUserProfile, setIsAuthReady, user]);

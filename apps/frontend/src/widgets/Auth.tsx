@@ -3,7 +3,6 @@ import { authCustomer } from '@/shared/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { motion } from 'motion/react';
@@ -46,7 +45,16 @@ export default function Auth() {
         await signInWithEmailAndPassword(authCustomer, email, password);
       } else {
         const userCredential = await createUserWithEmailAndPassword(authCustomer, email, password);
-        await updateProfile(userCredential.user, { displayName });
+        
+        // TODO: CUSTOM BACKEND INTEGRATION
+        // Step 1: Send userCredential.user.uid, email, and displayName to your Node.js backend to create a user record in your own Database.
+        // Example: await fetch('https://api.yugoda.com/users/register', { method: 'POST', body: JSON.stringify({ uid: userCredential.user.uid, name: displayName, role: 'customer' }) });
+
+        // Step 2: For now, we are mocking the future Custom Backend response by updating local state directly so the UI doesn't break:
+        const store = useStore.getState();
+        if (store.userProfile) {
+          store.setUserProfile({ ...store.userProfile, displayName: displayName } as any);
+        }
       }
     } catch (err: any) {
       setError(err.message);
