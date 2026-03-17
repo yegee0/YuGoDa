@@ -5,8 +5,6 @@ import {
   AlertCircle, Store, LayoutDashboard, TrendingUp, Package,
   ArrowUpRight, ArrowDownRight, Clock, Ban, Star
 } from 'lucide-react';
-import { db } from '@/shared/lib/firebase';
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, limit } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -20,22 +18,13 @@ export default function AdminPanel() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) =>
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubTrans = onSnapshot(
-      query(collection(db, 'transactions'), orderBy('createdAt', 'desc'), limit(50)),
-      (snap) => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    const unsubStores = onSnapshot(collection(db, 'stores'), (snap) =>
-      setStores(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    return () => { unsubUsers(); unsubTrans(); unsubStores(); };
+    // TODO: Custom backend API fetching
+    console.log('TODO: Custom backend API - Admin fetch users, transactions, stores');
   }, []);
 
   const handleApproveStore = async (storeId: string, approved: boolean) => {
-    await updateDoc(doc(db, 'stores', storeId), {
-      status: approved ? 'active' : 'rejected',
-      updatedAt: new Date()
-    });
+    console.log('TODO: Custom backend API - Admin handleApproveStore', storeId, approved);
+    setStores(stores.map(s => s.id === storeId ? { ...s, status: approved ? 'active' : 'rejected' } : s));
   };
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
