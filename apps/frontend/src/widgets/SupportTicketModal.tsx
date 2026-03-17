@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Ticket, CheckCircle2, Loader2, Paperclip, ChevronDown } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
-import { db } from '@/shared/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Props {
     isOpen: boolean;
@@ -44,17 +42,9 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
         setLoading(true);
 
         try {
-            const ticketRef = await addDoc(collection(db, 'support_tickets'), {
-                userId: user?.uid || 'anonymous',
-                userEmail: user?.email || 'anonymous',
-                userName: userProfile?.displayName || 'Anonymous',
-                ...form,
-                attachments: attachments.map(f => ({ name: f.name, size: f.size, type: f.type })),
-                status: 'open',
-                createdAt: serverTimestamp(),
-            });
+            console.log('TODO: Custom backend API - addDoc support ticket', form);
 
-            const shortId = `TKT-${ticketRef.id.slice(0, 6).toUpperCase()}`;
+            const shortId = `TKT-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
             setTicketId(shortId);
             setStep('success');
         } catch (err) {

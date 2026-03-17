@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Package, Clock, Truck, BarChart3, Plus, Search, Filter, MoreVertical, CheckCircle, XCircle, ChevronRight, MapPin, Camera, MessageSquare, Star, TrendingUp, DollarSign } from 'lucide-react';
-import { db } from '@/shared/lib/firebase';
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, limit, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
@@ -28,10 +26,8 @@ export default function StorePanel() {
   const handleUpdateProfile = async () => {
     if (!user || !editedProfile) return;
     try {
-      await updateDoc(doc(db, 'stores', user.uid), {
-        ...editedProfile,
-        updatedAt: serverTimestamp()
-      });
+      console.log('TODO: Custom backend API - updateDoc stores profile:', editedProfile);
+      setStoreProfile(editedProfile);
       setIsEditingProfile(false);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -41,31 +37,18 @@ export default function StorePanel() {
   useEffect(() => {
     if (!user) return;
 
-    const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('restaurantId', '==', user.uid), orderBy('createdAt', 'desc')), (snapshot) => {
-      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    const unsubInv = onSnapshot(query(collection(db, 'bags'), where('restaurantId', '==', user.uid)), (snapshot) => {
-      setInventory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    const unsubDrivers = onSnapshot(collection(db, 'drivers'), (snapshot) => {
-      setDrivers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    const unsubProfile = onSnapshot(doc(db, 'stores', user.uid), (snapshot) => {
-      if (snapshot.exists()) setStoreProfile(snapshot.data());
-    });
-
+    // TODO: Fetch from Custom backend API
+    console.log('TODO: Custom backend API - fetch orders, inventory, drivers, profile');
     setLoading(false);
+    
     return () => {
-      unsubOrders();
-      unsubInv();
-      unsubDrivers();
-      unsubProfile();
     };
   }, [user]);
 
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status, updatedAt: serverTimestamp() });
+      console.log('TODO: Custom backend API - updateDoc order status:', orderId, status);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status } : o));
     } catch (error) {
       console.error('Error updating order status:', error);
     }
@@ -74,13 +57,8 @@ export default function StorePanel() {
   const handleAddBag = async () => {
     if (!user) return;
     try {
-      await addDoc(collection(db, 'bags'), {
-        ...newBag,
-        restaurantId: user.uid,
-        restaurantName: storeProfile?.name || userProfile?.displayName || 'My Store',
-        image: 'https://picsum.photos/seed/food/400/300',
-        createdAt: serverTimestamp()
-      });
+      console.log('TODO: Custom backend API - addDoc bag:', newBag);
+      setInventory([...inventory, { id: Math.random().toString(36).substr(2, 9), ...newBag }]);
       setShowAddBag(false);
     } catch (error) {
       console.error('Error adding bag:', error);
