@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authPartner } from '@/shared/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
+import AuthFormLayout from '@/shared/ui/AuthFormLayout';
 
 export default function RestaurantAuth() {
     const [loading, setLoading] = useState(false);
