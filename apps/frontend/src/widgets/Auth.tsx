@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '@/shared/lib/firebase';
+import { authCustomer } from '@/shared/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useStore } from '@/app/store/useStore';
+import AuthFormLayout from '@/shared/ui/AuthFormLayout';
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { userProfile } = useStore();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +27,14 @@ export default function Auth() {
     setIsLogin(searchParams.get('mode') !== 'signup');
   }, [searchParams]);
 
+  useEffect(() => {
+    if (userProfile && !loading && !error) {
+      if (userProfile.role === 'admin') navigate('/admin', { replace: true });
+      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
+      else navigate('/discover', { replace: true });
+    }
+  }, [userProfile, navigate, loading, error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -33,20 +43,19 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(authCustomer, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        const userCredential = await createUserWithEmailAndPassword(authCustomer, email, password);
+        
+        // TODO: CUSTOM BACKEND INTEGRATION
+        // Step 1: Send userCredential.user.uid, email, and displayName to your Node.js backend to create a user record in your own Database.
+        // Example: await fetch('https://api.yugoda.com/users/register', { method: 'POST', body: JSON.stringify({ uid: userCredential.user.uid, name: displayName, role: 'customer' }) });
 
-        await updateProfile(user, { displayName });
-
-        // Create user profile in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName,
-          createdAt: serverTimestamp(),
-        });
+        // Step 2: For now, we are mocking the future Custom Backend response by updating local state directly so the UI doesn't break:
+        const store = useStore.getState();
+        if (store.userProfile) {
+          store.setUserProfile({ ...store.userProfile, displayName: displayName } as any);
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -64,7 +73,7 @@ export default function Auth() {
     setMsg('');
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(authCustomer, email);
       setMsg('Password reset email sent. Check your inbox.');
     } catch (err: any) {
       setError(err.message);
@@ -74,23 +83,21 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9] dark:bg-[#0A0A0A] p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-xl border border-gray-200 dark:border-gray-800 p-8"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[#1A4D2E] flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
+    <AuthFormLayout
+      headerContent={
+        <>
+          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 backdrop-blur-sm border border-white/20">
             E
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight">
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p className="text-gray-500 mt-2">
+          <p className="text-emerald-100/80 mt-2">
             {isLogin ? 'Save food, save the planet.' : 'Join the movement to stop food waste.'}
           </p>
-        </div>
+        </>
+      }
+    >
 
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} className="space-y-4">
           {!isLogin && (
@@ -154,16 +161,21 @@ export default function Auth() {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center flex flex-col gap-2">
           <button
             onClick={() => setIsLogin(!isLogin)}
             className="text-sm text-[#1A4D2E] dark:text-[#2D6A4F] font-bold hover:underline"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
           </button>
+          <button
+            onClick={() => navigate('/business-auth')}
+            className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            Are you a restaurant partner? Login here
+          </button>
         </div>
-      </motion.div>
-    </div>
+    </AuthFormLayout>
   );
 }
 

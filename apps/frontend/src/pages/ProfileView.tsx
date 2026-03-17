@@ -16,8 +16,6 @@ import {
   Wallet
 } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/shared/lib/firebase';
 
 export default function ProfileView() {
   const { t, i18n } = useTranslation();
@@ -38,10 +36,9 @@ export default function ProfileView() {
 
   const handleLanguageChange = async (lang: string) => {
     if (!userProfile) return;
-    const userRef = doc(db, 'users', userProfile.uid);
     try {
       await i18n.changeLanguage(lang);
-      await updateDoc(userRef, { preferredLanguage: lang });
+      console.log('TODO: Custom backend API - updateDoc preferredLanguage:', lang);
       setUserProfile({ ...userProfile, preferredLanguage: lang });
       setShowLanguageModal(false);
     } catch (error) {
@@ -51,10 +48,9 @@ export default function ProfileView() {
 
   const handleNotificationToggle = async () => {
     if (!userProfile) return;
-    const userRef = doc(db, 'users', userProfile.uid);
     const newValue = !userProfile.notificationsEnabled;
     try {
-      await updateDoc(userRef, { notificationsEnabled: newValue });
+      console.log('TODO: Custom backend API - updateDoc notificationsEnabled:', newValue);
       setUserProfile({ ...userProfile, notificationsEnabled: newValue });
     } catch (error) {
       console.error('Error toggling notifications:', error);
@@ -70,9 +66,8 @@ export default function ProfileView() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
-      const userRef = doc(db, 'users', userProfile.uid);
       try {
-        await updateDoc(userRef, { photoURL: base64String });
+        console.log('TODO: Custom backend API - updateDoc photoURL');
         setUserProfile({ ...userProfile, photoURL: base64String });
       } catch (error) {
         console.error('Error updating photo:', error);
@@ -83,9 +78,8 @@ export default function ProfileView() {
 
   const handleSaveProfile = async () => {
     if (!userProfile) return;
-    const userRef = doc(db, 'users', userProfile.uid);
     try {
-      await updateDoc(userRef, formData);
+      console.log('TODO: Custom backend API - updateDoc formData:', formData);
       setUserProfile({ ...userProfile, ...formData });
       setIsEditing(false);
     } catch (error) {
@@ -95,13 +89,12 @@ export default function ProfileView() {
 
   const handleAddAddress = async () => {
     if (!userProfile) return;
-    const userRef = doc(db, 'users', userProfile.uid);
     const updatedAddresses = [
       ...(userProfile.addresses || []),
       { id: Math.random().toString(36).substr(2, 9), ...newAddress, isDefault: (userProfile.addresses?.length || 0) === 0 }
     ];
     try {
-      await updateDoc(userRef, { addresses: updatedAddresses });
+      console.log('TODO: Custom backend API - updateDoc addresses:', updatedAddresses);
       setUserProfile({ ...userProfile, addresses: updatedAddresses });
       setShowAddressModal(false);
       setNewAddress({ label: '', address: '' });
@@ -112,10 +105,9 @@ export default function ProfileView() {
 
   const handleDeleteAddress = async (id: string) => {
     if (!userProfile) return;
-    const userRef = doc(db, 'users', userProfile.uid);
     const updatedAddresses = userProfile.addresses.filter(a => a.id !== id);
     try {
-      await updateDoc(userRef, { addresses: updatedAddresses });
+      console.log('TODO: Custom backend API - updateDoc remove address id:', id);
       setUserProfile({ ...userProfile, addresses: updatedAddresses });
     } catch (error) {
       console.error('Error deleting address:', error);
