@@ -9,6 +9,7 @@ import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/app/store/useStore';
+import AuthFormLayout from '@/shared/ui/AuthFormLayout';
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -82,23 +83,21 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9] dark:bg-[#0A0A0A] p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-xl border border-gray-200 dark:border-gray-800 p-8"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[#1A4D2E] flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
+    <AuthFormLayout
+      headerContent={
+        <>
+          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 backdrop-blur-sm border border-white/20">
             E
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight">
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h1>
-          <p className="text-gray-500 mt-2">
+          <p className="text-emerald-100/80 mt-2">
             {isLogin ? 'Save food, save the planet.' : 'Join the movement to stop food waste.'}
           </p>
-        </div>
+        </>
+      }
+    >
 
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} className="space-y-4">
           {!isLogin && (
@@ -176,8 +175,7 @@ export default function Auth() {
             Are you a restaurant partner? Login here
           </button>
         </div>
-      </motion.div>
-    </div>
+    </AuthFormLayout>
   );
 }
 

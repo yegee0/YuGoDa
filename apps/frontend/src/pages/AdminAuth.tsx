@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useStore } from '@/app/store/useStore';
+import AuthFormLayout from '@/shared/ui/AuthFormLayout';
 
 export default function AdminAuth() {
   const { t } = useTranslation();
@@ -42,18 +43,17 @@ export default function AdminAuth() {
   };
 
   return (
-    <div className="min-h-screen bg-eco-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800">
-        <div className="bg-[#1A4D2E] p-8 text-center text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm relative z-10 border border-white/20">
+    <AuthFormLayout
+      headerContent={
+        <>
+          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold relative z-10">Admin Portal</h2>
-          <p className="text-emerald-100/80 text-sm mt-2 relative z-10">Authorized Personnel Only</p>
-        </div>
-
-        <div className="p-8">
+          <h2 className="text-2xl font-bold">Admin Portal</h2>
+          <p className="text-emerald-100/80 text-sm mt-2">Authorized Personnel Only</p>
+        </>
+      }
+    >
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
@@ -103,8 +103,6 @@ export default function AdminAuth() {
               )}
             </button>
           </form>
-        </div>
-      </div>
-    </div>
+    </AuthFormLayout>
   );
 }
