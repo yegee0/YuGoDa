@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '@/shared/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { authCustomer, authPartner, authAdmin } from '@/shared/lib/firebase';
 import { useStore } from '@/app/store/useStore';
-import { seedIfEmpty } from '@/shared/lib/seedFirestore';
 import { useTranslation } from 'react-i18next';
 
 // Pages
@@ -46,88 +44,37 @@ function AppContent() {
   }, [isRTL, i18n.language]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+    let isReadyCustomer = false;
+    let isReadyPartner = false;
+    let isReadyAdmin = false;
 
+    const checkReady = () => {
+      if (isReadyCustomer && isReadyPartner && isReadyAdmin) setIsAuthReady(true);
+    };
+
+    const handleAuth = (currentUser: any, role: 'customer' | 'restaurant' | 'admin') => {
       if (currentUser) {
-        const userRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userRef);
-        const debugRole = localStorage.getItem('debug_role') as any;
-
-        if (userDoc.exists()) {
-          const profile = userDoc.data() as any;
-          const finalRole = debugRole || profile.role || 'customer';
-          setUserProfile({
-            uid: currentUser.uid,
-            email: currentUser.email!,
-            displayName: profile.displayName || currentUser.displayName || 'User',
-            role: finalRole,
-            favorites: profile.favorites || [],
-            walletBalance: profile.walletBalance || 0,
-            addresses: profile.addresses || [],
-            notificationsEnabled: profile.notificationsEnabled ?? true,
-            preferredLanguage: profile.preferredLanguage || 'en'
-          });
-          setFavorites(profile.favorites || []);
-        } else {
-          const finalRole = debugRole || 'customer';
-          const newProfile = {
-            uid: currentUser.uid,
-            email: currentUser.email!,
-            displayName: currentUser.displayName || 'User',
-            role: finalRole,
-            favorites: [],
-            createdAt: serverTimestamp(),
-          };
-          await setDoc(userRef, newProfile);
-          setUserProfile({
-            uid: currentUser.uid,
-            email: currentUser.email!,
-            displayName: newProfile.displayName,
-            role: finalRole,
-            favorites: [],
-            walletBalance: 0,
-            addresses: [],
-            notificationsEnabled: true,
-            preferredLanguage: 'en'
-          });
-          setFavorites([]);
-        }
-      } else {
-        setUserProfile(null);
-        setFavorites([]);
+        setUser(currentUser);
+        setUserProfile({
+          uid: currentUser.uid,
+          email: currentUser.email!,
+          displayName: currentUser.displayName || 'User',
+          role: role,
+          favorites: [],
+          walletBalance: 0,
+          addresses: [],
+          notificationsEnabled: true,
+          preferredLanguage: 'en'
+        } as any);
       }
-      setIsAuthReady(true);
-    });
+    };
 
-    return () => unsubscribe();
-  }, [setUser, setIsAuthReady, setFavorites, setUserProfile]);
+    const unsubC = onAuthStateChanged(authCustomer, (u) => { if (u) handleAuth(u, 'customer'); else if(!user) setUserProfile(null); isReadyCustomer = true; checkReady(); });
+    const unsubP = onAuthStateChanged(authPartner, (u) => { if (u) handleAuth(u, 'restaurant'); else if(!user) setUserProfile(null); isReadyPartner = true; checkReady(); });
+    const unsubA = onAuthStateChanged(authAdmin, (u) => { if (u) handleAuth(u, 'admin'); else if(!user) setUserProfile(null); isReadyAdmin = true; checkReady(); });
 
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setNotifications(notifs);
-    });
-
-    return () => unsubscribe();
-  }, [user, setNotifications]);
-
-  useEffect(() => {
-    if (isAuthReady) {
-      seedIfEmpty();
-    }
-  }, [isAuthReady, user]);
+    return () => { unsubC(); unsubP(); unsubA(); };
+  }, [setUser, setUserProfile, setIsAuthReady, user]);
 
   useEffect(() => {
     if (isDarkMode) {

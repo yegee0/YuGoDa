@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Store, MapPin, Phone, Mail, User, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { auth, db } from '@/shared/lib/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { authPartner } from '@/shared/lib/firebase';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
-import { useEffect } from 'react';
 
 export default function RestaurantAuth() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [msg, setMsg] = useState('');
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'login');
     const { userProfile } = useStore();
 
     const faqs = [
@@ -23,12 +23,12 @@ export default function RestaurantAuth() {
     ];
 
     useEffect(() => {
-        if (userProfile) {
+        if (userProfile && !loading && !error) {
             if (userProfile.role === 'admin') navigate('/admin', { replace: true });
             else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
             else navigate('/discover', { replace: true });
         }
-    }, [userProfile, navigate]);
+    }, [userProfile, navigate, loading, error]);
 
 
     const [formData, setFormData] = useState({
@@ -57,36 +57,27 @@ export default function RestaurantAuth() {
         setLoading(true);
 
         try {
-            if (!formData.email || !formData.password || !formData.businessName) {
-                throw new Error('Please fill in the required fields: Email, Password, and Business Name');
+            if (isLogin) {
+                if (!formData.email || !formData.password) {
+                    throw new Error('Please fill in Email and Password');
+                }
+                await signInWithEmailAndPassword(authPartner, formData.email, formData.password);
+            } else {
+                if (!formData.email || !formData.password || !formData.businessName) {
+                    throw new Error('Please fill in the required fields: Email, Password, and Business Name');
+                }
+
+                const userCredential = await createUserWithEmailAndPassword(authPartner, formData.email, formData.password);
+                const user = userCredential.user;
+
+                const displayName = `${formData.firstName} ${formData.lastName}`.trim();
+                await updateProfile(user, { displayName });
+
+                setMsg('Business account created successfully! You are being redirected...');
+                setTimeout(() => {
+                    navigate('/restaurant');
+                }, 2000);
             }
-
-            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-            const user = userCredential.user;
-
-            const displayName = `${formData.firstName} ${formData.lastName}`.trim();
-            await updateProfile(user, { displayName });
-
-            await setDoc(doc(db, 'users', user.uid), {
-                uid: user.uid,
-                email: user.email,
-                displayName: formData.businessName,
-                ownerName: displayName,
-                phone: formData.phone,
-                address: formData.address,
-                brandName: formData.brandName,
-                businessType: formData.businessType,
-                cuisineType: formData.cuisineType,
-                branches: formData.branches,
-                role: 'restaurant',
-                createdAt: serverTimestamp(),
-            });
-
-            setMsg('Business account created successfully! You are being redirected...');
-            setTimeout(() => {
-                navigate('/restaurant');
-            }, 2000);
-
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -124,9 +115,9 @@ export default function RestaurantAuth() {
                         <div className="mb-10">
                             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Get Started</h2>
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-500 text-sm">Already have an account?</span>
-                                <button onClick={() => navigate('/auth?mode=login')} className="text-[#1A4D2E] text-sm font-bold hover:underline">
-                                    Log In
+                                <span className="text-gray-500 text-sm">{isLogin ? "Don't have an account?" : "Already have an account?"}</span>
+                                <button type="button" onClick={() => { setIsLogin(!isLogin); setError(''); setMsg(''); }} className="text-[#1A4D2E] text-sm font-bold hover:underline">
+                                    {isLogin ? "Sign Up" : "Log In"}
                                 </button>
                             </div>
 
@@ -138,22 +129,24 @@ export default function RestaurantAuth() {
                         </div>
 
                         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">First Name</label>
-                                    <input
-                                        type="text" name="firstName" value={formData.firstName} onChange={handleChange} required
-                                        className="w-full bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none transition-all text-gray-900 dark:text-white"
-                                    />
+                            {!isLogin && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">First Name</label>
+                                        <input
+                                            type="text" name="firstName" value={formData.firstName} onChange={handleChange} required={!isLogin}
+                                            className="w-full bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none transition-all text-gray-900 dark:text-white"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Last Name</label>
+                                        <input
+                                            type="text" name="lastName" value={formData.lastName} onChange={handleChange} required={!isLogin}
+                                            className="w-full bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none transition-all text-gray-900 dark:text-white"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Last Name</label>
-                                    <input
-                                        type="text" name="lastName" value={formData.lastName} onChange={handleChange} required
-                                        className="w-full bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none transition-all text-gray-900 dark:text-white"
-                                    />
-                                </div>
-                            </div>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Email address *</label>
@@ -177,8 +170,10 @@ export default function RestaurantAuth() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Phone number</label>
+                            {!isLogin && (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Phone number</label>
                                 <div className="flex gap-2">
                                     <select className="bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl px-3 py-3 text-sm focus:ring-2 focus:ring-[#1A4D2E] outline-none text-gray-900 dark:text-white">
                                         <option value="US">US +1</option>
@@ -224,15 +219,17 @@ export default function RestaurantAuth() {
                                     <option value="Grocery Store">Grocery Store</option>
                                     <option value="Bakery & Patisserie">Bakery & Patisserie</option>
                                     <option value="Cafe">Cafe</option>
-                                </select>
-                            </div>
+                                    </select>
+                                </div>
+                                </>
+                            )}
 
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="w-full bg-[#1A4D2E] text-white rounded-xl py-4 font-bold hover:bg-[#133b23] transition-colors shadow-lg disabled:opacity-50 mt-4"
                             >
-                                {loading ? 'Processing...' : 'Create Account'}
+                                {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                             </button>
                             <p className="text-[10px] text-gray-500 text-center mt-4">
                                 By continuing, you agree to the Terms and Conditions.

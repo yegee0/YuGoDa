@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '@/shared/lib/firebase';
+import { authCustomer } from '@/shared/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -29,12 +28,12 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && !loading && !error) {
       if (userProfile.role === 'admin') navigate('/admin', { replace: true });
       else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
       else navigate('/discover', { replace: true });
     }
-  }, [userProfile, navigate]);
+  }, [userProfile, navigate, loading, error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,20 +43,10 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(authCustomer, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        await updateProfile(user, { displayName });
-
-        // Create user profile in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName,
-          createdAt: serverTimestamp(),
-        });
+        const userCredential = await createUserWithEmailAndPassword(authCustomer, email, password);
+        await updateProfile(userCredential.user, { displayName });
       }
     } catch (err: any) {
       setError(err.message);
@@ -75,7 +64,7 @@ export default function Auth() {
     setMsg('');
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(authCustomer, email);
       setMsg('Password reset email sent. Check your inbox.');
     } catch (err: any) {
       setError(err.message);

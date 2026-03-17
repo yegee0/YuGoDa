@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { User } from 'firebase/auth';
-import { db } from '@/shared/lib/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from 'firebase/firestore';
 
 interface UserProfile {
   uid: string;
@@ -87,32 +85,14 @@ export const useStore = create<AppState>((set, get) => ({
   favorites: [],
   setFavorites: (favorites) => set({ favorites }),
   toggleFavorite: async (id: string) => {
-    const { user, favorites } = get();
-    if (!user) return;
-
+    const { favorites } = get();
     const isFavorite = favorites.includes(id);
-    const userRef = doc(db, 'users', user.uid);
 
-    try {
-      if (isFavorite) {
-        set((state) => ({ favorites: state.favorites.filter((f) => f !== id) }));
-        await updateDoc(userRef, {
-          favorites: arrayRemove(id)
-        });
-      } else {
-        set((state) => ({ favorites: [...state.favorites, id] }));
-        await updateDoc(userRef, {
-          favorites: arrayUnion(id)
-        });
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      // Rollback on error
-      if (isFavorite) {
-        set((state) => ({ favorites: [...state.favorites, id] }));
-      } else {
-        set((state) => ({ favorites: state.favorites.filter((f) => f !== id) }));
-      }
+    // For now, update state locally. Real API calls will map to the custom backend soon.
+    if (isFavorite) {
+      set((state) => ({ favorites: state.favorites.filter((f) => f !== id) }));
+    } else {
+      set((state) => ({ favorites: [...state.favorites, id] }));
     }
   },
 

@@ -27,7 +27,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/business-auth')} className="hidden sm:block px-4 py-2 font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-colors text-sm">
+                    <button onClick={() => navigate('/business-auth?mode=login')} className="hidden sm:block px-4 py-2 font-medium text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-colors text-sm">
                         Partner Portal
                     </button>
                     <button onClick={() => navigate('/auth?mode=login')} className="hidden sm:block px-4 py-2 font-medium hover:bg-gray-100 rounded-full transition-colors">
@@ -71,14 +71,8 @@ export default function LandingPage() {
                                 </div>
 
                                 <div className="mt-10 flex flex-col gap-6 pl-1 flex-1">
-                                    <Link to="/business-auth" className="flex items-center text-[15px] font-medium text-gray-900 hover:text-black transition-colors">
-                                        Partner / Restaurant Login
-                                    </Link>
-                                    <Link to="/business-auth" className="flex items-center text-[15px] font-medium text-gray-900 hover:text-black transition-colors">
+                                    <Link to="/business-auth?mode=signup" className="flex items-center text-[15px] font-medium text-gray-900 hover:text-black transition-colors">
                                         Create a business account
-                                    </Link>
-                                    <Link to="/business-auth" className="flex items-center text-[15px] font-medium text-gray-900 hover:text-black transition-colors">
-                                        Sign up to deliver
                                     </Link>
                                 </div>
                                 

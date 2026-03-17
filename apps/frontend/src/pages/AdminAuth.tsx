@@ -1,31 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/shared/lib/firebase';
+import { authAdmin } from '@/shared/lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useStore } from '@/app/store/useStore';
 
 export default function AdminAuth() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { userProfile } = useStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+
+  useEffect(() => {
+    if (userProfile && !isLoading && !error) {
+      if (userProfile.role === 'admin') navigate('/admin', { replace: true });
+      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
+      else navigate('/discover', { replace: true });
+    }
+  }, [userProfile, navigate, isLoading, error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      // user listener in App.tsx maps the user role and routes appropriately,
-      // but just in case, we navigate to the admin portal
+      await signInWithEmailAndPassword(authAdmin, formData.email, formData.password);
       navigate('/admin');
-    } catch (error: any) {
-      toast.error(error.message || t('Login failed. Please verify your credentials.'));
+    } catch (err: any) {
+      toast.error(err.message || t('Login failed. Please verify your credentials.'));
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }

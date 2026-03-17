@@ -34,8 +34,6 @@ import GoogleMapsView from '@/widgets/GoogleMapsView';
 import LocationPickerMap from '@/widgets/LocationPickerMap';
 import { useCountdown } from '@/shared/hooks/useCountdown';
 import { useStore } from '@/app/store/useStore';
-import { db } from '@/shared/lib/firebase';
-import { collection, addDoc, serverTimestamp, onSnapshot, query, where, doc, updateDoc, increment, getDocs, orderBy, limit } from 'firebase/firestore';
 import FilterPanel from '@/widgets/FilterPanel';
 import CartDrawer from '@/widgets/CartDrawer';
 
@@ -332,22 +330,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     ];
 
 
-    const q = query(collection(db, 'bags'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (snapshot.empty) {
-        // Firestore has no bags — use local fallback data immediately so UI is never blank
-        setBags(FALLBACK_BAGS);
-      } else {
-        const bagsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBags(bagsData);
-      }
-      setLoading(false);
-    }, (_err) => {
-      // On permission error (e.g. not authenticated yet), still show fallback
-      setBags(FALLBACK_BAGS);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    // Firestore removed for custom backend migration. Using local fallback data.
+    setBags(FALLBACK_BAGS);
+    setLoading(false);
 
   }, []);
 
@@ -385,57 +370,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     if (!user || !checkoutData) return;
 
     try {
-      // 1. Create Order
-      const newOrder = {
-        userId: user.uid,
-        restaurantId: checkoutData.items[0].restaurantId,
-        bagId: checkoutData.items[0].id,
-        restaurantName: checkoutData.items[0].restaurantName,
-        price: checkoutData.subtotal,
-        tipAmount: checkoutData.tip,
-        tax: checkoutData.tax,
-        bookingFee: checkoutData.bookingFee,
-        total: checkoutData.total,
-        status: 'preparing',
-        deliveryType: checkoutData.deliveryType,
-        pickupTime: checkoutData.pickupTime,
-        paymentMethod: checkoutData.paymentMethod,
-        leaveAtDoor: checkoutData.leaveAtDoor,
-        promoCode: checkoutData.promoCode,
-        createdAt: serverTimestamp(),
-      };
-      const orderRef = await addDoc(collection(db, 'orders'), newOrder);
-      setOrderId(orderRef.id);
-
-      // 2. Create Transaction Log
-      await addDoc(collection(db, 'transactions'), {
-        orderId: orderRef.id,
-        amount: checkoutData.total,
-        tip: checkoutData.tip,
-        status: 'completed',
-        paymentMethod: checkoutData.paymentMethod,
-        createdAt: serverTimestamp()
-      });
-
-      // 3. Update Stock
-      for (const item of checkoutData.items) {
-        if (item.id.length > 10) {
-          const bagRef = doc(db, 'bags', item.id);
-          await updateDoc(bagRef, {
-            available: increment(-item.quantity)
-          });
-        }
-      }
-
-      // 4. Send Notification
-      await addDoc(collection(db, 'notifications'), {
-        userId: checkoutData.items[0].restaurantId,
-        title: 'New Order Received!',
-        message: `A new order has been placed by ${userProfile?.displayName || 'a customer'}.`,
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-
+      // TODO: Replace with custom backend API call
+      const mockOrderId = "ECO-" + Math.floor(Math.random() * 9000 + 1000);
+      setOrderId(mockOrderId);
       clearCart();
       setCheckoutStep('tracking');
     } catch (error) {
@@ -446,14 +383,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const handleSubmitReview = async () => {
     if (!user || !selectedBag) return;
     try {
-      await addDoc(collection(db, 'reviews'), {
-        userId: user.uid,
-        restaurantId: selectedBag.restaurantId || 'mock-restaurant-id',
-        orderId: orderId || 'mock-order-id',
-        rating: reviewRating,
-        comment: reviewComment,
-        createdAt: serverTimestamp(),
-      });
+      // TODO: Replace with custom backend API call
       setSelectedBag(null);
       setCheckoutStep('reserve');
       setReviewComment('');
