@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Store, MapPin, Phone, Mail, User, ShieldCheck } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authPartner } from '@/shared/lib/firebase';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
 
 export default function RestaurantAuth() {
@@ -69,9 +69,17 @@ export default function RestaurantAuth() {
 
                 const userCredential = await createUserWithEmailAndPassword(authPartner, formData.email, formData.password);
                 const user = userCredential.user;
+                const mockDisplayName = `${formData.firstName} ${formData.lastName}`.trim();
 
-                const displayName = `${formData.firstName} ${formData.lastName}`.trim();
-                await updateProfile(user, { displayName });
+                // TODO: CUSTOM BACKEND INTEGRATION
+                // Step 1: Send user.uid and all formData to your Node.js backend to create a restaurant/partner record in your own Database.
+                // Example: await fetch('https://api.yugoda.com/partners/register', { method: 'POST', body: JSON.stringify({ uid: user.uid, businessName: formData.businessName, ... }) });
+
+                // Step 2: For now, we are mocking the future Custom Backend response by updating local state directly:
+                const store = useStore.getState();
+                if (store.userProfile) {
+                    store.setUserProfile({ ...store.userProfile, displayName: mockDisplayName } as any);
+                }
 
                 setMsg('Business account created successfully! You are being redirected...');
                 setTimeout(() => {
