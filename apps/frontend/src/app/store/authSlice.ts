@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { User } from 'firebase/auth';
+import { api } from '@/lib/api';
 
 export interface UserProfile {
   uid: string;
@@ -41,11 +42,22 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
     const { favorites } = get();
     const isFavorite = favorites.includes(id);
 
-    // For now, update state locally. Real API calls will map to the custom backend soon.
+    // Optimistic update
     if (isFavorite) {
       set((state) => ({ favorites: state.favorites.filter((f) => f !== id) }));
     } else {
       set((state) => ({ favorites: [...state.favorites, id] }));
+    }
+
+    // Backend'e senkronize et
+    try {
+      const data = await api.put('/users/me/favorites', { bagId: id });
+      if (data.favorites) {
+        set({ favorites: data.favorites });
+      }
+    } catch {
+      // Hata durumunda geri al
+      set({ favorites });
     }
   },
   isAuthReady: false,

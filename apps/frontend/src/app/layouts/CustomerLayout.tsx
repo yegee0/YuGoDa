@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Sidebar, SidebarItem } from '@/widgets/layout/Sidebar';
-import Header from '@/widgets/layout/Header';
+import { Sidebar, SidebarItem } from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
 import { LayoutDashboard, Map as MapIcon, Heart, HelpCircle, MessageCircle, X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import FoodChatbot from '@/widgets/FoodChatbot';
-import CookieBanner from '@/widgets/CookieBanner';
-import SupportTicketModal from '@/widgets/SupportTicketModal';
+import FoodChatbot from '@/components/FoodChatbot';
+import ConsentNotice from '@/components/ConsentNotice';
+import SupportTicketModal from '@/components/SupportTicketModal';
 
 export default function CustomerLayout() {
   const { t } = useTranslation();
@@ -73,7 +73,7 @@ export default function CustomerLayout() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-hidden relative">
+        <main className="flex-1 overflow-hidden relative z-[10]">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -226,7 +226,7 @@ export default function CustomerLayout() {
       </AnimatePresence>
 
       <FoodChatbot />
-      <CookieBanner />
+      <ConsentNotice />
       <SupportTicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
     </div>
   );
