@@ -94,3 +94,37 @@ body {
   border-color: #2D6A4F;
   color: #2D6A4F;
 }
+
+/* ── Landing page ticker animation ────────────────────── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 28s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Partner marquee (cream strip) ────────────────────── */
+@keyframes partner-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-25%); }
+}
+
+.partner-track {
+  display: flex;
+  width: max-content;
+  animation: partner-scroll 35s linear infinite;
+  will-change: transform;
+}
+
+.partner-track:hover {
+  animation-play-state: paused;
+}

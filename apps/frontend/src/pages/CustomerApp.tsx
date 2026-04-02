@@ -29,15 +29,16 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
-import GoogleMapsView from '@/widgets/GoogleMapsView';
-import LocationPickerMap from '@/widgets/LocationPickerMap';
-import { useCountdown } from '@/shared/hooks/useCountdown';
+import { Link, useNavigate } from 'react-router-dom';
+import GoogleMapsView from '@/components/GoogleMapsView';
+import LocationPickerMap from '@/components/LocationPickerMap';
+import { useCountdown } from '@/hooks/useCountdown';
 import { useStore } from '@/app/store/useStore';
-import { useBags } from '@/shared/hooks/useBags';
-import { useLocationManager } from '@/shared/hooks/useLocationManager';
-import FilterPanel from '@/widgets/FilterPanel';
-import CartDrawer from '@/widgets/CartDrawer';
+import { useBags } from '@/hooks/useBags';
+import { useLocationManager } from '@/hooks/useLocationManager';
+import FilterPanel from '@/components/FilterPanel';
+import CartDrawer from '@/components/CartDrawer';
+import { api } from '@/lib/api';
 
 const GOOGLE_MAPS_API_KEY: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ?? '';
 const GOOGLE_MAPS_MAP_ID: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_MAP_ID ?? '';
@@ -62,6 +63,15 @@ function BagCard({ bag, onClick }: any) {
             referrerPolicy="no-referrer"
           />
         </Link>
+
+        {bag.isCurrentlyOpen === false && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="px-3 py-1.5 bg-gray-900/80 text-white text-xs font-bold rounded-full tracking-wide">
+              {t('Closed')}
+            </span>
+          </div>
+        )}
+
         <div className="absolute top-3 right-3 flex flex-col gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); toggleFavorite(bag.id); }}
@@ -91,8 +101,8 @@ function BagCard({ bag, onClick }: any) {
             <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-tight group-hover:text-[#1A4D2E] transition-colors">{bag.restaurantName}</h3>
           </Link>
           <div className="text-right">
-            <span className="font-bold text-[#1A4D2E] dark:text-[#2D6A4F] text-lg">${bag.price.toFixed(2)}</span>
-            <p className="text-[10px] text-gray-400 line-through">${bag.originalPrice?.toFixed(2)}</p>
+            <span className="font-bold text-[#1A4D2E] dark:text-[#2D6A4F] text-lg">₺{bag.price.toFixed(2)}</span>
+            <p className="text-[10px] text-gray-400 line-through">₺{bag.originalPrice?.toFixed(2)}</p>
           </div>
         </div>
         <p className="text-sm text-gray-500 mb-2">{bag.category} • {bag.distance || '0.5 miles'}</p>
@@ -117,8 +127,10 @@ function BagCard({ bag, onClick }: any) {
             <span>{t('Pickup')}: {bag.pickupTime}</span>
           </div>
           <button
+            disabled={bag.isCurrentlyOpen === false}
             onClick={(e) => {
               e.stopPropagation();
+              if (bag.isCurrentlyOpen === false) return;
               addToCart({
                 id: bag.id,
                 restaurantId: bag.restaurantId || 'mock',
@@ -129,9 +141,13 @@ function BagCard({ bag, onClick }: any) {
                 image: bag.image
               });
             }}
-            className="px-4 py-2 bg-[#1A4D2E]/10 text-[#1A4D2E] rounded-xl hover:bg-[#1A4D2E] hover:text-white transition-all text-xs font-bold"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              bag.isCurrentlyOpen === false
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                : 'bg-[#1A4D2E]/10 text-[#1A4D2E] hover:bg-[#1A4D2E] hover:text-white'
+            }`}
           >
-            {t('Add')}
+            {bag.isCurrentlyOpen === false ? t('Closed') : t('Add')}
           </button>
         </div>
       </div>
@@ -141,6 +157,7 @@ function BagCard({ bag, onClick }: any) {
 
 export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 'discover' | 'browse' | 'favorites' }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'discover' | 'browse' | 'favorites'>(initialTab);
   const [selectedBag, setSelectedBag] = useState<any | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<'reserve' | 'pay' | 'tracking' | 'success' | 'review'>('reserve');
@@ -224,9 +241,31 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     if (!user || !checkoutData) return;
 
     try {
-      // TODO: Replace with custom backend API call
-      const mockOrderId = "ECO-" + Math.floor(Math.random() * 9000 + 1000);
-      setOrderId(mockOrderId);
+      const restaurantGroups = checkoutData.items.reduce((acc: any, item: any) => {
+        if (!acc[item.restaurantId]) acc[item.restaurantId] = [];
+        acc[item.restaurantId].push(item);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      let createdOrderId = '';
+      for (const [restaurantId, items] of Object.entries(restaurantGroups) as any) {
+        const res = await api.post('/orders', {
+          restaurantId,
+          bagId: (items as any[])[0].id,
+          restaurantName: (items as any[])[0].restaurantName,
+          items,
+          price: (items as any[]).reduce((s: number, i: any) => s + i.price * i.quantity, 0),
+          tipAmount: checkoutData.tip,
+          bookingFee: checkoutData.bookingFee,
+          tax: checkoutData.tax,
+          total: checkoutData.total,
+          deliveryType: checkoutData.deliveryType,
+          paymentMethod: checkoutData.paymentMethod,
+          leaveAtDoor: checkoutData.leaveAtDoor ? 1 : 0,
+        });
+        createdOrderId = res.order?.id || '';
+      }
+      setOrderId(createdOrderId);
       clearCart();
       setCheckoutStep('tracking');
     } catch (error) {
@@ -237,10 +276,16 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const handleSubmitReview = async () => {
     if (!user || !selectedBag) return;
     try {
-      // TODO: Replace with custom backend API call
+      await api.post('/reviews', {
+        restaurantId: selectedBag.restaurantId,
+        orderId: orderId,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
       setSelectedBag(null);
       setCheckoutStep('reserve');
       setReviewComment('');
+      setReviewRating(5);
     } catch (error) {
       console.error('Error submitting review:', error);
     }
@@ -474,7 +519,11 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
       <FilterPanel isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} />
 
       {/* Cart Drawer */}
-      <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} onCheckout={handleCheckout} />
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        onProceedToCheckout={() => { setIsCartOpen(false); navigate('/checkout'); }}
+      />
 
       {/* Checkout Flow Overlay */}
       <AnimatePresence>
@@ -505,7 +554,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                 {checkoutStep === 'pay' && checkoutData && (
                   <div className="flex flex-col items-center py-12 space-y-8">
                     <div className="text-center">
-                      <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">${checkoutData.total.toFixed(2)}</h2>
+                      <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">₺{checkoutData.total.toFixed(2)}</h2>
                       <p className="text-gray-500">{t('Secure Payment with EcoPay')}</p>
                     </div>
 
@@ -522,7 +571,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                         <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl flex items-center gap-3">
                           <Info className="w-4 h-4 text-emerald-600" />
                           <p className="text-xs text-emerald-600 font-medium">
-                            {t('Current balance')}: ${userProfile?.walletBalance?.toFixed(2)}
+                            {t('Current balance')}: ₺{userProfile?.walletBalance?.toFixed(2)}
                           </p>
                         </div>
                       )}
@@ -612,7 +661,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
 
                     <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl max-w-xs mx-auto">
                       <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">{t('Order ID')}</p>
-                      <p className="text-3xl font-mono font-bold text-gray-900 dark:text-white">#ECO-{Math.floor(Math.random() * 9000) + 1000}</p>
+                      <p className="text-3xl font-mono font-bold text-gray-900 dark:text-white">{orderId ? `#${orderId.slice(0, 8).toUpperCase()}` : '#—'}</p>
                     </div>
                     <button
                       onClick={() => setCheckoutStep('review')}

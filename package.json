@@ -1,11 +1,7 @@
 {
   "name": "yugoda",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
-    "dev": "npm run dev --workspace=frontend",
-    "server": "npm run dev --workspace=backend"
+    "dev": "npm run dev --prefix apps/frontend"
   }
 }

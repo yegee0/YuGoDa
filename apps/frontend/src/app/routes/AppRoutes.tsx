@@ -4,7 +4,7 @@ import { useStore } from '@/app/store/useStore';
 
 // Pages
 import LandingPage from '@/pages/LandingPage';
-import Auth from '@/widgets/Auth';
+import Auth from '@/pages/CustomerAuth';
 import RestaurantAuth from '@/pages/RestaurantAuth';
 import AdminAuth from '@/pages/AdminAuth';
 import CustomerApp from '@/pages/CustomerApp';
@@ -55,14 +55,28 @@ export default function AppRoutes() {
       {/* Restaurant Routes */}
       <Route element={<ProtectedRoute allowedRoles={['restaurant']} />}>
         <Route element={<RestaurantLayout />}>
-          <Route path="/restaurant" element={<RestaurantPortal />} />
+          <Route path="/restaurant" element={<Navigate to="/restaurant/dashboard" replace />} />
+          <Route path="/restaurant/dashboard" element={<RestaurantPortal />} />
+          <Route path="/restaurant/orders" element={<RestaurantPortal />} />
+          <Route path="/restaurant/inventory" element={<RestaurantPortal />} />
+          <Route path="/restaurant/drivers" element={<RestaurantPortal />} />
+          <Route path="/restaurant/reviews" element={<RestaurantPortal />} />
+          <Route path="/restaurant/support" element={<RestaurantPortal />} />
+          <Route path="/restaurant/profile" element={<RestaurantPortal />} />
         </Route>
       </Route>
 
       {/* Admin Routes */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/customers" element={<AdminDashboard />} />
+          <Route path="/admin/stores" element={<AdminDashboard />} />
+          <Route path="/admin/transactions" element={<AdminDashboard />} />
+          <Route path="/admin/support" element={<AdminDashboard />} />
+          <Route path="/admin/live-chat" element={<AdminDashboard />} />
+          <Route path="/admin/settings" element={<AdminDashboard />} />
         </Route>
       </Route>
 

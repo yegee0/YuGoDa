@@ -1,26 +1,81 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Sidebar, SidebarItem } from '@/widgets/layout/Sidebar';
-import Header from '@/widgets/layout/Header';
-import { ShieldCheck } from 'lucide-react';
+import { Sidebar, SidebarItem } from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
+import { ShieldCheck, LayoutDashboard, Users, Store, DollarSign, MessageSquare, MessageCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentView = location.pathname.split('/')[1] || 'admin';
+  const currentView = location.pathname.split('/')[2] || 'dashboard';
 
   return (
     <div className="min-h-screen bg-eco-bg flex font-sans transition-colors duration-300">
       <Sidebar>
         {(isSidebarCollapsed) => (
-          <SidebarItem
-            icon={<ShieldCheck className="w-5 h-5" />}
-            label="Admin Panel"
-            active={currentView === 'admin'}
-            collapsed={isSidebarCollapsed}
-            onClick={() => navigate('/admin')}
-          />
+          <>
+            <div className={`px-4 py-2 mt-2 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+              Platform
+            </div>
+            <SidebarItem
+              icon={<LayoutDashboard className="w-5 h-5 shrink-0" />}
+              label="Dashboard"
+              active={currentView === 'dashboard'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/dashboard')}
+            />
+            <SidebarItem
+              icon={<Users className="w-5 h-5 shrink-0" />}
+              label="Customers"
+              active={currentView === 'customers'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/customers')}
+            />
+            <SidebarItem
+              icon={<Store className="w-5 h-5 shrink-0" />}
+              label="Stores"
+              active={currentView === 'stores'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/stores')}
+            />
+            <SidebarItem
+              icon={<DollarSign className="w-5 h-5 shrink-0" />}
+              label="Transactions"
+              active={currentView === 'transactions'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/transactions')}
+            />
+
+            <div className={`px-4 py-2 mt-6 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+              Support
+            </div>
+            <SidebarItem
+              icon={<MessageSquare className="w-5 h-5 shrink-0" />}
+              label="Support Queue"
+              active={currentView === 'support'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/support')}
+            />
+            <SidebarItem
+              icon={<MessageCircle className="w-5 h-5 shrink-0" />}
+              label="Live Chat"
+              active={currentView === 'live-chat'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/live-chat')}
+            />
+
+            <div className={`px-4 py-2 mt-6 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
+              System
+            </div>
+            <SidebarItem
+              icon={<Settings className="w-5 h-5 shrink-0" />}
+              label="Settings"
+              active={currentView === 'settings'}
+              collapsed={isSidebarCollapsed}
+              onClick={() => navigate('/admin/settings')}
+            />
+          </>
         )}
       </Sidebar>
 
