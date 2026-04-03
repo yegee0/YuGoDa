@@ -1,0 +1,121 @@
+name: Deploy YuGoDa to Cloud Run
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-west1
+  REGISTRY_REGION: europe-west3
+  REPO_NAME: yugoda-repo
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+
+      # ═══════════════════════════════════════════════════════════════
+      # 1. BACKEND — Build, push, deploy to Cloud Run + Cloud SQL
+      # ═══════════════════════════════════════════════════════════════
+      - name: Build and Push Backend Image
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend \
+            ./apps/backend
+          docker push \
+            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend
+
+      - name: Deploy Backend to Cloud Run
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PASS: ${{ secrets.DB_PASSWORD }}
+          IYZ_KEY: ${{ secrets.IYZICO_API_KEY }}
+          IYZ_SECRET: ${{ secrets.IYZICO_SECRET_KEY }}
+          IYZ_URL: ${{ secrets.IYZICO_BASE_URL }}
+          FB_PROJECT: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          gcloud run deploy backend-service \
+            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --port 4000 \
+            --memory 1Gi \
+            --allow-unauthenticated \
+            --set-env-vars "^@^SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:5432/postgres@SPRING_DATASOURCE_USERNAME=postgres@SPRING_DATASOURCE_PASSWORD=${DB_PASS}@SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver@SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect@IYZICO_API_KEY=${IYZ_KEY}@IYZICO_SECRET_KEY=${IYZ_SECRET}@IYZICO_BASE_URL=${IYZ_URL}@FIREBASE_PROJECT_ID=${FB_PROJECT}@SERVER_PORT=4000"
+
+      - name: Capture Backend URL
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe backend-service \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Backend deployed at: $URL"
+
+      # ═══════════════════════════════════════════════════════════════
+      # 2. FRONTEND — Build with backend URL baked in, deploy
+      # ═══════════════════════════════════════════════════════════════
+      - name: Build and Push Frontend Image
+        env:
+          MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          MAPS_ID: ${{ secrets.VITE_GOOGLE_MAPS_MAP_ID }}
+          GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          docker build \
+            --build-arg "VITE_API_BASE_URL=${{ steps.backend-url.outputs.url }}/api" \
+            --build-arg "VITE_GOOGLE_MAPS_API_KEY=${MAPS_KEY}" \
+            --build-arg "VITE_GOOGLE_MAPS_MAP_ID=${MAPS_ID}" \
+            --build-arg "GEMINI_API_KEY=${GEMINI_KEY}" \
+            -t ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend \
+            ./apps/frontend
+          docker push \
+            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend
+
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy frontend-service \
+            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --port 80 \
+            --allow-unauthenticated
+
+      # ═══════════════════════════════════════════════════════════════
+      # 3. UPDATE BACKEND — Inject frontend URL for CORS + app URL
+      # ═══════════════════════════════════════════════════════════════
+      - name: Update Backend with Frontend URL
+        run: |
+          FRONTEND_URL=$(gcloud run services describe frontend-service \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "Frontend deployed at: $FRONTEND_URL"
+
+          gcloud run services update backend-service \
+            --region ${{ env.REGION }} \
+            --update-env-vars "FRONTEND_URL=${FRONTEND_URL},APP_URL=${{ steps.backend-url.outputs.url }}"
+
+      - name: Deployment Summary
+        run: |
+          echo "================================================"
+          echo "  YuGoDa deployed successfully!"
+          echo "================================================"
+          echo "  Backend:  ${{ steps.backend-url.outputs.url }}"
+          FRONTEND_URL=$(gcloud run services describe frontend-service \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "  Frontend: $FRONTEND_URL"
+          echo "================================================"

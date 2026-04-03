@@ -6,5 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+!apps/frontend/.env.production
 firebase-applet-config.json
 *.db
