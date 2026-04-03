@@ -28,22 +28,17 @@ WORKDIR /app
 # Copy the fat JAR from the builder stage
 COPY --from=builder /app/target/yugoda-backend-*.jar app.jar
 
-# Create data dir and set ownership before declaring VOLUME
-# (Docker initialises named volumes from image content at first mount)
-RUN mkdir -p /app/data && chown -R yugoda:yugoda /app
-
-# Declare volume mount point AFTER ownership is set
-VOLUME ["/app/data"]
+RUN chown -R yugoda:yugoda /app
 
 USER yugoda
 
 # Default environment variables (override via docker run -e or docker-compose)
 ENV SERVER_PORT=4000
-ENV DB_PATH=/app/data/yugoda.db
-ENV IYZICO_API_KEY=dummy
-ENV IYZICO_SECRET_KEY=dummy
-ENV IYZICO_BASE_URL=https://sandbox-api.iyzipay.com
-ENV APP_URL=http://localhost:4000
+ENV DB_HOST=localhost
+ENV DB_PORT=5432
+ENV DB_NAME=yugoda
+ENV DB_USERNAME=postgres
+ENV DB_PASSWORD=postgres
 
 EXPOSE 4000
 
