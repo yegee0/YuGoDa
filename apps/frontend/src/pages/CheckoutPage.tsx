@@ -179,7 +179,7 @@ export default function CheckoutPage() {
                   ].map(({ id, label, sub, icon: Icon }) => (
                     <button
                       key={id}
-                      onClick={() => setDeliveryOption(id as any)}
+                      onClick={() => setDeliveryOption(id as 'delivery' | 'takeaway')}
                       className={`p-5 rounded-2xl border-2 text-left transition-all ${
                         deliveryOption === id
                           ? 'border-[#1A4D2E] bg-[#1A4D2E]/5 dark:bg-[#1A4D2E]/10'
@@ -224,7 +224,7 @@ export default function CheckoutPage() {
                   ].map(({ id, label, sub, icon: Icon }) => (
                     <button
                       key={id}
-                      onClick={() => setPaymentMethod(id as any)}
+                      onClick={() => setPaymentMethod(id as 'card' | 'cash' | 'wallet')}
                       className={`w-full p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${
                         paymentMethod === id
                           ? 'border-[#1A4D2E] bg-[#1A4D2E]/5 dark:bg-[#1A4D2E]/10'

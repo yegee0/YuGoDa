@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
+import type { Bag } from '@/types';
 
 export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 'favorites') {
-  const [bags, setBags] = useState<any[]>([]);
+  const [bags, setBags] = useState<Bag[]>([]);
   const [loading, setLoading] = useState(true);
   const { favorites, filters } = useStore();
 

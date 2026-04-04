@@ -36,11 +36,11 @@ services:
       - "4000:4000"
     environment:
       SERVER_PORT: "4000"
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_NAME: yugoda
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-postgres}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       # Allow requests from the browser-facing frontend origin
       FRONTEND_URL: "http://localhost:3000"
       # iyzico — override with real keys for production

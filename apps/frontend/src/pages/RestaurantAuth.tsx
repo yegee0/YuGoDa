@@ -155,8 +155,9 @@ export default function RestaurantAuth() {
         }).catch(() => {});
         setMsg('Account created! Redirecting…');
       }
-    } catch (err: any) {
-      setError(err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
     } finally {
       setLoading(false);
     }

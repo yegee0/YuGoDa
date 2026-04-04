@@ -9,21 +9,22 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import type { Bag, StoreProfile, OperatingHours } from '@/types';
 
 const TL = (n: number) => `₺${n.toFixed(2)}`;
 
-function isStoreCurrentlyOpen(operatingHours: any[] | null | undefined): boolean {
+function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefined): boolean {
   if (!operatingHours || !Array.isArray(operatingHours)) return true;
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const now = new Date();
-  const slot = operatingHours.find((s: any) => s.day === days[now.getDay()]);
+  const slot = operatingHours.find((s: OperatingHours) => s.day === days[now.getDay()]);
   if (!slot || !slot.isOpen) return false;
   const t = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   return t >= slot.open && t <= slot.close;
 }
 
 function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
-  bag: any; store: any;
+  bag: Bag; store: StoreProfile;
   onAdd: () => void;
   cartQty: number;
   onInc: () => void;
@@ -128,8 +129,8 @@ export default function StorePage() {
   const { t } = useTranslation();
   const { cart, addToCart, removeFromCart, updateCartQuantity, favorites, toggleFavorite } = useStore();
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
-  const [store, setStore] = useState<any>(null);
-  const [bags, setBags] = useState<any[]>([]);
+  const [store, setStore] = useState<StoreProfile | null>(null);
+  const [bags, setBags] = useState<Bag[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('');
   const [showInfo, setShowInfo] = useState(false);
@@ -138,7 +139,7 @@ export default function StorePage() {
   useEffect(() => {
     if (!id) return;
     api.get(`/stores/${id}`)
-      .then((data: any) => {
+      .then((data: { store: StoreProfile; bags?: Bag[] }) => {
         setStore(data.store);
         setBags(data.bags || []);
       })
@@ -146,7 +147,7 @@ export default function StorePage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const categories: Record<string, any[]> = bags.reduce((acc: Record<string, any[]>, bag: any) => {
+  const categories: Record<string, Bag[]> = bags.reduce((acc: Record<string, Bag[]>, bag: Bag) => {
     const cat = bag.category || 'Other';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(bag);
@@ -340,7 +341,7 @@ export default function StorePage() {
                   <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">{categories[cat].length}</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(categories[cat] as any[]).map(bag => {
+                  {categories[cat].map(bag => {
                     const cartItem = cart.find(c => c.id === bag.id);
                     const qty = cartItem?.quantity || 0;
                     return (

@@ -50,7 +50,7 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
     const [address, setAddress] = useState(initialName || '');
     const [geocoding, setGeocoding] = useState(false);
     const [pendingCoords, setPendingCoords] = useState(initialLocation || ISTANBUL);
-    const geocodeTimer = useRef<any>(null);
+    const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);

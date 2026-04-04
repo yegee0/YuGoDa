@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { User } from 'firebase/auth';
 import { api } from '@/lib/api';
+import type { Address } from '@/types';
 
 export interface UserProfile {
   uid: string;
@@ -16,7 +17,7 @@ export interface UserProfile {
   mobileNumber?: string;
   notificationsEnabled: boolean;
   preferredLanguage: string;
-  addresses: any[];
+  addresses: Address[];
 }
 
 export interface AuthSlice {

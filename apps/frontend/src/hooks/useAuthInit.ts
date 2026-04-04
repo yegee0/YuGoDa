@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { authCustomer, authPartner, authAdmin } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,7 @@ export function useAuthInit() {
       if (isReadyCustomer && isReadyPartner && isReadyAdmin) setIsAuthReady(true);
     };
 
-    const handleAuth = async (currentUser: any, role: 'customer' | 'restaurant' | 'admin') => {
+    const handleAuth = async (currentUser: User, role: 'customer' | 'restaurant' | 'admin') => {
       if (currentUser) {
         setUser(currentUser);
         // Varsayılan profil ayarla (API yanıtı gelene kadar)
@@ -41,7 +41,7 @@ export function useAuthInit() {
           addresses: [],
           notificationsEnabled: true,
           preferredLanguage: 'en'
-        } as any);
+        });
 
         // Backend'den profil bilgilerini al
         try {
