@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import type { Notification } from '@/types';
 
 export interface Filters {
   sortBy: 'lowest' | 'highest' | 'nearest' | 'fastest';
@@ -15,8 +16,8 @@ export interface UiSlice {
   filters: Filters;
   setFilters: (filters: Partial<Filters>) => void;
   resetFilters: () => void;
-  notifications: any[];
-  setNotifications: (notifications: any[]) => void;
+  notifications: Notification[];
+  setNotifications: (notifications: Notification[]) => void;
 }
 
 const initialFilters: Filters = {

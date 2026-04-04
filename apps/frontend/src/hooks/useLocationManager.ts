@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { Bag, MapSuggestion } from '@/types';
 
 interface Coords {
   lat: number;
@@ -13,11 +14,11 @@ export function useLocationManager() {
 
   // Map search state
   const [mapSearch, setMapSearch] = useState('');
-  const [mapSuggestions, setMapSuggestions] = useState<any[]>([]);
+  const [mapSuggestions, setMapSuggestions] = useState<MapSuggestion[]>([]);
   const [showMapSuggestions, setShowMapSuggestions] = useState(false);
   const [mapSearchLoading, setMapSearchLoading] = useState(false);
   const mapSearchRef = useRef<HTMLDivElement>(null);
-  const mapSearchTimer = useRef<any>(null);
+  const mapSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-detect location on mount
   useEffect(() => {
@@ -69,7 +70,7 @@ export function useLocationManager() {
   };
 
   // Debounced map search: query Nominatim + local bags
-  const searchMap = (query: string, bags: any[]) => {
+  const searchMap = (query: string, bags: Bag[]) => {
     setMapSearch(query);
 
     if (!query.trim()) {
@@ -78,16 +79,16 @@ export function useLocationManager() {
       return;
     }
 
-    clearTimeout(mapSearchTimer.current);
+    if (mapSearchTimer.current) clearTimeout(mapSearchTimer.current);
     mapSearchTimer.current = setTimeout(async () => {
       setMapSearchLoading(true);
       const q = query.toLowerCase();
-      const results: any[] = [];
+      const results: MapSuggestion[] = [];
 
       // Local restaurant matches
-      bags.forEach(bag => {
-        if (bag.restaurantName.toLowerCase().includes(q) || (bag.category || '').toLowerCase().includes(q)) {
-          results.push({ type: 'restaurant', label: bag.restaurantName, sublabel: `${bag.category} • ${bag.distance || ''}`, coords: bag.coordinates, bag });
+      bags.forEach((bag: Bag) => {
+        if ((bag.restaurantName || '').toLowerCase().includes(q) || (bag.category || '').toLowerCase().includes(q)) {
+          results.push({ type: 'restaurant', label: bag.restaurantName || '', sublabel: `${bag.category || ''} • ${bag.distance || ''}`, coords: bag.coordinates || { lat: 0, lng: 0 }, bag });
         }
       });
 
@@ -98,8 +99,8 @@ export function useLocationManager() {
           { headers: { 'Accept-Language': 'tr,en' } }
         );
         const data = await res.json();
-        data.forEach((item: any) => {
-          const name = item.display_name?.split(',').slice(0, 2).join(', ') || item.display_name;
+        data.forEach((item: { display_name?: string; type?: string; lat: string; lon: string }) => {
+          const name = item.display_name?.split(',').slice(0, 2).join(', ') || item.display_name || '';
           results.push({
             type: 'place',
             label: name,

@@ -19,7 +19,7 @@ export default function CustomerLayout() {
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [showTicketModal, setShowTicketModal] = useState(false);
   
-  const [chatMessages, setChatMessages] = useState<any[]>([{ role: 'model', text: 'Hi! I am EcoBot. How can I help you save food today?' }]);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model'; text: string }[]>([{ role: 'model', text: 'Hi! I am EcoBot. How can I help you save food today?' }]);
   const [chatInput, setChatInput] = useState('');
   const [isBotLoading, setIsBotLoading] = useState(false);
   const [isEscalated, setIsEscalated] = useState(false);

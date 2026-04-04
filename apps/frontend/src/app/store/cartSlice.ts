@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import type { Order } from '@/types';
 
 export interface CartItem {
   id: string;
@@ -16,8 +17,8 @@ export interface CartSlice {
   removeFromCart: (id: string) => void;
   updateCartQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  orders: any[];
-  setOrders: (orders: any[]) => void;
+  orders: Order[];
+  setOrders: (orders: Order[]) => void;
 }
 
 export const createCartSlice: StateCreator<CartSlice> = (set) => ({
