@@ -73,13 +73,13 @@ export const api = {
   get: <T = any>(endpoint: string) =>
     apiFetch<T>(endpoint, { method: 'GET' }),
 
-  post: <T = any>(endpoint: string, body?: any) =>
+  post: <T = any>(endpoint: string, body?: unknown) =>
     apiFetch<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  put: <T = any>(endpoint: string, body?: any) =>
+  put: <T = any>(endpoint: string, body?: unknown) =>
     apiFetch<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,

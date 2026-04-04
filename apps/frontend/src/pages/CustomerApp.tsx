@@ -39,11 +39,12 @@ import { useLocationManager } from '@/hooks/useLocationManager';
 import FilterPanel from '@/components/FilterPanel';
 import CartDrawer from '@/components/CartDrawer';
 import { api } from '@/lib/api';
+import type { Bag, MapSuggestion, CartItem } from '@/types';
 
-const GOOGLE_MAPS_API_KEY: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ?? '';
-const GOOGLE_MAPS_MAP_ID: string = (import.meta as any).env?.VITE_GOOGLE_MAPS_MAP_ID ?? '';
+const GOOGLE_MAPS_API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
+const GOOGLE_MAPS_MAP_ID: string = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ?? '';
 
-function BagCard({ bag, onClick }: any) {
+function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
   const countdown = useCountdown(bag.countdown || '');
   const { favorites, toggleFavorite, addToCart } = useStore();
   const isFavorite = favorites.includes(bag.id);
@@ -159,17 +160,17 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'discover' | 'browse' | 'favorites'>(initialTab);
-  const [selectedBag, setSelectedBag] = useState<any | null>(null);
+  const [selectedBag, setSelectedBag] = useState<Bag | null>(null);
   const [checkoutStep, setCheckoutStep] = useState<'reserve' | 'pay' | 'tracking' | 'success' | 'review'>('reserve');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [mapInfoBag, setMapInfoBag] = useState<any | null>(null);
+  const [mapInfoBag, setMapInfoBag] = useState<Bag | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [checkoutData, setCheckoutData] = useState<any>(null);
-  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [checkoutData, setCheckoutData] = useState<{ items: CartItem[]; tip: number; bookingFee: number; tax: number; total: number; deliveryType: string; paymentMethod: string; leaveAtDoor: boolean } | null>(null);
+  const [searchSuggestions, setSearchSuggestions] = useState<{ type: string; label: string; sublabel: string; bag?: Bag }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -194,15 +195,15 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     }
     const q = searchQuery.toLowerCase();
     const seen = new Set<string>();
-    const suggestions: any[] = [];
+    const suggestions: { type: string; label: string; sublabel: string; bag?: Bag }[] = [];
     bags.forEach(bag => {
-      if (bag.restaurantName.toLowerCase().includes(q) && !seen.has(bag.restaurantName)) {
-        seen.add(bag.restaurantName);
-        suggestions.push({ type: 'restaurant', label: bag.restaurantName, sublabel: bag.category, bag });
+      if ((bag.restaurantName || '').toLowerCase().includes(q) && !seen.has(bag.restaurantName || '')) {
+        seen.add(bag.restaurantName || '');
+        suggestions.push({ type: 'restaurant', label: bag.restaurantName || '', sublabel: bag.category || '', bag });
       }
     });
-    const categories = [...new Set(bags.map((b: any) => b.category))].filter((c: any) => c.toLowerCase().includes(q));
-    categories.forEach((c: any) => {
+    const categories = [...new Set(bags.map((b: Bag) => b.category))].filter((c): c is string => typeof c === 'string' && c.toLowerCase().includes(q));
+    categories.forEach((c: string) => {
       if (!seen.has(c)) {
         seen.add(c);
         suggestions.push({ type: 'category', label: c, sublabel: 'Category' });
@@ -227,7 +228,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     setActiveTab(initialTab);
   }, [initialTab]);
 
-  const handleCheckout = async (data: any) => {
+  const handleCheckout = async (data: { items: CartItem[]; tip: number; bookingFee: number; tax: number; total: number; deliveryType: string; paymentMethod: string; leaveAtDoor: boolean }) => {
     setCheckoutData(data);
     setIsCartOpen(false);
     setCheckoutStep('pay');
@@ -241,20 +242,20 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     if (!user || !checkoutData) return;
 
     try {
-      const restaurantGroups = checkoutData.items.reduce((acc: any, item: any) => {
+      const restaurantGroups = checkoutData.items.reduce((acc: Record<string, CartItem[]>, item: CartItem) => {
         if (!acc[item.restaurantId]) acc[item.restaurantId] = [];
         acc[item.restaurantId].push(item);
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {} as Record<string, CartItem[]>);
 
       let createdOrderId = '';
-      for (const [restaurantId, items] of Object.entries(restaurantGroups) as any) {
+      for (const [restaurantId, groupItems] of Object.entries(restaurantGroups) as [string, CartItem[]][]) {
         const res = await api.post('/orders', {
           restaurantId,
-          bagId: (items as any[])[0].id,
-          restaurantName: (items as any[])[0].restaurantName,
-          items,
-          price: (items as any[]).reduce((s: number, i: any) => s + i.price * i.quantity, 0),
+          bagId: groupItems[0].id,
+          restaurantName: groupItems[0].restaurantName,
+          items: groupItems,
+          price: groupItems.reduce((s: number, i: CartItem) => s + i.price * i.quantity, 0),
           tipAmount: checkoutData.tip,
           bookingFee: checkoutData.bookingFee,
           tax: checkoutData.tax,

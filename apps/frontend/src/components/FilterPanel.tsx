@@ -174,7 +174,7 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                   {SORT_OPTIONS.map((opt) => (
                     <button
                       key={opt.id}
-                      onClick={() => setFilters({ sortBy: opt.id as any })}
+                      onClick={() => setFilters({ sortBy: opt.id as 'lowest' | 'highest' | 'nearest' | 'fastest' })}
                       className={`flex items-center gap-2 p-3 rounded-2xl text-sm font-bold transition-all border ${filters.sortBy === opt.id
                         ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-lg shadow-[#1A4D2E]/20'
                         : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-100 dark:border-gray-700 hover:border-[#1A4D2E]/40'
@@ -299,8 +299,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                   {[3, 3.5, 4, 4.5, 5].map((rating) => (
                     <button
                       key={rating}
-                      onClick={() => setFilters({ minRating: (filters as any).minRating === rating ? 0 : rating })}
-                      className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold border transition-all ${(filters as any).minRating === rating
+                      onClick={() => setFilters({ minRating: filters.minRating === rating ? 0 : rating })}
+                      className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold border transition-all ${filters.minRating === rating
                         ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20'
                         : 'bg-gray-50 dark:bg-gray-800/50 border-transparent text-gray-600 dark:text-gray-400 hover:border-amber-200'
                         }`}
@@ -323,10 +323,10 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                     <button
                       key={opt.id}
                       onClick={() => {
-                        const newTime = (filters as any).pickupTime === opt.id ? null : opt.id as 'today' | 'morning' | 'evening';
+                        const newTime = filters.pickupTime === opt.id ? null : opt.id as 'today' | 'morning' | 'evening';
                         setFilters({ pickupTime: newTime });
                       }}
-                      className={`flex flex-col items-center p-3 rounded-2xl text-xs font-bold border transition-all ${(filters as any).pickupTime === opt.id
+                      className={`flex flex-col items-center p-3 rounded-2xl text-xs font-bold border transition-all ${filters.pickupTime === opt.id
                         ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-lg'
                         : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#1A4D2E]/30'
                         }`}

@@ -128,9 +128,10 @@ export default function AdminAuth() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(authAdmin, email, password);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
       setError(
-        err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
+        message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
         || 'Authentication failed.'
       );
     } finally {
@@ -145,9 +146,10 @@ export default function AdminAuth() {
     try {
       await sendPasswordResetEmail(authAdmin, email);
       setMsg('Reset link sent — check your inbox.');
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
       setError(
-        err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
+        message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
         || 'Failed to send reset email.'
       );
     } finally {

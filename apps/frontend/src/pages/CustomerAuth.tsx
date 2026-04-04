@@ -179,8 +179,9 @@ export default function Auth() {
           console.error('Backend registration failed:', apiErr);
         }
       }
-    } catch (err: any) {
-      setError(err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -193,18 +194,19 @@ export default function Auth() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(authCustomer, provider);
-    } catch (err: any) {
-      const code = err?.code || '';
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code || '';
       // Popup blocked or closed — fall back to redirect flow
       if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
         try {
           await signInWithRedirect(authCustomer, provider);
           return; // page will reload after redirect
-        } catch (redirectErr: any) {
-          setError(redirectErr.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Google sign-in failed.');
+        } catch (redirectErr: unknown) {
+          const redirectMessage = redirectErr instanceof Error ? redirectErr.message : '';
+          setError(redirectMessage?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Google sign-in failed.');
         }
       } else {
-        const msg = err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim();
+        const msg = err instanceof Error ? err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() : '';
         setError(
           code === 'auth/unauthorized-domain'
             ? 'This domain is not authorised for Google sign-in. Please add it in Firebase Console → Authentication → Authorised Domains.'
@@ -226,8 +228,9 @@ export default function Auth() {
     try {
       await sendPasswordResetEmail(authCustomer, email);
       setMsg('Reset link sent — check your inbox.');
-    } catch (err: any) {
-      setError(err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Failed to send reset email.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Failed to send reset email.');
     } finally {
       setLoading(false);
     }

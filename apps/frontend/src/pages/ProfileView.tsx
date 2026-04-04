@@ -10,6 +10,7 @@ import {
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import type { Address, Order, CartItem } from '@/types';
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
@@ -33,7 +34,7 @@ export default function ProfileView() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState(100);
   const [editingAddrIndex, setEditingAddrIndex] = useState<number | null>(null);
-  const [editingAddr, setEditingAddr] = useState<any>(null);
+  const [editingAddr, setEditingAddr] = useState<Address | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -91,8 +92,8 @@ export default function ProfileView() {
 
   const handleSaveEditedAddress = () => {
     if (!userProfile || editingAddrIndex === null) return;
-    const updated = userProfile.addresses.map((a: any, i: number) =>
-      i === editingAddrIndex ? editingAddr : a
+    const updated = userProfile.addresses.map((a: Address, i: number) =>
+      i === editingAddrIndex ? editingAddr! : a
     );
     setUserProfile({ ...userProfile, addresses: updated });
     try { api.put('/users/me', { addresses: updated }).catch(() => {}); } catch {}
@@ -129,7 +130,7 @@ export default function ProfileView() {
   useEffect(() => {
     if (tab !== 'orders' || orders.length > 0) return;
     setOrdersLoading(true);
-    api.get('/orders/my').then((data: any) => {
+    api.get('/orders/my').then((data: { orders?: Order[] }) => {
       setOrders(data.orders || []);
     }).catch(() => {
       // keep empty, show empty state
@@ -243,7 +244,7 @@ export default function ProfileView() {
                         <input
                           type={type}
                           disabled={!isEditing}
-                          value={(formData as any)[key]}
+                          value={formData[key as keyof typeof formData]}
                           onChange={e => setFormData(f => ({ ...f, [key]: e.target.value }))}
                           placeholder={placeholder}
                           className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] disabled:opacity-50 transition-colors"
@@ -304,7 +305,7 @@ export default function ProfileView() {
                     <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Confirm a location on the map to save one</p>
                   </div>
                 ) : (
-                  userProfile.addresses.map((addr: any, i: number) => {
+                  userProfile.addresses.map((addr: Address, i: number) => {
                     const tag = addr.tag || 'other';
                     const label = addr.addressLabel || addr.label || 'Saved Address';
                     const details = [addr.apartment, addr.floor && `Floor ${addr.floor}`, addr.unit && `Unit ${addr.unit}`]
@@ -397,7 +398,7 @@ export default function ProfileView() {
                                       <input
                                         type="text"
                                         value={editingAddr[key] || ''}
-                                        onChange={e => setEditingAddr((a: any) => ({ ...a, [key]: e.target.value }))}
+                                        onChange={e => setEditingAddr(a => a ? { ...a, [key]: e.target.value } : a)}
                                         placeholder={placeholder}
                                         className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] transition-colors"
                                       />
@@ -409,7 +410,7 @@ export default function ProfileView() {
                                   <textarea
                                     rows={2}
                                     value={editingAddr.deliveryNote || ''}
-                                    onChange={e => setEditingAddr((a: any) => ({ ...a, deliveryNote: e.target.value }))}
+                                    onChange={e => setEditingAddr(a => a ? { ...a, deliveryNote: e.target.value } : a)}
                                     placeholder="Door code, directions…"
                                     className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] transition-colors resize-none"
                                   />
@@ -420,7 +421,7 @@ export default function ProfileView() {
                                     <button
                                       key={t}
                                       type="button"
-                                      onClick={() => setEditingAddr((a: any) => ({ ...a, tag: t }))}
+                                      onClick={() => setEditingAddr(a => a ? { ...a, tag: t } : a)}
                                       className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
                                         editingAddr.tag === t
                                           ? 'bg-[#1A4D2E] border-[#1A4D2E] text-white'
@@ -463,7 +464,7 @@ export default function ProfileView() {
                     <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Your order history will appear here</p>
                   </div>
                 ) : (
-                  orders.map((order: any, i: number) => {
+                  orders.map((order: Order, i: number) => {
                     const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
                       pending:   { label: 'Pending',    color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',   icon: <Clock className="w-3.5 h-3.5" /> },
                       confirmed: { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',     icon: <Package className="w-3.5 h-3.5" /> },
@@ -508,7 +509,7 @@ export default function ProfileView() {
                           {/* Items */}
                           {order.items && order.items.length > 0 && (
                             <div className="space-y-1 mb-3">
-                              {order.items.slice(0, 3).map((item: any, j: number) => (
+                              {order.items?.slice(0, 3).map((item: CartItem, j: number) => (
                                 <div key={j} className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                                   <span className="truncate">{item.quantity}× {item.name}</span>
                                   <span className="font-semibold ml-2 flex-shrink-0">₺{(item.price * item.quantity).toFixed(2)}</span>

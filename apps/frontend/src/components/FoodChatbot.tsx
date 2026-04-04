@@ -20,7 +20,7 @@ export default function FoodChatbot() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<any>(null);
+  const chatRef = useRef<ReturnType<typeof genAI.chats.create> | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
