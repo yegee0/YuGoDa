@@ -3,6 +3,7 @@ package yugoda.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Notification;
 import yugoda.model.Order;
+import yugoda.model.Store;
 import yugoda.model.Transaction;
 import yugoda.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final BagRepository bagRepository;
+    private final StoreRepository storeRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final ObjectMapper objectMapper;
@@ -66,14 +68,25 @@ public class OrderService {
             bagRepository.save(bag);
         });
 
-        // Create transaction record
+        // Create transaction record with commission split
+        double baseAmount = total > 0 ? total : price;
+        double rate = 15.0;
+        Store store = storeRepository.findById(restaurantId).orElse(null);
+        if (store != null && store.getCommissionRate() != null) {
+            rate = store.getCommissionRate();
+        }
+        double commissionAmt = baseAmount * (rate / 100.0);
+
         Transaction tx = new Transaction();
         tx.setId(UUID.randomUUID().toString());
         tx.setOrderId(order.getId());
         tx.setUserId(uid);
         tx.setRestaurantId(restaurantId);
-        tx.setAmount(total > 0 ? total : price);
+        tx.setAmount(baseAmount);
         tx.setTip(tipAmount);
+        tx.setCommissionRate(rate);
+        tx.setCommissionAmount(commissionAmt);
+        tx.setRestaurantAmount(baseAmount - commissionAmt);
         tx.setStatus("pending");
         tx.setPaymentMethod(order.getPaymentMethod());
         transactionRepository.save(tx);

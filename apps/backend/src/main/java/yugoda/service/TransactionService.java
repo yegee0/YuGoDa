@@ -38,11 +38,18 @@ public class TransactionService {
                 .filter(t -> "completed".equals(t.getStatus()))
                 .mapToDouble(t -> t.getAmount() != null ? t.getAmount() : 0).sum();
 
+        double totalCommission = allForStats.stream()
+                .mapToDouble(t -> t.getCommissionAmount() != null ? t.getCommissionAmount() : 0).sum();
+        double totalRestaurantRevenue = allForStats.stream()
+                .mapToDouble(t -> t.getRestaurantAmount() != null ? t.getRestaurantAmount() : 0).sum();
+
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("totalCount", totalCount);
         stats.put("totalRevenue", totalRevenue);
         stats.put("totalTips", totalTips);
         stats.put("completedRevenue", completedRevenue);
+        stats.put("totalCommission", totalCommission);
+        stats.put("totalRestaurantRevenue", totalRestaurantRevenue);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("transactions", transactions);

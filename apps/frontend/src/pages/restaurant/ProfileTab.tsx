@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Store, MapPin, CalendarDays, Edit3, ShoppingBag,
+  Store, MapPin, CalendarDays, Edit3, ShoppingBag, Landmark,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import type { StoreProfile, OperatingHours } from '@/types';
+import type { StoreProfile, OperatingHours, BankingDetails } from '@/types';
 
 const DIETARY_TAGS = ['Vegan', 'Vegetarian', 'Halal', 'Gluten-Free', 'Organic', 'Dairy-Free'];
 
@@ -219,6 +219,49 @@ export default function ProfileTab({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Banking Details */}
+      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Landmark className="w-4 h-4 text-[#1A4D2E]" />
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm">Banking Details</h4>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { key: 'iban' as const, label: 'IBAN', placeholder: 'TR00 0000 0000 0000 0000 0000 00' },
+            { key: 'accountHolder' as const, label: 'Account Holder', placeholder: 'Full name' },
+            { key: 'bankName' as const, label: 'Bank Name', placeholder: 'Bank name' },
+            { key: 'branchCode' as const, label: 'Branch Code', placeholder: 'Branch code' },
+            { key: 'taxId' as const, label: 'Tax ID', placeholder: 'Tax identification number' },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <label className={labelCls}>{label}</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={(editedProfile?.bankingDetails as BankingDetails)?.[key] || ''}
+                  onChange={e => {
+                    if (!editedProfile) return;
+                    setEditedProfile({
+                      ...editedProfile,
+                      bankingDetails: {
+                        ...(editedProfile.bankingDetails || {}),
+                        [key]: e.target.value,
+                      },
+                    });
+                  }}
+                  className={inputCls}
+                  placeholder={placeholder}
+                />
+              ) : (
+                <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300">
+                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || 'Not set'}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </motion.div>

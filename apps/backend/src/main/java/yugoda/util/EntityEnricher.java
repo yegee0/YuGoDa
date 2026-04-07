@@ -62,6 +62,7 @@ public class EntityEnricher {
         Map<String, Object> map = objectMapper.convertValue(store, Map.class);
         parseJsonField(map, "location", store.getLocation(), null);
         parseJsonField(map, "operatingHours", store.getOperatingHours(), null);
+        parseJsonField(map, "bankingDetails", store.getBankingDetails(), null);
         toBooleanField(map, "isApproved", store.getIsApproved());
         return map;
     }

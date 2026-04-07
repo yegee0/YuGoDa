@@ -122,7 +122,9 @@ export default function StorePanel() {
     return { day, revenue: dayOrders.reduce((acc, o) => acc + (o.price || 0), 0), orders: dayOrders.length };
   });
 
-  const todaySales = orders.filter(o => o.status === 'delivered').reduce((acc, o) => acc + (o.price || 0), 0);
+  const commissionRate = storeProfile?.commissionRate ?? 15;
+  const todaySalesGross = orders.filter(o => o.status === 'delivered').reduce((acc, o) => acc + (o.price || 0), 0);
+  const todaySales = todaySalesGross * (1 - commissionRate / 100);
   const activeOrders = orders.filter(o => (['pending', 'preparing', 'ready'] as OrderStatus[]).includes(o.status)).length;
   const avgRating = reviews.length > 0 ? (reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—';
 
@@ -197,6 +199,7 @@ export default function StorePanel() {
               todaySales={todaySales}
               activeOrders={activeOrders}
               avgRating={avgRating}
+              commissionRate={commissionRate}
             />
           )}
 

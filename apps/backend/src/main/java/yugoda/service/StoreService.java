@@ -98,9 +98,11 @@ public class StoreService {
         if (body.containsKey("phone")) store.setPhone((String) body.get("phone"));
         if (body.containsKey("email")) store.setEmail((String) body.get("email"));
         if (body.containsKey("logo")) store.setLogo((String) body.get("logo"));
+        if (body.containsKey("commissionRate")) store.setCommissionRate(((Number) body.get("commissionRate")).doubleValue());
         try {
             if (body.containsKey("location")) store.setLocation(objectMapper.writeValueAsString(body.get("location")));
             if (body.containsKey("operatingHours")) store.setOperatingHours(objectMapper.writeValueAsString(body.get("operatingHours")));
+            if (body.containsKey("bankingDetails")) store.setBankingDetails(objectMapper.writeValueAsString(body.get("bankingDetails")));
         } catch (Exception ignored) {}
 
         return storeRepository.save(store);

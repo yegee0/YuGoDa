@@ -38,6 +38,7 @@ export const DAY_NAMES_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 // ── Business Constants ────────────────────────────────────────
 export const DELIVERY_FEE = 15;
 export const ORDER_POLL_INTERVAL = 30_000;
+export const DEFAULT_COMMISSION_RATE = 15;
 
 // ── Restaurant Signup ─────────────────────────────────────────
 export const BUSINESS_TYPES = ['Restaurant', 'Bakery & Patisserie', 'Grocery Store', 'Cafe'] as const;

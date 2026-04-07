@@ -130,7 +130,7 @@ export default function ProfileView() {
   useEffect(() => {
     if (tab !== 'orders' || orders.length > 0) return;
     setOrdersLoading(true);
-    api.get('/orders/my').then((data: { orders?: Order[] }) => {
+    api.get('/orders').then((data: { orders?: Order[] }) => {
       setOrders(data.orders || []);
     }).catch(() => {
       // keep empty, show empty state
