@@ -57,12 +57,18 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
     >
       <div className="relative h-48 w-full overflow-hidden">
         <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
-          <img
-            src={bag.image || bag.storeLogo}
-            alt={bag.restaurantName}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            referrerPolicy="no-referrer"
-          />
+          {bag.image || bag.storeLogo ? (
+            <img
+              src={bag.image || bag.storeLogo}
+              alt={bag.restaurantName}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#1A4D2E]/20 to-[#1A4D2E]/5 flex items-center justify-center">
+              <ShoppingBag className="w-12 h-12 text-[#1A4D2E]/30" />
+            </div>
+          )}
         </Link>
 
         {bag.isCurrentlyOpen === false && (

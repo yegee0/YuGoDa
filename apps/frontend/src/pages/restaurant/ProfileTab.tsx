@@ -36,7 +36,10 @@ export default function ProfileTab({
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   return (
-    <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-2xl space-y-5">
+    <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-4xl space-y-5">
+
+      {/* Store identity + Banking side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
       {/* Store identity */}
       <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
@@ -198,6 +201,51 @@ export default function ProfileTab({
         </div>
       </div>
 
+      {/* Banking Details */}
+      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Landmark className="w-4 h-4 text-[#1A4D2E]" />
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm">Banking Details</h4>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {[
+            { key: 'iban' as const, label: 'IBAN', placeholder: 'TR00 0000 0000 0000 0000 0000 00' },
+            { key: 'accountHolder' as const, label: 'Account Holder', placeholder: 'Full name' },
+            { key: 'bankName' as const, label: 'Bank Name', placeholder: 'Bank name' },
+            { key: 'branchCode' as const, label: 'Branch Code', placeholder: 'Branch code' },
+            { key: 'taxId' as const, label: 'Tax ID', placeholder: 'Tax identification number' },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <label className={labelCls}>{label}</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={(editedProfile?.bankingDetails as BankingDetails)?.[key] || ''}
+                  onChange={e => {
+                    if (!editedProfile) return;
+                    setEditedProfile({
+                      ...editedProfile,
+                      bankingDetails: {
+                        ...(editedProfile.bankingDetails || {}),
+                        [key]: e.target.value,
+                      },
+                    });
+                  }}
+                  className={inputCls}
+                  placeholder={placeholder}
+                />
+              ) : (
+                <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300">
+                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || 'Not set'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      </div>{/* end grid */}
+
       {/* Schedule */}
       <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
@@ -243,48 +291,6 @@ export default function ProfileTab({
         </div>
       </div>
 
-      {/* Banking Details */}
-      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
-        <div className="flex items-center gap-2 mb-5">
-          <Landmark className="w-4 h-4 text-[#1A4D2E]" />
-          <h4 className="font-bold text-gray-900 dark:text-white text-sm">Banking Details</h4>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { key: 'iban' as const, label: 'IBAN', placeholder: 'TR00 0000 0000 0000 0000 0000 00' },
-            { key: 'accountHolder' as const, label: 'Account Holder', placeholder: 'Full name' },
-            { key: 'bankName' as const, label: 'Bank Name', placeholder: 'Bank name' },
-            { key: 'branchCode' as const, label: 'Branch Code', placeholder: 'Branch code' },
-            { key: 'taxId' as const, label: 'Tax ID', placeholder: 'Tax identification number' },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <label className={labelCls}>{label}</label>
-              {isEditingProfile ? (
-                <input
-                  type="text"
-                  value={(editedProfile?.bankingDetails as BankingDetails)?.[key] || ''}
-                  onChange={e => {
-                    if (!editedProfile) return;
-                    setEditedProfile({
-                      ...editedProfile,
-                      bankingDetails: {
-                        ...(editedProfile.bankingDetails || {}),
-                        [key]: e.target.value,
-                      },
-                    });
-                  }}
-                  className={inputCls}
-                  placeholder={placeholder}
-                />
-              ) : (
-                <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300">
-                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || 'Not set'}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
       {/* Location Picker Modal */}
       {showLocationPicker && (
         <div className="fixed inset-0 z-[120]">
