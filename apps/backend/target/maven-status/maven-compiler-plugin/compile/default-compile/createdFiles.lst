@@ -1,0 +1,7 @@
+yugoda/repository/NotificationRepository.class
+yugoda/model/Review.class
+yugoda/model/Bag.class
+yugoda/config/FirebaseConfig.class
+yugoda/model/Notification.class
+yugoda/model/Dispute.class
+yugoda/repository/BagRepository.class

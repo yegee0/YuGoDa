@@ -5,6 +5,7 @@ import { MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '@/lib/api';
 import type { Transaction, StoreProfile, Dispute, ChartDataPoint } from '@/types';
+import { DAY_NAMES_SHORT } from '@/lib/constants';
 
 import DashboardTab from './DashboardTab';
 import CustomersTab from './CustomersTab';
@@ -94,7 +95,7 @@ export default function AdminPanel() {
 
   const headerInfo = pageTitles[activeTab] || { title: 'Admin Panel', subtitle: 'Manage your platform.' };
 
-  const revenueData: ChartDataPoint[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+  const revenueData: ChartDataPoint[] = DAY_NAMES_SHORT.map((day, i) => {
     const dayTxs = transactions.filter(tx => {
       if (!tx.createdAt) return false;
       const d = new Date(tx.createdAt);
