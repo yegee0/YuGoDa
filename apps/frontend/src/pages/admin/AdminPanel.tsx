@@ -135,7 +135,7 @@ export default function AdminPanel() {
           )}
 
           {activeTab === 'stores' && (
-            <StoresTab stores={stores} onApproveStore={handleApproveStore} />
+            <StoresTab stores={stores} onApproveStore={handleApproveStore} onUpdateStore={(id, updates) => setStores(stores.map(s => s.id === id ? { ...s, ...updates } : s))} />
           )}
 
           {activeTab === 'transactions' && (

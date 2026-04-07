@@ -1,14 +1,26 @@
-import React from 'react';
-import { Store, Clock, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Store, Clock, CheckCircle, XCircle, Percent } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { StoreProfile } from '@/types';
+import { api } from '@/lib/api';
 
 export interface StoresTabProps {
   stores: StoreProfile[];
   onApproveStore: (storeId: string, approved: boolean) => void;
+  onUpdateStore?: (storeId: string, updates: Partial<StoreProfile>) => void;
 }
 
-export default function StoresTab({ stores, onApproveStore }: StoresTabProps) {
+export default function StoresTab({ stores, onApproveStore, onUpdateStore }: StoresTabProps) {
+  const [editingCommission, setEditingCommission] = useState<string | null>(null);
+  const [commissionInput, setCommissionInput] = useState('');
+
+  const handleSaveCommission = async (storeId: string) => {
+    const rate = parseFloat(commissionInput);
+    if (isNaN(rate) || rate < 0 || rate > 100) return;
+    await api.put(`/stores/${storeId}`, { commissionRate: rate });
+    onUpdateStore?.(storeId, { commissionRate: rate });
+    setEditingCommission(null);
+  };
   return (
     <motion.div key="stores" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -73,7 +85,45 @@ export default function StoresTab({ stores, onApproveStore }: StoresTabProps) {
                     'bg-amber-100 text-amber-600'
                   }`}>{store.status || 'pending'}</span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{store.description || 'No description provided.'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{store.description || 'No description provided.'}</p>
+
+                {/* Commission rate */}
+                <div className="flex items-center gap-2 mb-3 p-2 rounded-xl bg-white dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                  <Percent className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                  {editingCommission === store.id ? (
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={commissionInput}
+                        onChange={e => setCommissionInput(e.target.value)}
+                        className="w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white outline-none"
+                        autoFocus
+                      />
+                      <span className="text-xs text-gray-400">%</span>
+                      <button onClick={() => handleSaveCommission(store.id)} className="text-xs font-bold text-[#1A4D2E] hover:underline ml-auto">Save</button>
+                      <button onClick={() => setEditingCommission(null)} className="text-xs font-bold text-gray-400 hover:underline">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 flex-1">
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Commission: {store.commissionRate ?? 15}%</span>
+                      <button
+                        onClick={() => { setEditingCommission(store.id); setCommissionInput(String(store.commissionRate ?? 15)); }}
+                        className="text-xs font-bold text-[#1A4D2E] hover:underline ml-auto"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Banking info */}
+                {store.bankingDetails?.iban && (
+                  <p className="text-[10px] text-gray-400 mb-3 truncate">IBAN: {store.bankingDetails.iban}</p>
+                )}
+
                 {(store.status === 'pending' || !store.status) && (
                   <div className="flex gap-2">
                     <button

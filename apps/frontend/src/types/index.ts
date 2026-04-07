@@ -81,7 +81,17 @@ export interface StoreProfile {
   status?: 'pending' | 'active' | 'rejected';
   rating?: number;
   totalOrders?: number;
+  commissionRate?: number;
+  bankingDetails?: BankingDetails;
   createdAt?: string;
+}
+
+export interface BankingDetails {
+  iban?: string;
+  accountHolder?: string;
+  bankName?: string;
+  branchCode?: string;
+  taxId?: string;
 }
 
 export interface OperatingHours {
@@ -152,8 +162,12 @@ export interface Transaction {
   id: string;
   orderId?: string;
   userId?: string;
+  restaurantId?: string;
   amount: number;
   tip?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  restaurantAmount?: number;
   status?: string;
   paymentMethod?: string;
   createdAt?: string;

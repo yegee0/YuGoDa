@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { Transaction, ChartDataPoint } from '@/types';
+import { TL } from '@/lib/formatters';
 
 export interface TransactionsTabProps {
   transactions: Transaction[];
@@ -58,6 +59,8 @@ export default function TransactionsTab({
               <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
                 <th className="px-6 py-4">Transaction ID</th>
                 <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Commission</th>
+                <th className="px-6 py-4">Restaurant Net</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Date</th>
               </tr>
@@ -66,7 +69,9 @@ export default function TransactionsTab({
               {transactions.map(tx => (
                 <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                   <td className="px-6 py-4 font-mono text-xs text-gray-400">#{tx.id.slice(0, 8)}</td>
-                  <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">${tx.amount?.toFixed(2) || '0.00'}</td>
+                  <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">{TL(tx.amount || 0)}</td>
+                  <td className="px-6 py-4 text-sm text-orange-600 font-bold">{TL(tx.commissionAmount || 0)}</td>
+                  <td className="px-6 py-4 text-sm text-emerald-600 font-bold">{TL(tx.restaurantAmount || 0)}</td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-bold uppercase">
                       {tx.status || 'completed'}

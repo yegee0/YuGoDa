@@ -31,6 +31,10 @@ public class Transaction {
 
     private String paymentMethod;
 
+    private Double commissionRate = 0.0;
+    private Double commissionAmount = 0.0;
+    private Double restaurantAmount = 0.0;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }
