@@ -338,10 +338,10 @@ export default function LandingPage() {
       <section style={{ backgroundColor: C.tealDark }} className="py-14">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: 250,   suffix: '+', label: 'Bags saved' },
-            { value: 50,    suffix: '+', label: 'Partner stores' },
+            { value: 50,    suffix: '+', label: 'Bags saved' },
+            { value: 12,    suffix: '+', label: 'Partner stores' },
             { value: 60,    suffix: '%', label: 'Avg. discount' },
-            { value: 12,    suffix: 't', label: 'CO₂ avoided' },
+            { value: 2,     suffix: 't',  label: 'CO₂ avoided' },
           ].map(({ value, suffix, label }) => (
             <div key={label}>
               <p className="text-white" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 3.5rem)' }}>
@@ -758,6 +758,22 @@ export default function LandingPage() {
                 q: 'How do I become a partner store?',
                 a: "Click 'Join as a business' above, register, and complete your store profile. Our team will verify your listing within 24 hours and you can start selling bags immediately after.",
               },
+              {
+                q: 'What payment methods do you accept?',
+                a: 'We accept credit and debit cards processed securely via iyzico, as well as YuGoPay wallet balance and cash on delivery for supported stores.',
+              },
+              {
+                q: 'Can I filter by dietary restrictions?',
+                a: 'Yes! Stores tag their bags with dietary labels like vegan, vegetarian, halal, gluten-free, and organic. Use the filters on the Discover page to find bags that match your preferences.',
+              },
+              {
+                q: 'What if something is wrong with my order?',
+                a: 'Contact our support team within 2 hours of pickup. We review every case individually and offer refunds or credits when appropriate.',
+              },
+              {
+                q: 'Do you offer delivery?',
+                a: 'Some partner stores offer delivery in addition to pickup. Check each store page for delivery availability and estimated delivery times.',
+              },
             ].map(item => (
               <FaqItem key={item.q} {...item} />
             ))}
@@ -858,6 +874,10 @@ export default function LandingPage() {
                         if (link === 'Admin') navigate('/admin-auth');
                         else if (link === 'Browse bags') navigate('/discover');
                         else if (link === 'For businesses') scrollTo('for-businesses');
+                        else if (link === 'About us') navigate('/about');
+                        else if (link === 'Privacy policy') navigate('/privacy');
+                        else if (link === 'Terms of service') navigate('/terms');
+                        else if (link === 'How it works') scrollTo('how-it-works');
                       }}
                       className="text-white/50 text-xs font-extrabold hover:text-white/90 transition-colors"
                     >

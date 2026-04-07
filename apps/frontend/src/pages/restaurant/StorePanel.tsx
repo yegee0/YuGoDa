@@ -100,10 +100,10 @@ export default function StorePanel() {
   }, [user]);
 
   // ── Shared handlers ──
-  const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingInfo?: { estimatedPickupTime?: string; trackingNotes?: string }) => {
     try {
-      await api.put(`/orders/${orderId}/status`, { status });
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+      await api.put(`/orders/${orderId}/status`, { status, ...trackingInfo });
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...trackingInfo } : o));
     } catch (err) { console.error(err); }
   };
 

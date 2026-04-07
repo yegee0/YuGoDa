@@ -70,8 +70,10 @@ public class OrderController extends BaseController {
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
         String status = (String) body.get("status");
         if (status == null) return badRequest("status zorunludur.");
+        String estimatedPickupTime = (String) body.get("estimatedPickupTime");
+        String trackingNotes = (String) body.get("trackingNotes");
         try {
-            Order order = orderService.updateStatus(id, user.getUid(), user.getRole(), status);
+            Order order = orderService.updateStatus(id, user.getUid(), user.getRole(), status, estimatedPickupTime, trackingNotes);
             return ResponseEntity.ok(Map.of("success", true, "order", enrichOrder(order)));
         } catch (NoSuchElementException e) {
             return notFound(e.getMessage());

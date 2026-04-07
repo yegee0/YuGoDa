@@ -358,6 +358,18 @@ export default function Auth() {
           </div>
 
           {/* stats row — bottom anchored */}
+          <h2 style={{
+            ...playfair,
+            fontSize: 'clamp(18px, 2vw, 24px)',
+            fontWeight: 600,
+            color: C.cream,
+            margin: 0,
+            marginBottom: '8px',
+            lineHeight: 1.3,
+          }}>
+            Making a Difference,{' '}
+            <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>One Meal at a Time</em>
+          </h2>
           <p style={{
             ...dm,
             fontSize: '11px',

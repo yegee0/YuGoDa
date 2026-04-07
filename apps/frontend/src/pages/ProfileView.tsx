@@ -5,12 +5,13 @@ import {
   User, Mail, Phone, Globe, MapPin, Camera, Save,
   Trash2, CheckCircle2, Wallet, Plus, Home, Briefcase,
   Heart, MoreHorizontal, Bell, X, Building2, Pencil,
-  ShoppingBag, Clock, ChevronRight, Package, CheckCircle, XCircle, Loader2
+  ShoppingBag, Clock, ChevronRight, Package, CheckCircle, XCircle, Loader2, Truck
 } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Address, Order, CartItem } from '@/types';
+import { ReviewModal } from '@/components/shared';
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
@@ -36,6 +37,8 @@ export default function ProfileView() {
   const [editingAddrIndex, setEditingAddrIndex] = useState<number | null>(null);
   const [editingAddr, setEditingAddr] = useState<Address | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [reviewModal, setReviewModal] = useState<{ orderId: string; restaurantId: string; restaurantName: string } | null>(null);
+  const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState({
     firstName:    userProfile?.firstName    || '',
@@ -133,9 +136,9 @@ export default function ProfileView() {
     api.get('/orders').then((data: { orders?: Order[] }) => {
       setOrders(data.orders || []);
     }).catch(() => {
-      // keep empty, show empty state
+      toast.error('Failed to load orders');
     }).finally(() => setOrdersLoading(false));
-  }, [tab]);
+  }, [tab, setOrders]);
 
   const initials =
     userProfile?.displayName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() ||
@@ -460,17 +463,20 @@ export default function ProfileView() {
                 ) : orders.length === 0 ? (
                   <div className="bg-white dark:bg-[#111] rounded-3xl p-12 text-center shadow-sm">
                     <ShoppingBag className="w-10 h-10 text-gray-200 dark:text-white/10 mx-auto mb-3" />
-                    <p className="font-bold text-gray-400 text-sm">No orders yet</p>
-                    <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Your order history will appear here</p>
+                    <p className="font-bold text-gray-400 text-sm">{t('No orders yet')}</p>
+                    <p className="text-xs text-gray-300 dark:text-white/20 mt-1">{t('Your order history will appear here')}</p>
                   </div>
                 ) : (
                   orders.map((order: Order, i: number) => {
                     const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-                      pending:   { label: 'Pending',    color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',   icon: <Clock className="w-3.5 h-3.5" /> },
-                      confirmed: { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',     icon: <Package className="w-3.5 h-3.5" /> },
-                      ready:     { label: 'Ready',      color: 'text-[#1A4D2E] bg-[#1A4D2E]/10',                  icon: <Package className="w-3.5 h-3.5" /> },
-                      completed: { label: 'Completed',  color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20', icon: <CheckCircle className="w-3.5 h-3.5" /> },
-                      cancelled: { label: 'Cancelled',  color: 'text-red-500 bg-red-50 dark:bg-red-900/20',       icon: <XCircle className="w-3.5 h-3.5" /> },
+                      pending:    { label: 'Pending',    color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',       icon: <Clock className="w-3.5 h-3.5" /> },
+                      confirmed:  { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',         icon: <Package className="w-3.5 h-3.5" /> },
+                      preparing:  { label: 'Preparing',  color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20',   icon: <Loader2 className="w-3.5 h-3.5" /> },
+                      ready:      { label: 'Ready',      color: 'text-[#1A4D2E] bg-[#1A4D2E]/10',                      icon: <Package className="w-3.5 h-3.5" /> },
+                      picked_up:  { label: 'Picked Up',  color: 'text-violet-500 bg-violet-50 dark:bg-violet-900/20',   icon: <Package className="w-3.5 h-3.5" /> },
+                      delivering: { label: 'Delivering', color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20',         icon: <Truck className="w-3.5 h-3.5" /> },
+                      delivered:  { label: 'Delivered',  color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20', icon: <CheckCircle className="w-3.5 h-3.5" /> },
+                      cancelled:  { label: 'Cancelled',  color: 'text-red-500 bg-red-50 dark:bg-red-900/20',           icon: <XCircle className="w-3.5 h-3.5" /> },
                     };
                     const sc = statusConfig[order.status] || statusConfig['pending'];
                     const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -521,6 +527,18 @@ export default function ProfileView() {
                             </div>
                           )}
 
+                          {/* Tracking info */}
+                          {(order.estimatedPickupTime || order.trackingNotes) && (
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-3 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-xl">
+                              {order.estimatedPickupTime && (
+                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pickup: {order.estimatedPickupTime}</span>
+                              )}
+                              {order.trackingNotes && (
+                                <span>{order.trackingNotes}</span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Footer row */}
                           <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-white/5">
                             <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -535,8 +553,15 @@ export default function ProfileView() {
                               <span className="font-black text-sm text-gray-900 dark:text-white">
                                 ₺{(order.total ?? order.price ?? 0).toFixed(2)}
                               </span>
-                              {order.status === 'completed' && (
-                                <button className="flex items-center gap-1 text-xs font-bold text-[#1A4D2E] hover:underline">
+                              {order.status === 'delivered' && !reviewedOrderIds.has(order.id) && (
+                                <button
+                                  onClick={() => setReviewModal({
+                                    orderId: order.id,
+                                    restaurantId: order.restaurantId || '',
+                                    restaurantName: order.restaurantName || 'Restaurant',
+                                  })}
+                                  className="flex items-center gap-1 text-xs font-bold text-[#1A4D2E] hover:underline"
+                                >
                                   Rate <ChevronRight className="w-3 h-3" />
                                 </button>
                               )}
@@ -678,6 +703,21 @@ export default function ProfileView() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Review Modal */}
+      {reviewModal && (
+        <ReviewModal
+          isOpen={!!reviewModal}
+          onClose={() => setReviewModal(null)}
+          restaurantId={reviewModal.restaurantId}
+          restaurantName={reviewModal.restaurantName}
+          orderId={reviewModal.orderId}
+          onSubmitted={() => {
+            setReviewedOrderIds(prev => new Set(prev).add(reviewModal.orderId));
+            setReviewModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }
