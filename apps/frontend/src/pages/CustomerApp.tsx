@@ -58,7 +58,7 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
       <div className="relative h-48 w-full overflow-hidden">
         <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
           <img
-            src={bag.image}
+            src={bag.image || bag.storeLogo}
             alt={bag.restaurantName}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             referrerPolicy="no-referrer"
