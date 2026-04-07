@@ -128,7 +128,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateStatus(String orderId, String uid, String role, String status) {
+    public Order updateStatus(String orderId, String uid, String role, String status, String estimatedPickupTime, String trackingNotes) {
         List<String> validStatuses = List.of("pending", "confirmed", "preparing", "ready",
                 "picked_up", "delivering", "delivered", "cancelled");
         if (!validStatuses.contains(status)) {
@@ -141,6 +141,8 @@ public class OrderService {
         }
 
         order.setStatus(status);
+        if (estimatedPickupTime != null) order.setEstimatedPickupTime(estimatedPickupTime);
+        if (trackingNotes != null) order.setTrackingNotes(trackingNotes);
         if ("delivered".equals(status)) {
             order.setDeliveredAt(LocalDateTime.now());
             transactionRepository.findByOrderId(orderId).forEach(tx -> {

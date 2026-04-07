@@ -1,6 +1,7 @@
 import React from 'react';
 import { Star, MessageSquare, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import type { Review } from '@/types';
 import { StatCard } from './StorePanel';
 
@@ -10,13 +11,14 @@ export interface ReviewsTabProps {
 }
 
 export default function ReviewsTab({ reviews, avgRating }: ReviewsTabProps) {
+  const { t } = useTranslation();
   return (
     <motion.div key="reviews" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-5">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Average Rating" value={`${avgRating} / 5.0`} icon={<Star className="w-5 h-5" />}        color="bg-amber-50 dark:bg-amber-900/20 text-amber-500" />
-        <StatCard label="Total Reviews"  value={reviews.length}       icon={<MessageSquare className="w-5 h-5" />} color="bg-blue-50 dark:bg-blue-900/20 text-blue-600" />
+        <StatCard label={t('Average Rating')} value={`${avgRating} / 5.0`} icon={<Star className="w-5 h-5" />}        color="bg-amber-50 dark:bg-amber-900/20 text-amber-500" />
+        <StatCard label={t('Total Reviews')}  value={reviews.length}       icon={<MessageSquare className="w-5 h-5" />} color="bg-blue-50 dark:bg-blue-900/20 text-blue-600" />
         <StatCard
-          label="5-Star Reviews"
+          label={t('5-Star Reviews')}
           value={reviews.filter(r => r.rating === 5).length}
           icon={<TrendingUp className="w-5 h-5" />}
           color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600"
@@ -27,7 +29,7 @@ export default function ReviewsTab({ reviews, avgRating }: ReviewsTabProps) {
       {reviews.length === 0 ? (
         <div className="bg-white dark:bg-[#111] rounded-2xl py-16 text-center border-2 border-dashed border-gray-100 dark:border-white/5">
           <MessageSquare className="w-12 h-12 text-gray-200 dark:text-white/10 mx-auto mb-3" />
-          <p className="font-bold text-gray-400 text-sm">No reviews yet</p>
+          <p className="font-bold text-gray-400 text-sm">{t('No reviews yet')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -39,7 +41,7 @@ export default function ReviewsTab({ reviews, avgRating }: ReviewsTabProps) {
                     {(review.userName || 'A').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 dark:text-white text-sm">{review.userName || 'Anonymous'}</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm">{review.userName || t('Anonymous')}</p>
                     <p className="text-[10px] text-gray-400">{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}</p>
                   </div>
                 </div>

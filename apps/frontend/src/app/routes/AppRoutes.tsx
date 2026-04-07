@@ -13,6 +13,9 @@ import CheckoutPage from '@/pages/CheckoutPage';
 import ProfileView from '@/pages/ProfileView';
 import RestaurantPortal from '@/pages/StorePanel';
 import AdminDashboard from '@/pages/AdminPanel';
+import AboutPage from '@/pages/legal/AboutPage';
+import PrivacyPage from '@/pages/legal/PrivacyPage';
+import TermsPage from '@/pages/legal/TermsPage';
 
 // Layouts & Guards
 import CustomerLayout from '@/app/layouts/CustomerLayout';
@@ -39,6 +42,9 @@ export default function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/business-auth" element={<RestaurantAuth />} />
       <Route path="/admin-auth" element={<AdminAuth />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Customer Routes */}
       <Route element={<ProtectedRoute allowedRoles={['customer']} />}>

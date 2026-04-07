@@ -41,9 +41,10 @@ interface Props {
     initialName?: string;
     onConfirm: (coords: { lat: number; lng: number }, name: string) => void;
     onClose: () => void;
+    mode?: 'customer' | 'restaurant';
 }
 
-export default function LocationPickerMap({ initialLocation, initialName, onConfirm, onClose }: Props) {
+export default function LocationPickerMap({ initialLocation, initialName, onConfirm, onClose, mode = 'customer' }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -227,7 +228,7 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                         </div>
                     </div>
                     <button
-                        onClick={() => setShowForm(true)}
+                        onClick={() => mode === 'restaurant' ? onConfirm(pendingCoords, address) : setShowForm(true)}
                         disabled={geocoding}
                         className="w-full flex items-center justify-center gap-2 bg-[#1A4D2E] text-white py-3 rounded-full font-bold text-sm hover:bg-[#133b23] transition-colors disabled:opacity-60"
                     >

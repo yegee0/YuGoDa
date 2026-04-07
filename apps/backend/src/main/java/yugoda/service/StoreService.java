@@ -38,6 +38,7 @@ public class StoreService {
         store.setAddress((String) body.getOrDefault("address", ""));
         store.setPhone((String) body.getOrDefault("phone", ""));
         store.setEmail((String) body.getOrDefault("email", ""));
+        if (body.containsKey("coverImage")) store.setCoverImage((String) body.get("coverImage"));
         store.setStatus("pending");
 
         try {
@@ -98,6 +99,7 @@ public class StoreService {
         if (body.containsKey("phone")) store.setPhone((String) body.get("phone"));
         if (body.containsKey("email")) store.setEmail((String) body.get("email"));
         if (body.containsKey("logo")) store.setLogo((String) body.get("logo"));
+        if (body.containsKey("coverImage")) store.setCoverImage((String) body.get("coverImage"));
         if (body.containsKey("commissionRate")) store.setCommissionRate(((Number) body.get("commissionRate")).doubleValue());
         try {
             if (body.containsKey("location")) store.setLocation(objectMapper.writeValueAsString(body.get("location")));

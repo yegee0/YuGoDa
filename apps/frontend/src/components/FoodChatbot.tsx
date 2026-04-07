@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Send, Bot, User, X, MessageCircle, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { api } from '@/lib/api';
+import type { Order } from '@/types';
 
-// Initialize AI right before use to ensure fresh API key if needed, 
-// but for a simple chatbot, we can do it at the top level if the key is stable.
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 interface Message {
@@ -28,17 +28,35 @@ export default function FoodChatbot() {
     }
   }, [messages, isLoading]);
 
-  // Initialize chat session once
+  // Fetch order history when chatbot opens and build context-aware system prompt
   useEffect(() => {
-    if (!chatRef.current) {
+    if (!isOpen) return;
+    api.get('/orders').then((data: { orders?: Order[] }) => {
+      const recentOrders = (data.orders || []).slice(0, 10);
+      const orderContext = recentOrders.length > 0
+        ? `\n\nThe user's recent orders:\n${recentOrders.map(o =>
+            `- ${o.restaurantName || 'Unknown restaurant'}: ${o.items?.map(i => i.name).join(', ') || 'surprise bag'} (${o.status})`
+          ).join('\n')}\n\nBased on their order history, you can suggest similar items they might enjoy or recommend healthier alternatives if they've been ordering frequently. Encourage variety and eco-friendly choices.`
+        : '';
+
       chatRef.current = genAI.chats.create({
         model: "gemini-3-flash-preview",
         config: {
-          systemInstruction: "You are YuGoBot, a helpful assistant for a food waste prevention platform called YuGoDa. Your goal is to help users find surplus food bags, suggest meals based on their cravings, and encourage eco-friendly eating habits. Keep responses concise, friendly, and use emojis occasionally. If asked about specific bags, mention that they can find them in the 'Discover' tab.",
+          systemInstruction: `You are YuGoBot, a helpful assistant for a food waste prevention platform called YuGoDa. Your goal is to help users find surplus food bags, suggest meals based on their cravings, and encourage eco-friendly eating habits. Keep responses concise, friendly, and use emojis occasionally. If asked about specific bags, mention that they can find them in the 'Discover' tab.${orderContext}`,
         },
       });
-    }
-  }, []);
+    }).catch(() => {
+      // Fallback: init without order history
+      if (!chatRef.current) {
+        chatRef.current = genAI.chats.create({
+          model: "gemini-3-flash-preview",
+          config: {
+            systemInstruction: "You are YuGoBot, a helpful assistant for a food waste prevention platform called YuGoDa. Your goal is to help users find surplus food bags, suggest meals based on their cravings, and encourage eco-friendly eating habits. Keep responses concise, friendly, and use emojis occasionally. If asked about specific bags, mention that they can find them in the 'Discover' tab.",
+          },
+        });
+      }
+    });
+  }, [isOpen]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;

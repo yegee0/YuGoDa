@@ -34,7 +34,7 @@ export interface Address {
 }
 
 // ── Orders ───────────────────────────────────────────────
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'confirmed' | 'completed';
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivering' | 'delivered' | 'cancelled';
 
 export interface Order {
   id: string;
@@ -52,6 +52,8 @@ export interface Order {
   paymentMethod?: string;
   createdAt?: string;
   updatedAt?: string;
+  estimatedPickupTime?: string;
+  trackingNotes?: string;
 }
 
 export interface CartItem {

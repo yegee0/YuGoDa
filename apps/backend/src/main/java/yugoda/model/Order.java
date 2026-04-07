@@ -54,4 +54,9 @@ public class Order {
     private LocalDateTime createdAt;
 
     private LocalDateTime deliveredAt;
+
+    private String estimatedPickupTime;
+
+    @Column(columnDefinition = "TEXT")
+    private String trackingNotes;
 }
