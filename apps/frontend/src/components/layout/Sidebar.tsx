@@ -39,7 +39,9 @@ export function Sidebar({ children }: { children: (collapsed: boolean) => React.
             <Leaf className="w-4 h-4" />
           </div>
           {!isSidebarCollapsed && (
-            <span className="text-xl font-bold text-eco-primary dark:text-[#2D6A4F] tracking-tight">YuGoDa</span>
+            <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
+              Yu<span className="text-[#FF9F1C]">Go</span>Da
+            </span>
           )}
         </Link>
       </div>

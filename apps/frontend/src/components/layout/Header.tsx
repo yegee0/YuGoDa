@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { Languages, Sun, Moon, Bell, LogOut, User as UserIcon, Store, ShieldCheck, Heart, Leaf } from 'lucide-react';
+import { Languages, Sun, Moon, Bell, LogOut, User as UserIcon, Store, ShieldCheck, Heart } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
 import { authCustomer, authPartner, authAdmin } from '@/lib/firebase';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -49,16 +49,7 @@ export default function Header() {
   return (
     <header className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
       <div className="flex items-center gap-4">
-        {currentView === 'discover' ? (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#1A4D2E] flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-black text-gray-900 dark:text-white">
-              Yu<span className="text-[#FF9F1C]">Go</span>Da
-            </span>
-          </div>
-        ) : (
+        {currentView !== 'discover' && (
           <h2 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
             {t(currentView.replace('-', ' '))}
           </h2>

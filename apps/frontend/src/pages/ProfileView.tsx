@@ -131,7 +131,7 @@ export default function ProfileView() {
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
-    if (tab !== 'orders' || orders.length > 0) return;
+    if (tab !== 'orders') return;
     setOrdersLoading(true);
     api.get('/orders').then((data: { orders?: Order[] }) => {
       setOrders(data.orders || []);
