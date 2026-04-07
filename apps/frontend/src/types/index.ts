@@ -11,6 +11,8 @@ export interface UserProfile {
   role: 'customer' | 'restaurant' | 'admin' | 'driver';
   favorites: string[];
   walletBalance: number;
+  countryCode?: string;
+  mobileNumber?: string;
   addresses: Address[];
   notificationsEnabled: boolean;
   preferredLanguage: string;
@@ -115,6 +117,7 @@ export interface Bag {
   countdown?: string;
   distance?: string;
   prepTime?: number;
+  storeLogo?: string;
   createdAt?: string;
 }
 

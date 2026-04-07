@@ -1,9 +1,9 @@
 package yugoda.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Order;
 import yugoda.security.UserPrincipal;
 import yugoda.service.OrderService;
+import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.*;
 public class OrderController extends BaseController {
 
     private final OrderService orderService;
-    private final ObjectMapper objectMapper;
+    private final EntityEnricher enricher;
 
     // POST /
     @PostMapping
@@ -82,14 +82,7 @@ public class OrderController extends BaseController {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> enrichOrder(Order order) {
-        Map<String, Object> map = objectMapper.convertValue(order, Map.class);
-        try {
-            map.put("items", order.getItems() != null
-                    ? objectMapper.readValue(order.getItems(), List.class) : List.of());
-        } catch (Exception ignored) {}
-        map.put("leaveAtDoor", order.getLeaveAtDoor() != null && order.getLeaveAtDoor() == 1);
-        return map;
+        return enricher.enrichOrder(order);
     }
 }

@@ -10,12 +10,12 @@ import { useStore } from '@/app/store/useStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import type { Bag, StoreProfile, OperatingHours } from '@/types';
-
-const TL = (n: number) => `₺${n.toFixed(2)}`;
+import { TL } from '@/lib/formatters';
+import { DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
 
 function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefined): boolean {
   if (!operatingHours || !Array.isArray(operatingHours)) return true;
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const days = DAY_NAMES;
   const now = new Date();
   const slot = operatingHours.find((s: OperatingHours) => s.day === days[now.getDay()]);
   if (!slot || !slot.isOpen) return false;
@@ -163,7 +163,7 @@ export default function StorePage() {
 
   const cartItems = cart.filter(c => bags.some(b => b.id === c.id));
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryFee = deliveryType === 'delivery' ? 15 : 0;
+  const deliveryFee = deliveryType === 'delivery' ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryFee;
   const isFavStore = store ? favorites.includes(store.id) : false;
   const isOpen = store ? isStoreCurrentlyOpen(store.operatingHours) : true;

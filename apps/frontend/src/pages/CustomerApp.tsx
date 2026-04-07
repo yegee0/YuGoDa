@@ -94,6 +94,12 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
         <div className="absolute top-3 left-3 bg-[#1A4D2E] text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
           {bag.available} {t('left')}
         </div>
+
+        {bag.storeLogo && (
+          <div className="absolute bottom-3 right-3 w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-lg">
+            <img src={bag.storeLogo} alt={bag.restaurantName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          </div>
+        )}
       </div>
 
       <div className="p-4 flex-1 flex flex-col">

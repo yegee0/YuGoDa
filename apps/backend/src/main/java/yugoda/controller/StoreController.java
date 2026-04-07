@@ -1,10 +1,10 @@
 package yugoda.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Bag;
 import yugoda.model.Store;
 import yugoda.security.UserPrincipal;
 import yugoda.service.StoreService;
+import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import java.util.*;
 public class StoreController extends BaseController {
 
     private final StoreService storeService;
-    private final ObjectMapper objectMapper;
+    private final EntityEnricher enricher;
 
     // POST /
     @PostMapping
@@ -102,29 +102,11 @@ public class StoreController extends BaseController {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> enrichStore(Store store) {
-        Map<String, Object> map = objectMapper.convertValue(store, Map.class);
-        try {
-            map.put("location", store.getLocation() != null
-                    ? objectMapper.readValue(store.getLocation(), Object.class) : null);
-            map.put("operatingHours", store.getOperatingHours() != null
-                    ? objectMapper.readValue(store.getOperatingHours(), Object.class) : null);
-        } catch (Exception ignored) {}
-        map.put("isApproved", store.getIsApproved() != null && store.getIsApproved() == 1);
-        return map;
+        return enricher.enrichStore(store);
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> enrichBag(Bag bag) {
-        Map<String, Object> map = objectMapper.convertValue(bag, Map.class);
-        try {
-            map.put("coordinates", bag.getCoordinates() != null
-                    ? objectMapper.readValue(bag.getCoordinates(), Object.class) : null);
-            map.put("tags", bag.getTags() != null
-                    ? objectMapper.readValue(bag.getTags(), List.class) : List.of());
-        } catch (Exception ignored) {}
-        map.put("isLastChance", bag.getIsLastChance() != null && bag.getIsLastChance() == 1);
-        return map;
+        return enricher.enrichBag(bag);
     }
 }

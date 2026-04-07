@@ -15,9 +15,7 @@ const C = {
 };
 
 // ── font helpers ───────────────────────────────────────────────
-const playfair: React.CSSProperties = { fontFamily: '"Playfair Display", Georgia, serif' };
-const dm:       React.CSSProperties = { fontFamily: '"DM Sans", system-ui, sans-serif' };
-const mono:     React.CSSProperties = { fontFamily: '"DM Mono", "Courier New", monospace' };
+import { FONT_PLAYFAIR as playfair, FONT_DM as dm, FONT_MONO as mono } from '@/lib/constants';
 
 // ── permission lines ───────────────────────────────────────────
 const PERMISSIONS = [

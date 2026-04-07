@@ -8,6 +8,7 @@ import { AnimatePresence } from 'motion/react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import type { Order, Bag, Driver, Review, StoreProfile, OperatingHours, ChartDataPoint, OrderStatus } from '@/types';
+import { DAY_NAMES_SHORT, ORDER_POLL_INTERVAL } from '@/lib/constants';
 
 import DashboardTab from './DashboardTab';
 import OrdersTab from './OrdersTab';
@@ -17,44 +18,11 @@ import ReviewsTab from './ReviewsTab';
 import ProfileTab from './ProfileTab';
 import SupportTab from './SupportTab';
 
-// ── Shared helpers (exported for tab components) ──────────────
-
-export const TL = (n: number) => `₺${(n || 0).toFixed(2)}`;
-
-export function StatCard({ label, value, icon, color, sub }: {
-  label: string; value: string | number;
-  icon: React.ReactNode; color: string; sub?: string;
-}) {
-  return (
-    <div className="bg-white dark:bg-[#111] rounded-2xl p-5 border border-gray-100 dark:border-white/5 shadow-sm flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-400 font-medium mb-0.5">{label}</p>
-        <p className="text-2xl font-black text-gray-900 dark:text-white leading-none">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-export const STATUS_CFG: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'Pending',   cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
-  preparing: { label: 'Preparing', cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' },
-  ready:     { label: 'Ready',     cls: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600' },
-  delivered: { label: 'Delivered', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' },
-  cancelled: { label: 'Cancelled', cls: 'bg-red-50 dark:bg-red-900/20 text-red-500' },
-};
-
-export function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CFG[status] || STATUS_CFG['pending'];
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${cfg.cls}`}>
-      {cfg.label}
-    </span>
-  );
-}
+// ── Shared helpers (re-exported from centralized modules) ─────
+export { TL } from '@/lib/formatters';
+export { StatCard } from '@/components/shared';
+export { StatusBadge } from '@/components/shared';
+export { STATUS_CONFIG as STATUS_CFG } from '@/lib/constants';
 
 // ── Main component ────────────────────────────────────────────
 
@@ -127,7 +95,7 @@ export default function StorePanel() {
       } catch (err) { console.error(err); } finally { setLoading(false); }
     };
     fetchData();
-    pollingRef.current = setInterval(fetchOrders, 30000);
+    pollingRef.current = setInterval(fetchOrders, ORDER_POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [user]);
 
@@ -149,7 +117,7 @@ export default function StorePanel() {
   };
 
   // ── Derived data ──
-  const chartData: ChartDataPoint[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+  const chartData: ChartDataPoint[] = DAY_NAMES_SHORT.map((day, i) => {
     const dayOrders = orders.filter(o => o.createdAt && new Date(o.createdAt).getDay() === (i + 1) % 7);
     return { day, revenue: dayOrders.reduce((acc, o) => acc + (o.price || 0), 0), orders: dayOrders.length };
   });

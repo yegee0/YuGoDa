@@ -8,8 +8,7 @@ import {
   ChevronRight, X, ShoppingBag, Truck, Package, Check, Shield
 } from 'lucide-react';
 import { api } from '@/lib/api';
-
-const TL = (amount: number) => `₺${amount.toFixed(2)}`;
+import { TL } from '@/lib/formatters';
 
 const STEPS = ['Cart', 'Delivery', 'Payment', 'Confirm'] as const;
 type Step = typeof STEPS[number];

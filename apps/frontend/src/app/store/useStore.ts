@@ -4,7 +4,7 @@ import { CartSlice, createCartSlice } from './cartSlice';
 import { UiSlice, createUiSlice } from './uiSlice';
 
 // Re-export types for convenience
-export type { UserProfile } from './authSlice';
+export type { UserProfile } from '@/types';
 export type { CartItem } from './cartSlice';
 export type { Filters } from './uiSlice';
 
