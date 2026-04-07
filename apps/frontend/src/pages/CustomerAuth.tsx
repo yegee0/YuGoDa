@@ -28,9 +28,9 @@ import { FONT_PLAYFAIR as playfair, FONT_DM as dm } from '@/lib/constants';
 
 // ── stats data ─────────────────────────────────────────────────
 const STATS = [
-  { value: '50K+',  label: 'Meals rescued' },
-  { value: '1,200+', label: 'Partner stores' },
-  { value: '32 ton', label: 'Food saved' },
+  { value: '47',   label: 'Meals rescued' },
+  { value: '9',    label: 'Partner stores' },
+  { value: '70%',  label: 'Avg. discount' },
 ];
 
 // ── blob SVG paths (decorative, low opacity) ──────────────────

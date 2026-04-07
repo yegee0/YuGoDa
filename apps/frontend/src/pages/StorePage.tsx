@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import type { Bag, StoreProfile, OperatingHours } from '@/types';
+import type { Bag, StoreProfile, OperatingHours, Review } from '@/types';
 import { TL } from '@/lib/formatters';
 import { DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
 
@@ -132,6 +132,7 @@ export default function StorePage() {
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [bags, setBags] = useState<Bag[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('');
   const [showInfo, setShowInfo] = useState(false);
@@ -146,6 +147,9 @@ export default function StorePage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+    api.get(`/reviews?restaurantId=${id}`)
+      .then((data: { reviews?: Review[] }) => setReviews(data.reviews || []))
+      .catch(() => {});
   }, [id]);
 
   const categories: Record<string, Bag[]> = bags.reduce((acc: Record<string, Bag[]>, bag: Bag) => {
@@ -327,7 +331,7 @@ export default function StorePage() {
         )}
 
         {/* ── Bag grid ── */}
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-8" id="bags">
           {catKeys.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-[#111] rounded-3xl border-2 border-dashed border-gray-100 dark:border-white/5">
               <ShoppingBag className="w-12 h-12 text-gray-200 dark:text-white/10 mx-auto mb-3" />
@@ -370,6 +374,40 @@ export default function StorePage() {
             ))
           )}
         </div>
+        {/* ── Reviews ── */}
+        {reviews.length > 0 && (
+          <div className="px-6 pb-8">
+            <h2 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              {t('Reviews')}
+              <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">{reviews.length}</span>
+            </h2>
+            <div className="space-y-3">
+              {reviews.map(review => (
+                <div key={review.id} className="bg-white dark:bg-[#111] rounded-2xl p-4 border border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                      {review.userName || t('Anonymous')}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200 dark:text-white/10'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  {review.comment && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{review.comment}</p>
+                  )}
+                  {review.createdAt && (
+                    <p className="text-[10px] text-gray-300 dark:text-white/20 mt-2">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Right sidebar (basket) ── */}

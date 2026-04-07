@@ -9,7 +9,6 @@ import {
   Pizza, Utensils, Soup,
   DollarSign, Gift, MapPin,
   Croissant, CakeSlice,
-  Twitter, Instagram, Linkedin, Youtube,
 } from 'lucide-react';
 
 // ── colour tokens ──────────────────────────────────────
@@ -338,10 +337,10 @@ export default function LandingPage() {
       <section style={{ backgroundColor: C.tealDark }} className="py-14">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: 50,    suffix: '+', label: 'Bags saved' },
-            { value: 12,    suffix: '+', label: 'Partner stores' },
-            { value: 60,    suffix: '%', label: 'Avg. discount' },
-            { value: 2,     suffix: 't',  label: 'CO₂ avoided' },
+            { value: 47,    suffix: '',    label: 'Bags rescued' },
+            { value: 9,     suffix: '+',  label: 'Partner stores' },
+            { value: 70,    suffix: '%',  label: 'Avg. discount' },
+            { value: 83,    suffix: ' kg', label: 'CO₂ avoided' },
           ].map(({ value, suffix, label }) => (
             <div key={label}>
               <p className="text-white" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 3.5rem)' }}>
@@ -837,30 +836,14 @@ export default function LandingPage() {
             <p className="text-white/50 text-xs leading-relaxed font-extrabold mb-5">
               Fight food waste. Save money.<br />Save the planet.
             </p>
-            <div className="flex gap-3">
-              {[
-                { icon: <Twitter className="w-4 h-4" />, href: '#' },
-                { icon: <Instagram className="w-4 h-4" />, href: '#' },
-                { icon: <Linkedin className="w-4 h-4" />, href: '#' },
-                { icon: <Youtube className="w-4 h-4" />, href: '#' },
-              ].map(({ icon, href }, i) => (
-                <a
-                  key={i}
-                  href={href}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white/60 hover:text-white hover:opacity-70 transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
+            <p className="text-white/30 text-xs font-bold">Coming soon on social media.</p>
           </div>
 
           {/* Link columns */}
           {[
-            { heading: 'Product',  links: ['How it works', 'Browse bags', 'For businesses', 'Pricing'] },
-            { heading: 'Company',  links: ['About us', 'Blog', 'Careers', 'Press'] },
-            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Cookie settings', 'Admin'] },
+            { heading: 'Product',  links: ['How it works', 'Browse bags', 'For businesses'] },
+            { heading: 'Company',  links: ['About us'] },
+            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Admin'] },
           ].map(({ heading, links }) => (
             <div key={heading}>
               <h4 className="text-xs font-extrabold uppercase tracking-widest mb-4" style={{ color: C.lime }}>
