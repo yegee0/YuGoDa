@@ -49,9 +49,21 @@ services:
       IYZICO_BASE_URL: ${IYZICO_BASE_URL:-https://sandbox-api.iyzipay.com}
       # Public URL used in payment callbacks
       APP_URL: ${APP_URL:-http://localhost:4000}
-      # Firebase Admin SDK — optional, leave blank to use JWT-decode fallback
+      # Firebase Admin SDK credentials — three options, first match wins:
+      #   1. FIREBASE_SERVICE_ACCOUNT_KEY  — full service account JSON as one line (set in .env.local)
+      #   2. GOOGLE_APPLICATION_CREDENTIALS — points to the gcloud ADC file mounted below
+      #   3. Automatic ADC on GCP Cloud Run  — no config needed in production
+      FIREBASE_SERVICE_ACCOUNT_KEY: ${FIREBASE_SERVICE_ACCOUNT_KEY:-}
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-yugoda-5b36a}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud/application_default_credentials.json
+    volumes:
+      # Mount the local gcloud config directory so ADC works inside the container.
+      # USERPROFILE is a standard Windows shell variable (e.g. C:\Users\Gaming) and is
+      # always visible to Docker Compose without any .env.local changes.
+      # Mac/Linux users: export USERPROFILE=$HOME before running docker compose,
+      # then set GCLOUD_SUBPATH=.config/gcloud in their shell as well.
+      - ${USERPROFILE}/AppData/Roaming/gcloud:/tmp/gcloud:ro
     depends_on:
       postgres:
         condition: service_healthy

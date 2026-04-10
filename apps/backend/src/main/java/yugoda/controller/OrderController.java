@@ -72,8 +72,9 @@ public class OrderController extends BaseController {
         if (status == null) return badRequest("status zorunludur.");
         String estimatedPickupTime = (String) body.get("estimatedPickupTime");
         String trackingNotes = (String) body.get("trackingNotes");
+        String inputDeliveryCode = (String) body.get("deliveryCode");
         try {
-            Order order = orderService.updateStatus(id, user.getUid(), user.getRole(), status, estimatedPickupTime, trackingNotes);
+            Order order = orderService.updateStatus(id, user.getUid(), user.getRole(), status, estimatedPickupTime, trackingNotes, inputDeliveryCode);
             return ResponseEntity.ok(Map.of("success", true, "order", enrichOrder(order)));
         } catch (NoSuchElementException e) {
             return notFound(e.getMessage());

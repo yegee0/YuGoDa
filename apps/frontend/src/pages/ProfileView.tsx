@@ -527,6 +527,15 @@ export default function ProfileView() {
                             </div>
                           )}
 
+                          {/* Delivery Code — shown only to this customer when order is out for delivery */}
+                          {order.status === 'delivering' && order.deliveryCode && (
+                            <div className="mb-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200/60 dark:border-amber-700/30">
+                              <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">Delivery Code</p>
+                              <p className="text-2xl font-black text-amber-700 dark:text-amber-300 tracking-[0.4em]">{order.deliveryCode}</p>
+                              <p className="text-xs text-amber-600/80 dark:text-amber-400/70 mt-1">Give this code to the courier to confirm your delivery.</p>
+                            </div>
+                          )}
+
                           {/* Tracking info */}
                           {(order.estimatedPickupTime || order.trackingNotes) && (
                             <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-3 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-xl">

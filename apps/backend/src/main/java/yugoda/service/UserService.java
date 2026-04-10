@@ -109,6 +109,7 @@ public class UserService {
         }
         if (body.containsKey("preferredLanguage")) user.setPreferredLanguage((String) body.get("preferredLanguage"));
         if (body.containsKey("language")) user.setLanguage((String) body.get("language"));
+        if (body.containsKey("fcmToken")) user.setFcmToken((String) body.get("fcmToken"));
         if (body.containsKey("walletBalance")) {
             user.setWalletBalance(((Number) body.get("walletBalance")).doubleValue());
         }

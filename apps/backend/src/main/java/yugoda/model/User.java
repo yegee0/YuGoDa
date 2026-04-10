@@ -42,6 +42,7 @@ public class User {
 
     private Integer notificationsEnabled = 1;
     private String preferredLanguage = "en";
+    private String fcmToken;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

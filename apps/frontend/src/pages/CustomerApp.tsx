@@ -57,9 +57,9 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
     >
       <div className="relative h-48 w-full overflow-hidden">
         <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
-          {bag.image || bag.storeLogo ? (
+          {bag.image || bag.storeCoverImage ? (
             <img
-              src={bag.image || bag.storeLogo}
+              src={bag.image || bag.storeCoverImage}
               alt={bag.restaurantName}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               referrerPolicy="no-referrer"
@@ -151,7 +151,7 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
                 name: `${bag.category} Magic Bag`,
                 price: bag.price,
                 quantity: 1,
-                image: bag.image
+                image: bag.image || bag.storeCoverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'
               });
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
