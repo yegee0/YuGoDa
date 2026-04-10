@@ -20,36 +20,37 @@ export default function CustomersTab({ users }: CustomersTabProps) {
   return (
     <motion.div key="customers" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-[#111] p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+          <div className="bg-white p-5 rounded-2xl border border-[#E8E0D5] shadow-sm relative overflow-hidden group">
             <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-[#F5F0E8] flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-500" />
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Total Customers</p>
-              <h3 className="text-2xl font-black text-gray-900 dark:text-white">{users.filter(u => u.role === 'customer').length}</h3>
+              <p className="text-xs text-[#8FA396] font-medium mb-1">Total Customers</p>
+              <h3 className="text-2xl font-black text-[#1B1B1B]">{users.filter(u => u.role === 'customer').length}</h3>
             </div>
           </div>
       </div>
 
-      <div className="bg-white dark:bg-[#111] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-bold text-gray-900 dark:text-white">All Customers ({users.length})</h3>
+      <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E8E0D5] flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-bold text-[#1B1B1B]">All Customers ({users.length})</h3>
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8FA396]" />
             <input
               type="text"
               placeholder="Search customers..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="bg-gray-50 dark:bg-gray-800 border-none rounded-xl py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#1A4D2E]/20 dark:text-white w-56"
+              className="bg-[#F5F0E8] border-none rounded-xl py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#1B5E52]/20 w-56"
             />
           </div>
         </div>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[550px]">
           <thead>
-            <tr className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+            <tr className="text-xs font-bold text-[#8FA396] uppercase tracking-wider border-b border-[#E8E0D5]">
               <th className="px-6 py-4">Customer</th>
               <th className="px-6 py-4">Role</th>
               <th className="px-6 py-4">Status</th>
@@ -57,19 +58,19 @@ export default function CustomersTab({ users }: CustomersTabProps) {
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
+          <tbody className="divide-y divide-[#F5F0E8]">
             {users
               .filter(u => (u.displayName || u.email || '').toLowerCase().includes(searchQuery.toLowerCase()))
               .map(u => (
-                <tr key={u.uid} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                <tr key={u.uid} className="hover:bg-[#F5F0E8] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#1A4D2E]/10 flex items-center justify-center text-[#1A4D2E] font-bold">
+                      <div className="w-10 h-10 rounded-full bg-[#1B5E52]/10 flex items-center justify-center text-[#1B5E52] font-bold">
                         {u.displayName?.charAt(0) || 'U'}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">{u.displayName || 'Unknown'}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <p className="text-sm font-bold text-[#1B1B1B]">{u.displayName || 'Unknown'}</p>
+                        <p className="text-xs text-[#8FA396]">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -85,11 +86,11 @@ export default function CustomersTab({ users }: CustomersTabProps) {
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Active
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs text-gray-400">
+                  <td className="px-6 py-4 text-xs text-[#8FA396]">
                     {(u.createdAt as unknown as { toDate?: () => Date })?.toDate?.().toLocaleDateString() || '—'}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 transition-colors">
+                    <button className="p-2 hover:bg-[#F5F0E8] rounded-lg text-[#8FA396] transition-colors">
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </td>
@@ -97,6 +98,7 @@ export default function CustomersTab({ users }: CustomersTabProps) {
               ))}
           </tbody>
         </table>
+        </div>
       </div>
     </motion.div>
   );

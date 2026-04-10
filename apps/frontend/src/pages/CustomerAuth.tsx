@@ -288,7 +288,6 @@ export default function Auth() {
           width: '55%',
           background: C.forest,
           padding: '52px 48px',
-          display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
@@ -415,7 +414,7 @@ export default function Auth() {
         <div style={{
           flex: 1,
           background: C.cream,
-          padding: '48px 44px',
+          padding: 'clamp(28px, 6vw, 48px) clamp(20px, 5vw, 44px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'auto',

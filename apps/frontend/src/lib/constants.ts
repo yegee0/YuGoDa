@@ -2,8 +2,8 @@ import type React from 'react';
 
 // ── Brand Colors ──────────────────────────────────────────────
 export const COLORS = {
-  forest: '#1A4D2E',
-  forestDark: '#133b23',
+  forest: '#1B5E52',
+  forestDark: '#164d43',
   orange: '#FF9F1C',
 } as const;
 
@@ -20,15 +20,15 @@ export const AUTH_PALETTE = {
 
 // ── Order / Bag Status ────────────────────────────────────────
 export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  pending:   { label: 'Pending',   cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
-  confirmed: { label: 'Confirmed', cls: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600' },
-  preparing: { label: 'Preparing', cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' },
-  ready:     { label: 'Ready',     cls: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600' },
-  picked_up: { label: 'Picked Up', cls: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600' },
-  delivering:{ label: 'Delivering',cls: 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600' },
-  delivered: { label: 'Delivered', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' },
-  cancelled: { label: 'Cancelled', cls: 'bg-red-50 dark:bg-red-900/20 text-red-500' },
-  completed: { label: 'Completed', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' },
+  pending:   { label: 'Pending',   cls: 'bg-amber-50 text-amber-600' },
+  confirmed: { label: 'Confirmed', cls: 'bg-[#1B5E52]/10 text-[#1B5E52]' },
+  preparing: { label: 'Preparing', cls: 'bg-blue-50 text-blue-600' },
+  ready:     { label: 'Ready',     cls: 'bg-purple-50 text-purple-600' },
+  picked_up: { label: 'Picked Up', cls: 'bg-indigo-50 text-indigo-600' },
+  delivering:{ label: 'Delivering',cls: 'bg-cyan-50 text-cyan-600' },
+  delivered: { label: 'Delivered', cls: 'bg-[#748f2b]/20 text-[#5a7a1a]' },
+  cancelled: { label: 'Cancelled', cls: 'bg-[#ad3115]/10 text-[#ad3115]' },
+  completed: { label: 'Completed', cls: 'bg-[#748f2b]/20 text-[#5a7a1a]' },
 };
 
 // ── Day Names ─────────────────────────────────────────────────

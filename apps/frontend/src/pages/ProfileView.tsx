@@ -5,13 +5,13 @@ import {
   User, Mail, Phone, Globe, MapPin, Camera, Save,
   Trash2, CheckCircle2, Wallet, Plus, Home, Briefcase,
   Heart, MoreHorizontal, Bell, X, Building2, Pencil,
-  ShoppingBag, Clock, ChevronRight, Package, CheckCircle, XCircle, Loader2, Truck
+  ShoppingBag, Clock, Package, CheckCircle, XCircle, Loader2, Truck,
+  Star, ChevronDown
 } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
-import type { Address, Order, CartItem } from '@/types';
-import { ReviewModal } from '@/components/shared';
+import type { Address, Order, CartItem, StoreProfile } from '@/types';
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
@@ -37,8 +37,15 @@ export default function ProfileView() {
   const [editingAddrIndex, setEditingAddrIndex] = useState<number | null>(null);
   const [editingAddr, setEditingAddr] = useState<Address | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [reviewModal, setReviewModal] = useState<{ orderId: string; restaurantId: string; restaurantName: string } | null>(null);
   const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [inlineRating, setInlineRating] = useState(5);
+  const [inlineComment, setInlineComment] = useState('');
+  const [inlineSubmitting, setInlineSubmitting] = useState(false);
+  /** Store locations keyed by restaurantId — fetched on-demand for delivery ETA. */
+  const [storeLocations, setStoreLocations] = useState<Record<string, { lat: number; lng: number }>>({});
+  /** Ticked every 30 s so delivery arrival times stay current. */
+  const [now, setNow] = useState(() => new Date());
 
   const [formData, setFormData] = useState({
     firstName:    userProfile?.firstName    || '',
@@ -140,31 +147,123 @@ export default function ProfileView() {
     }).finally(() => setOrdersLoading(false));
   }, [tab, setOrders]);
 
+  // Fetch store locations for any 'delivering' orders so we can compute Haversine ETA.
+  useEffect(() => {
+    if (tab !== 'orders') return;
+    const ids = [...new Set(
+      orders
+        .filter(o => o.status === 'delivering' && o.restaurantId && o.deliveryLat && o.deliveryLng)
+        .map(o => o.restaurantId!)
+        .filter(id => !storeLocations[id])
+    )];
+    ids.forEach(id => {
+      api.get(`/stores/${id}`)
+        .then((data: { store?: StoreProfile }) => {
+          const loc = data.store?.location;
+          if (loc) setStoreLocations(prev => ({ ...prev, [id]: loc }));
+        })
+        .catch(() => {});
+    });
+  }, [orders, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tick every 30 s while any order is out for delivery so the arrival time stays fresh.
+  useEffect(() => {
+    const hasDelivering = orders.some(o => o.status === 'delivering');
+    if (!hasDelivering) return;
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, [orders]);
+
+  const computeETA = (pickupTime: string): string => {
+    try {
+      const [h, m] = pickupTime.split(':').map(Number);
+      const base = new Date();
+      const pickup = new Date(base);
+      pickup.setHours(h, m, 0, 0);
+      const diffMs = pickup.getTime() - base.getTime();
+      if (diffMs <= 0) return 'Soon';
+      const mins = Math.round(diffMs / 60000);
+      if (mins < 60) return `~${mins} min`;
+      const hours = Math.floor(mins / 60);
+      const rem = mins % 60;
+      return rem > 0 ? `~${hours}h ${rem}m` : `~${hours}h`;
+    } catch { return ''; }
+  };
+
+  /** Haversine great-circle distance in km (same algorithm as DriversTab). */
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  /**
+   * For a 'delivering' order: compute the expected arrival clock time ("HH:MM")
+   * by taking the Haversine distance (store → customer) ÷ 30 km/h and adding
+   * that duration to the current time (`now` state ticks every 30 s).
+   */
+  const computeDeliveryArrival = (order: Order): string | null => {
+    if (!order.deliveryLat || !order.deliveryLng || !order.restaurantId) return null;
+    const storeLoc = storeLocations[order.restaurantId];
+    if (!storeLoc) return null;
+    const distKm = haversineKm(storeLoc.lat, storeLoc.lng, order.deliveryLat, order.deliveryLng);
+    const etaMins = Math.max(1, Math.round((distKm / 30) * 60));
+    const arrival = new Date(now.getTime() + etaMins * 60000);
+    return `${String(arrival.getHours()).padStart(2, '0')}:${String(arrival.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const handleInlineReview = async (order: Order) => {
+    if (!order.restaurantId || inlineSubmitting) return;
+    setInlineSubmitting(true);
+    try {
+      await api.post('/reviews', {
+        restaurantId: order.restaurantId,
+        orderId: order.id,
+        rating: inlineRating,
+        comment: inlineComment,
+      });
+      setReviewedOrderIds(prev => new Set(prev).add(order.id));
+      setExpandedOrderId(null);
+      setInlineRating(5);
+      setInlineComment('');
+      toast.success('Review submitted!');
+    } catch {
+      toast.error('Failed to submit review');
+    } finally {
+      setInlineSubmitting(false);
+    }
+  };
+
   const initials =
     userProfile?.displayName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() ||
     userProfile?.email?.charAt(0).toUpperCase() || '?';
 
   /* ── Render ───────────────────────────────────────────── */
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-[#0a0a0a] relative z-[1]">
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div className="h-full overflow-y-auto relative z-[1]" style={{ backgroundColor: '#1b5e52' }}>
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
 
         {/* ── Hero card ── */}
-        <div className="bg-white dark:bg-[#111] rounded-3xl overflow-hidden shadow-sm">
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-[#E8E0D5]">
           {/* Banner */}
-          <div className="h-24 bg-gradient-to-r from-[#1A4D2E] to-[#2d6a4f]" />
+          <div className="h-24 bg-gradient-to-r from-[#1B5E52] to-[#2d7a6a]" />
           <div className="px-6 pb-6">
             <div className="flex items-end justify-between -mt-10 mb-4">
               {/* Avatar */}
               <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-[#1A4D2E] border-4 border-white dark:border-[#111] flex items-center justify-center text-white text-2xl font-black shadow-xl overflow-hidden">
+                <div className="w-20 h-20 rounded-2xl bg-[#1B5E52] border-4 border-white flex items-center justify-center text-white text-2xl font-black shadow-xl overflow-hidden">
                   {userProfile?.photoURL
                     ? <img src={userProfile.photoURL} alt="avatar" className="w-full h-full object-cover" />
                     : initials}
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-white dark:bg-[#1a1a1a] rounded-full shadow-md border border-gray-100 dark:border-white/10 flex items-center justify-center text-[#1A4D2E]"
+                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full shadow-md border border-[#E8E0D5] flex items-center justify-center text-[#1B5E52]"
                 >
                   <Camera className="w-3.5 h-3.5" />
                 </button>
@@ -174,32 +273,32 @@ export default function ProfileView() {
               {/* Wallet chip */}
               <button
                 onClick={() => setShowWalletModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#1A4D2E]/8 dark:bg-[#1A4D2E]/15 rounded-xl hover:bg-[#1A4D2E]/15 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#1B5E52]/10 rounded-full hover:bg-[#1B5E52]/15 transition-colors"
               >
-                <Wallet className="w-4 h-4 text-[#1A4D2E]" />
-                <span className="font-black text-[#1A4D2E] text-sm">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span>
-                <Plus className="w-3.5 h-3.5 text-[#1A4D2E]" />
+                <Wallet className="w-4 h-4 text-[#1B5E52]" />
+                <span className="font-black text-[#1B5E52] text-sm">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span>
+                <Plus className="w-3.5 h-3.5 text-[#1B5E52]" />
               </button>
             </div>
 
-            <h2 className="font-black text-xl text-gray-900 dark:text-white leading-none">{userProfile?.displayName || 'User'}</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{userProfile?.email}</p>
-            <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-full">
+            <h2 className="font-black text-xl text-[#1B1B1B] leading-none">{userProfile?.displayName || 'User'}</h2>
+            <p className="text-sm text-[#8FA396] font-medium mt-0.5">{userProfile?.email}</p>
+            <span className="inline-block mt-2 text-[10px] font-black uppercase tracking-widest bg-[#F5F0E8] text-[#5C6B63] px-2.5 py-1 rounded-full">
               {userProfile?.role || 'customer'}
             </span>
           </div>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1 bg-white dark:bg-[#111] rounded-2xl p-1 shadow-sm">
+        <div className="flex gap-1 bg-white rounded-2xl p-1 shadow-sm border border-[#E8E0D5] overflow-x-auto">
           {(['profile', 'addresses', 'orders', 'settings'] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
+              className={`flex-1 min-w-0 py-2.5 rounded-xl text-xs md:text-sm font-black capitalize transition-all whitespace-nowrap ${
                 tab === t
-                  ? 'bg-[#1A4D2E] text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  ? 'bg-[#1B5E52] text-white shadow-sm'
+                  : 'text-[#8FA396] hover:text-[#5C6B63]'
               }`}
             >
               {t === 'profile' ? 'Profile' : t === 'addresses' ? 'Addresses' : t === 'orders' ? 'Orders' : 'Settings'}
@@ -218,16 +317,16 @@ export default function ProfileView() {
 
             {/* ══ PROFILE TAB ══ */}
             {tab === 'profile' && (
-              <div className="bg-white dark:bg-[#111] rounded-3xl p-6 shadow-sm space-y-5">
+              <div className="bg-white rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 dark:text-white">Personal Information</h3>
+                  <h3 className="font-bold text-[#1B1B1B]">Personal Information</h3>
                   <button
                     onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
                     disabled={saving}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                       isEditing
-                        ? 'bg-[#1A4D2E] text-white'
-                        : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300'
+                        ? 'bg-[#1B5E52] text-white'
+                        : 'bg-[#F5F0E8] text-[#5C6B63]'
                     }`}
                   >
                     {isEditing ? <><Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save'}</> : <><User className="w-4 h-4" /> Edit</>}
@@ -241,28 +340,28 @@ export default function ProfileView() {
                     { label: 'Display Name',  key: 'displayName', icon: User,  type: 'text',  placeholder: 'johndoe' },
                   ].map(({ label, key, icon: Icon, type, placeholder }) => (
                     <div key={key}>
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">{label}</label>
+                      <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{label}</label>
                       <div className="relative">
-                        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B0BDB7]" />
                         <input
                           type={type}
                           disabled={!isEditing}
                           value={formData[key as keyof typeof formData]}
                           onChange={e => setFormData(f => ({ ...f, [key]: e.target.value }))}
                           placeholder={placeholder}
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] disabled:opacity-50 transition-colors"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] disabled:opacity-50 transition-colors"
                         />
                       </div>
                     </div>
                   ))}
 
                   <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Email</label>
+                    <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Email</label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B0BDB7]" />
                       <input
                         type="email" disabled value={formData.email}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white opacity-50"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] opacity-50"
                       />
                     </div>
                   </div>
@@ -270,13 +369,13 @@ export default function ProfileView() {
 
                 {/* Phone */}
                 <div>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Phone</label>
+                  <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Phone</label>
                   <div className="flex gap-2">
                     <select
                       disabled={!isEditing}
                       value={formData.countryCode}
                       onChange={e => setFormData(f => ({ ...f, countryCode: e.target.value }))}
-                      className="px-3 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1A4D2E] disabled:opacity-50"
+                      className="px-3 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] focus:outline-none focus:border-[#1B5E52] disabled:opacity-50"
                     >
                       <option value="+90">🇹🇷 +90</option>
                       <option value="+1">🇺🇸 +1</option>
@@ -284,13 +383,13 @@ export default function ProfileView() {
                       <option value="+49">🇩🇪 +49</option>
                     </select>
                     <div className="relative flex-1">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B0BDB7]" />
                       <input
                         type="tel" disabled={!isEditing}
                         value={formData.mobileNumber}
                         onChange={e => setFormData(f => ({ ...f, mobileNumber: e.target.value }))}
                         placeholder="5XX XXX XX XX"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] disabled:opacity-50 transition-colors"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] disabled:opacity-50 transition-colors"
                       />
                     </div>
                   </div>
@@ -302,10 +401,10 @@ export default function ProfileView() {
             {tab === 'addresses' && (
               <div className="space-y-3">
                 {(!userProfile?.addresses || userProfile.addresses.length === 0) ? (
-                  <div className="bg-white dark:bg-[#111] rounded-3xl p-12 text-center shadow-sm">
-                    <MapPin className="w-10 h-10 text-gray-200 dark:text-white/10 mx-auto mb-3" />
-                    <p className="font-bold text-gray-400 text-sm">No saved addresses yet</p>
-                    <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Confirm a location on the map to save one</p>
+                  <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
+                    <MapPin className="w-10 h-10 text-[#B0BDB7] mx-auto mb-3" />
+                    <p className="font-bold text-[#8FA396] text-sm">No saved addresses yet</p>
+                    <p className="text-xs text-[#B0BDB7] mt-1">Confirm a location on the map to save one</p>
                   </div>
                 ) : (
                   userProfile.addresses.map((addr: Address, i: number) => {
@@ -320,38 +419,38 @@ export default function ProfileView() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="bg-white dark:bg-[#111] rounded-2xl shadow-sm overflow-hidden"
+                        className="bg-white rounded-2xl shadow-sm overflow-hidden"
                       >
                         {/* Card header — always visible */}
                         <div className="p-4 flex items-start gap-4">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            tag === 'home'    ? 'bg-blue-50   dark:bg-blue-900/20   text-blue-500'   :
-                            tag === 'work'    ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-500' :
-                            tag === 'partner' ? 'bg-pink-50   dark:bg-pink-900/20   text-pink-500'   :
-                            'bg-gray-100 dark:bg-white/5 text-gray-500'
+                            tag === 'home'    ? 'bg-blue-50   text-blue-500'   :
+                            tag === 'work'    ? 'bg-purple-50 text-purple-500' :
+                            tag === 'partner' ? 'bg-pink-50   text-pink-500'   :
+                            'bg-[#F5F0E8] text-[#8FA396]'
                           }`}>
                             {TAG_ICON[tag]}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-bold text-gray-900 dark:text-white text-sm">{label}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                              <span className="font-bold text-[#1B1B1B] text-sm">{label}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#8FA396] bg-[#F5F0E8] px-2 py-0.5 rounded-full">
                                 {TAG_LABEL[tag] || tag}
                               </span>
                             </div>
-                            {details && <p className="text-xs text-gray-500 dark:text-gray-400">{details}</p>}
+                            {details && <p className="text-xs text-[#8FA396]">{details}</p>}
                             {addr.phone && (
-                              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                              <p className="text-xs text-[#8FA396] mt-0.5 flex items-center gap-1">
                                 <Phone className="w-3 h-3" />{addr.phone}
                               </p>
                             )}
                             {addr.company && (
-                              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                              <p className="text-xs text-[#8FA396] mt-0.5 flex items-center gap-1">
                                 <Building2 className="w-3 h-3" />{addr.company}
                               </p>
                             )}
                             {addr.deliveryNote && (
-                              <p className="text-xs text-gray-400 mt-1 italic">"{addr.deliveryNote}"</p>
+                              <p className="text-xs text-[#8FA396] mt-1 italic">"{addr.deliveryNote}"</p>
                             )}
                           </div>
                           {/* Change + Delete buttons */}
@@ -360,8 +459,8 @@ export default function ProfileView() {
                               onClick={() => isEditingThis ? (setEditingAddrIndex(null), setEditingAddr(null)) : openEditAddress(i)}
                               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                                 isEditingThis
-                                  ? 'bg-gray-100 dark:bg-white/5 text-gray-500'
-                                  : 'bg-[#1A4D2E]/8 dark:bg-[#1A4D2E]/15 text-[#1A4D2E] hover:bg-[#1A4D2E]/15'
+                                  ? 'bg-[#F5F0E8] text-[#8FA396]'
+                                  : 'bg-[#1B5E52]/10 text-[#1B5E52] hover:bg-[#1B5E52]/15'
                               }`}
                             >
                               <Pencil className="w-3 h-3" />
@@ -369,7 +468,7 @@ export default function ProfileView() {
                             </button>
                             <button
                               onClick={() => handleDeleteAddress(i)}
-                              className="p-1.5 text-gray-300 hover:text-red-400 dark:text-white/20 dark:hover:text-red-400 transition-colors rounded-lg"
+                              className="p-1.5 text-[#B0BDB7] hover:text-red-400 transition-colors rounded-lg"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -384,7 +483,7 @@ export default function ProfileView() {
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
-                              className="overflow-hidden border-t border-gray-100 dark:border-white/5"
+                              className="overflow-hidden border-t border-[#E8E0D5]"
                             >
                               <div className="p-4 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
@@ -397,25 +496,25 @@ export default function ProfileView() {
                                     { key: 'phone',        label: 'Phone',         placeholder: '+90 5XX…' },
                                   ].map(({ key, label, placeholder }) => (
                                     <div key={key}>
-                                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1 block">{label}</label>
+                                      <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{label}</label>
                                       <input
                                         type="text"
                                         value={editingAddr[key] || ''}
                                         onChange={e => setEditingAddr(a => a ? { ...a, [key]: e.target.value } : a)}
                                         placeholder={placeholder}
-                                        className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] transition-colors"
+                                        className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
                                       />
                                     </div>
                                   ))}
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1 block">Delivery Note</label>
+                                  <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">Delivery Note</label>
                                   <textarea
                                     rows={2}
                                     value={editingAddr.deliveryNote || ''}
                                     onChange={e => setEditingAddr(a => a ? { ...a, deliveryNote: e.target.value } : a)}
                                     placeholder="Door code, directions…"
-                                    className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-xs text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none focus:border-[#1A4D2E] transition-colors resize-none"
+                                    className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors resize-none"
                                   />
                                 </div>
                                 {/* Tag selector */}
@@ -427,8 +526,8 @@ export default function ProfileView() {
                                       onClick={() => setEditingAddr(a => a ? { ...a, tag: t } : a)}
                                       className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
                                         editingAddr.tag === t
-                                          ? 'bg-[#1A4D2E] border-[#1A4D2E] text-white'
-                                          : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-500 dark:text-gray-400'
+                                          ? 'bg-[#1B5E52] border-[#1B5E52] text-white'
+                                          : 'bg-[#F5F0E8] border-[#E8E0D5] text-[#8FA396]'
                                       }`}
                                     >
                                       {TAG_ICON[t]}
@@ -438,7 +537,7 @@ export default function ProfileView() {
                                 </div>
                                 <button
                                   onClick={handleSaveEditedAddress}
-                                  className="w-full py-2.5 bg-[#1A4D2E] text-white rounded-xl text-sm font-bold hover:bg-[#133b23] transition-colors"
+                                  className="w-full py-2.5 bg-[#1B5E52] text-white rounded-xl text-sm font-bold hover:bg-[#164d43] transition-colors"
                                 >
                                   Save Changes
                                 </button>
@@ -457,26 +556,26 @@ export default function ProfileView() {
             {tab === 'orders' && (
               <div className="space-y-3">
                 {ordersLoading ? (
-                  <div className="bg-white dark:bg-[#111] rounded-3xl p-12 flex items-center justify-center shadow-sm">
-                    <Loader2 className="w-8 h-8 text-[#1A4D2E] animate-spin" />
+                  <div className="bg-white rounded-3xl p-12 flex items-center justify-center shadow-sm">
+                    <Loader2 className="w-8 h-8 text-[#1B5E52] animate-spin" />
                   </div>
                 ) : orders.length === 0 ? (
-                  <div className="bg-white dark:bg-[#111] rounded-3xl p-12 text-center shadow-sm">
-                    <ShoppingBag className="w-10 h-10 text-gray-200 dark:text-white/10 mx-auto mb-3" />
-                    <p className="font-bold text-gray-400 text-sm">{t('No orders yet')}</p>
-                    <p className="text-xs text-gray-300 dark:text-white/20 mt-1">{t('Your order history will appear here')}</p>
+                  <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
+                    <ShoppingBag className="w-10 h-10 text-[#B0BDB7] mx-auto mb-3" />
+                    <p className="font-bold text-[#8FA396] text-sm">{t('No orders yet')}</p>
+                    <p className="text-xs text-[#B0BDB7] mt-1">{t('Your order history will appear here')}</p>
                   </div>
                 ) : (
                   orders.map((order: Order, i: number) => {
                     const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-                      pending:    { label: 'Pending',    color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',       icon: <Clock className="w-3.5 h-3.5" /> },
-                      confirmed:  { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',         icon: <Package className="w-3.5 h-3.5" /> },
-                      preparing:  { label: 'Preparing',  color: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20',   icon: <Loader2 className="w-3.5 h-3.5" /> },
-                      ready:      { label: 'Ready',      color: 'text-[#1A4D2E] bg-[#1A4D2E]/10',                      icon: <Package className="w-3.5 h-3.5" /> },
-                      picked_up:  { label: 'Picked Up',  color: 'text-violet-500 bg-violet-50 dark:bg-violet-900/20',   icon: <Package className="w-3.5 h-3.5" /> },
-                      delivering: { label: 'Delivering', color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20',         icon: <Truck className="w-3.5 h-3.5" /> },
-                      delivered:  { label: 'Delivered',  color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20', icon: <CheckCircle className="w-3.5 h-3.5" /> },
-                      cancelled:  { label: 'Cancelled',  color: 'text-red-500 bg-red-50 dark:bg-red-900/20',           icon: <XCircle className="w-3.5 h-3.5" /> },
+                      pending:    { label: 'Pending',    color: 'text-amber-500 bg-amber-50',       icon: <Clock className="w-3.5 h-3.5" /> },
+                      confirmed:  { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50',         icon: <Package className="w-3.5 h-3.5" /> },
+                      preparing:  { label: 'Preparing',  color: 'text-indigo-500 bg-indigo-50',     icon: <Loader2 className="w-3.5 h-3.5" /> },
+                      ready:      { label: 'Ready',      color: 'text-[#1B5E52] bg-[#1B5E52]/10',  icon: <Package className="w-3.5 h-3.5" /> },
+                      picked_up:  { label: 'Picked Up',  color: 'text-violet-500 bg-violet-50',     icon: <Package className="w-3.5 h-3.5" /> },
+                      delivering: { label: 'Delivering', color: 'text-cyan-500 bg-cyan-50',         icon: <Truck className="w-3.5 h-3.5" /> },
+                      delivered:  { label: 'Delivered',  color: 'text-emerald-600 bg-emerald-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
+                      cancelled:  { label: 'Cancelled',  color: 'text-red-500 bg-red-50',           icon: <XCircle className="w-3.5 h-3.5" /> },
                     };
                     const sc = statusConfig[order.status] || statusConfig['pending'];
                     const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -487,96 +586,148 @@ export default function ProfileView() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="bg-white dark:bg-[#111] rounded-2xl shadow-sm overflow-hidden"
+                        className="bg-white rounded-2xl shadow-sm overflow-hidden"
                       >
-                        <div className="p-4">
-                          {/* Top row */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
+                        {/* Clickable header — toggles expanded detail */}
+                        <div
+                          className="p-4 cursor-pointer select-none"
+                          onClick={() => {
+                            const newId = expandedOrderId === order.id ? null : order.id;
+                            setExpandedOrderId(newId);
+                            if (newId !== expandedOrderId) { setInlineRating(5); setInlineComment(''); }
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#1A4D2E]/10 flex items-center justify-center text-[#1A4D2E] flex-shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-[#1B5E52]/10 flex items-center justify-center text-[#1B5E52] flex-shrink-0">
                                 <ShoppingBag className="w-5 h-5" />
                               </div>
                               <div>
-                                <p className="font-bold text-sm text-gray-900 dark:text-white leading-tight">
+                                <p className="font-bold text-sm text-[#1B1B1B] leading-tight">
                                   {order.restaurantName || 'Order'}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                <p className="text-xs text-[#8FA396] mt-0.5 flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {date}{time ? ` · ${time}` : ''}
                                 </p>
                               </div>
                             </div>
-                            <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0 ${sc.color}`}>
-                              {sc.icon}
-                              {sc.label}
+                            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                              <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${sc.color}`}>
+                                {sc.icon}
+                                {sc.label}
+                              </span>
+                              {order.status === 'delivering' && (() => {
+                                const arrival = computeDeliveryArrival(order);
+                                return (
+                                  <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-600">
+                                    <Truck className="w-3 h-3" />
+                                    {arrival ? `~${arrival}` : 'On the way'}
+                                  </span>
+                                );
+                              })()}
+                              {['pending','preparing','ready'].includes(order.status) && order.estimatedPickupTime && (
+                                <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                                  <Clock className="w-3 h-3" />
+                                  {computeETA(order.estimatedPickupTime)}
+                                </span>
+                              )}
+                              <ChevronDown className={`w-4 h-4 text-[#8FA396] transition-transform duration-200 ${expandedOrderId === order.id ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+
+                          {/* Footer — always visible */}
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E8E0D5]">
+                            <div className="flex items-center gap-3 text-xs text-[#8FA396]">
+                              {order.deliveryType && <span className="capitalize">{order.deliveryType}</span>}
+                              {order.paymentMethod && <span className="capitalize">{order.paymentMethod}</span>}
+                            </div>
+                            <span className="font-black text-sm text-[#1B1B1B]">
+                              ₺{(order.total ?? order.price ?? 0).toFixed(2)}
                             </span>
                           </div>
-
-                          {/* Items */}
-                          {order.items && order.items.length > 0 && (
-                            <div className="space-y-1 mb-3">
-                              {order.items?.slice(0, 3).map((item: CartItem, j: number) => (
-                                <div key={j} className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                  <span className="truncate">{item.quantity}× {item.name}</span>
-                                  <span className="font-semibold ml-2 flex-shrink-0">₺{(item.price * item.quantity).toFixed(2)}</span>
-                                </div>
-                              ))}
-                              {order.items.length > 3 && (
-                                <p className="text-xs text-gray-400">+{order.items.length - 3} more items</p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Delivery Code — shown only to this customer when order is out for delivery */}
-                          {order.status === 'delivering' && order.deliveryCode && (
-                            <div className="mb-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200/60 dark:border-amber-700/30">
-                              <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">Delivery Code</p>
-                              <p className="text-2xl font-black text-amber-700 dark:text-amber-300 tracking-[0.4em]">{order.deliveryCode}</p>
-                              <p className="text-xs text-amber-600/80 dark:text-amber-400/70 mt-1">Give this code to the courier to confirm your delivery.</p>
-                            </div>
-                          )}
-
-                          {/* Tracking info */}
-                          {(order.estimatedPickupTime || order.trackingNotes) && (
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-3 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-xl">
-                              {order.estimatedPickupTime && (
-                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pickup: {order.estimatedPickupTime}</span>
-                              )}
-                              {order.trackingNotes && (
-                                <span>{order.trackingNotes}</span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Footer row */}
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-white/5">
-                            <div className="flex items-center gap-3 text-xs text-gray-400">
-                              {order.deliveryType && (
-                                <span className="capitalize">{order.deliveryType}</span>
-                              )}
-                              {order.paymentMethod && (
-                                <span className="capitalize">{order.paymentMethod}</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-sm text-gray-900 dark:text-white">
-                                ₺{(order.total ?? order.price ?? 0).toFixed(2)}
-                              </span>
-                              {order.status === 'delivered' && !reviewedOrderIds.has(order.id) && (
-                                <button
-                                  onClick={() => setReviewModal({
-                                    orderId: order.id,
-                                    restaurantId: order.restaurantId || '',
-                                    restaurantName: order.restaurantName || 'Restaurant',
-                                  })}
-                                  className="flex items-center gap-1 text-xs font-bold text-[#1A4D2E] hover:underline"
-                                >
-                                  Rate <ChevronRight className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
                         </div>
+
+                        {/* Expandable detail */}
+                        <AnimatePresence>
+                          {expandedOrderId === order.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-4 pb-4 pt-1 space-y-3 border-t border-[#E8E0D5]">
+
+                                {/* All items */}
+                                {order.items && order.items.length > 0 && (
+                                  <div className="space-y-1">
+                                    {order.items.map((item: CartItem, j: number) => (
+                                      <div key={j} className="flex items-center justify-between text-xs text-[#8FA396]">
+                                        <span className="truncate">{item.quantity}× {item.name}</span>
+                                        <span className="font-semibold ml-2 flex-shrink-0">₺{(item.price * item.quantity).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Delivery Code */}
+                                {order.status === 'delivering' && order.deliveryCode && (
+                                  <div className="px-4 py-3 bg-amber-50 rounded-xl border border-amber-200/60">
+                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Delivery Code</p>
+                                    <p className="text-2xl font-black text-amber-700 tracking-[0.4em]">{order.deliveryCode}</p>
+                                    <p className="text-xs text-amber-600/80 mt-1">Give this code to the courier to confirm your delivery.</p>
+                                  </div>
+                                )}
+
+                                {/* Tracking info */}
+                                {(order.estimatedPickupTime || order.trackingNotes) && (
+                                  <div className="flex flex-wrap gap-3 text-xs text-[#8FA396] px-3 py-2 bg-[#F5F0E8] rounded-xl">
+                                    {order.estimatedPickupTime && (
+                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pickup: {order.estimatedPickupTime}</span>
+                                    )}
+                                    {order.trackingNotes && <span>{order.trackingNotes}</span>}
+                                  </div>
+                                )}
+
+                                {/* Inline review form for delivered & unreviewed orders */}
+                                {order.status === 'delivered' && !reviewedOrderIds.has(order.id) && (
+                                  <div className="pt-2 border-t border-[#E8E0D5]">
+                                    <p className="text-xs font-bold text-[#8FA396] mb-3">Rate your experience</p>
+                                    <div className="flex gap-1 mb-3">
+                                      {[1, 2, 3, 4, 5].map(s => (
+                                        <button
+                                          key={s}
+                                          type="button"
+                                          onClick={e => { e.stopPropagation(); setInlineRating(s); }}
+                                          className="p-0.5 transition-transform hover:scale-110 active:scale-95"
+                                        >
+                                          <Star className={`w-6 h-6 ${s <= inlineRating ? 'fill-amber-400 text-amber-400' : 'text-[#B0BDB7]'}`} />
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <textarea
+                                      rows={2}
+                                      value={inlineComment}
+                                      onChange={e => setInlineComment(e.target.value)}
+                                      onClick={e => e.stopPropagation()}
+                                      placeholder="Share your thoughts (optional)…"
+                                      className="w-full px-3 py-2 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors resize-none mb-2"
+                                    />
+                                    <button
+                                      onClick={e => { e.stopPropagation(); handleInlineReview(order); }}
+                                      disabled={inlineSubmitting}
+                                      className="w-full py-2.5 bg-[#1B5E52] text-white rounded-xl text-xs font-bold hover:bg-[#164d43] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                      {inlineSubmitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Submitting…</> : 'Submit Review'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     );
                   })
@@ -589,8 +740,8 @@ export default function ProfileView() {
               <div className="space-y-3">
 
                 {/* Language */}
-                <div className="bg-white dark:bg-[#111] rounded-2xl overflow-hidden shadow-sm">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest px-5 pt-5 pb-2">Language</p>
+                <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest px-5 pt-5 pb-2">Language</p>
                   {[
                     { code: 'en', name: 'English', flag: '🇬🇧' },
                     { code: 'tr', name: 'Türkçe',  flag: '🇹🇷' },
@@ -599,35 +750,35 @@ export default function ProfileView() {
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`w-full flex items-center justify-between px-5 py-3.5 transition-colors ${
-                        idx < 1 ? 'border-b border-gray-50 dark:border-white/5' : ''
-                      } ${i18n.language === lang.code ? 'bg-[#1A4D2E]/5 dark:bg-[#1A4D2E]/10' : 'hover:bg-gray-50 dark:hover:bg-white/3'}`}
+                        idx < 1 ? 'border-b border-[#E8E0D5]' : ''
+                      } ${i18n.language === lang.code ? 'bg-[#1B5E52]/5' : 'hover:bg-[#F5F0E8]'}`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">{lang.flag}</span>
-                        <span className={`font-medium text-sm ${i18n.language === lang.code ? 'text-[#1A4D2E] font-bold' : 'text-gray-700 dark:text-gray-300'}`}>
+                        <span className={`font-medium text-sm ${i18n.language === lang.code ? 'text-[#1B5E52] font-bold' : 'text-[#5C6B63]'}`}>
                           {lang.name}
                         </span>
                       </div>
-                      {i18n.language === lang.code && <CheckCircle2 className="w-4 h-4 text-[#1A4D2E]" />}
+                      {i18n.language === lang.code && <CheckCircle2 className="w-4 h-4 text-[#1B5E52]" />}
                     </button>
                   ))}
                 </div>
 
                 {/* Notifications */}
-                <div className="bg-white dark:bg-[#111] rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between">
+                <div className="bg-white rounded-2xl px-5 py-4 shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${userProfile?.notificationsEnabled ? 'bg-[#1A4D2E]/10 text-[#1A4D2E]' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${userProfile?.notificationsEnabled ? 'bg-[#1B5E52]/10 text-[#1B5E52]' : 'bg-[#F5F0E8] text-[#8FA396]'}`}>
                       <Bell className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-gray-900 dark:text-white">Notifications</p>
-                      <p className="text-xs text-gray-400">{userProfile?.notificationsEnabled ? 'Enabled' : 'Disabled'}</p>
+                      <p className="font-bold text-sm text-[#1B1B1B]">Notifications</p>
+                      <p className="text-xs text-[#8FA396]">{userProfile?.notificationsEnabled ? 'Enabled' : 'Disabled'}</p>
                     </div>
                   </div>
                   <button
                     onClick={handleNotificationToggle}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                      userProfile?.notificationsEnabled ? 'bg-[#1A4D2E]' : 'bg-gray-200 dark:bg-white/10'
+                      userProfile?.notificationsEnabled ? 'bg-[#1B5E52]' : 'bg-[#E8E0D5]'
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -637,13 +788,13 @@ export default function ProfileView() {
                 </div>
 
                 {/* Account info */}
-                <div className="bg-white dark:bg-[#111] rounded-2xl px-5 py-4 shadow-sm space-y-3">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Account</p>
-                  <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                <div className="bg-white rounded-2xl px-5 py-4 shadow-sm space-y-3">
+                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">Account</p>
+                  <div className="flex items-center gap-3 text-sm text-[#8FA396]">
                     <Globe className="w-4 h-4 flex-shrink-0" />
                     <span>Member since {new Date().getFullYear()}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 text-sm text-[#8FA396]">
                     <User className="w-4 h-4 flex-shrink-0" />
                     <span className="capitalize">{userProfile?.role || 'customer'} account</span>
                   </div>
@@ -664,15 +815,15 @@ export default function ProfileView() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-              className="bg-white dark:bg-[#111] rounded-3xl w-full max-w-sm p-6 shadow-2xl"
+              className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="font-black text-gray-900 dark:text-white text-lg">Top Up Wallet</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Current: <span className="font-bold text-[#1A4D2E]">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span></p>
+                  <h3 className="font-black text-[#1B1B1B] text-lg">Top Up Wallet</h3>
+                  <p className="text-xs text-[#8FA396] mt-0.5">Current: <span className="font-bold text-[#1B5E52]">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span></p>
                 </div>
-                <button onClick={() => setShowWalletModal(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                  <X className="w-4 h-4 text-gray-500" />
+                <button onClick={() => setShowWalletModal(false)} className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center">
+                  <X className="w-4 h-4 text-[#8FA396]" />
                 </button>
               </div>
 
@@ -683,8 +834,8 @@ export default function ProfileView() {
                     onClick={() => setTopUpAmount(amount)}
                     className={`py-3 rounded-xl text-sm font-bold transition-all border-2 ${
                       topUpAmount === amount
-                        ? 'bg-[#1A4D2E] border-[#1A4D2E] text-white'
-                        : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                        ? 'bg-[#1B5E52] border-[#1B5E52] text-white'
+                        : 'bg-[#F5F0E8] border-[#E8E0D5] text-[#5C6B63]'
                     }`}
                   >
                     ₺{amount}
@@ -693,18 +844,18 @@ export default function ProfileView() {
               </div>
 
               <div className="mb-5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Custom amount</label>
+                <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Custom amount</label>
                 <input
                   type="number" min={1}
                   value={topUpAmount}
                   onChange={e => setTopUpAmount(Number(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#1A4D2E]"
+                  className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] focus:outline-none focus:border-[#1B5E52]"
                 />
               </div>
 
               <button
                 onClick={handleTopUp}
-                className="w-full py-3.5 bg-[#1A4D2E] text-white rounded-2xl font-bold hover:bg-[#133b23] transition-colors"
+                className="w-full py-3.5 bg-[#1B5E52] text-white rounded-2xl font-bold hover:bg-[#164d43] transition-colors"
               >
                 Add ₺{topUpAmount}
               </button>
@@ -713,20 +864,6 @@ export default function ProfileView() {
         )}
       </AnimatePresence>
 
-      {/* Review Modal */}
-      {reviewModal && (
-        <ReviewModal
-          isOpen={!!reviewModal}
-          onClose={() => setReviewModal(null)}
-          restaurantId={reviewModal.restaurantId}
-          restaurantName={reviewModal.restaurantName}
-          orderId={reviewModal.orderId}
-          onSubmitted={() => {
-            setReviewedOrderIds(prev => new Set(prev).add(reviewModal.orderId));
-            setReviewModal(null);
-          }}
-        />
-      )}
     </div>
   );
 }
