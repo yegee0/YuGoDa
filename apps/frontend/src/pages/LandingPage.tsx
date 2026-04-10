@@ -222,7 +222,7 @@ export default function LandingPage() {
         <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: C.lime }} />
         <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: C.coral }} />
 
-        <div className="max-w-7xl mx-auto px-6 pt-24 pb-20 w-full grid md:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-6 pt-24 pb-20 w-full grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -276,50 +276,52 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center px-8 md:px-0"
           >
             <div
-              className="relative w-64 h-80 rounded-3xl flex items-center justify-center shadow-2xl"
+              className="relative w-52 h-64 md:w-64 md:h-80 rounded-3xl flex items-center justify-center shadow-2xl"
               style={{ backgroundColor: C.lime }}
             >
-              <ShoppingBag className="w-32 h-32" style={{ color: C.teal, opacity: 0.9 }} />
+              <ShoppingBag className="w-24 h-24 md:w-32 md:h-32" style={{ color: C.teal, opacity: 0.9 }} />
               <div
-                className="absolute -top-4 -right-4 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-lg"
+                className="absolute -top-3 -right-3 md:-top-4 md:-right-4 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-lg"
                 style={{ backgroundColor: C.coral, color: '#fff' }}
               >
                 Up to 70% OFF
               </div>
             </div>
 
-            {/* Floating food cards */}
-            {([
-              { icon: <Croissant className="w-4 h-4" />, label: 'Pastries',  style: { top: '0%',    left: '-22%'  }, delay: 0.3,  accent: C.coral },
-              { icon: <Pizza     className="w-4 h-4" />, label: 'Pizza',     style: { top: '15%',   right: '-22%' }, delay: 0.45, accent: C.teal },
-              { icon: <Utensils  className="w-4 h-4" />, label: 'Salads',    style: { bottom: '12%',left: '-20%'  }, delay: 0.6,  accent: C.teal },
-              { icon: <Soup      className="w-4 h-4" />, label: 'Bento',     style: { bottom: '0%', right: '-18%' }, delay: 0.75, accent: C.coral },
-            ] as const).map(({ icon, label, style, delay, accent }) => (
-              <motion.div
-                key={label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay }}
-                className="absolute px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg"
-                style={{ ...style, backgroundColor: 'rgba(255,255,255,0.95)' }}
-              >
-                <span style={{ color: accent }}>{icon}</span>
-                <span className="text-xs font-extrabold" style={{ color: C.teal }}>{label}</span>
-              </motion.div>
-            ))}
+            {/* Floating food cards — hidden on very small screens */}
+            <div className="hidden sm:block">
+              {([
+                { icon: <Croissant className="w-4 h-4" />, label: 'Pastries',  style: { top: '0%',    left: '-22%'  }, delay: 0.3,  accent: C.coral },
+                { icon: <Pizza     className="w-4 h-4" />, label: 'Pizza',     style: { top: '15%',   right: '-22%' }, delay: 0.45, accent: C.teal },
+                { icon: <Utensils  className="w-4 h-4" />, label: 'Salads',    style: { bottom: '12%',left: '-20%'  }, delay: 0.6,  accent: C.teal },
+                { icon: <Soup      className="w-4 h-4" />, label: 'Bento',     style: { bottom: '0%', right: '-18%' }, delay: 0.75, accent: C.coral },
+              ] as const).map(({ icon, label, style, delay, accent }) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay }}
+                  className="absolute px-3 md:px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg"
+                  style={{ ...style, backgroundColor: 'rgba(255,255,255,0.95)' }}
+                >
+                  <span style={{ color: accent }}>{icon}</span>
+                  <span className="text-xs font-extrabold" style={{ color: C.teal }}>{label}</span>
+                </motion.div>
+              ))}
+            </div>
 
             {/* CO₂ badge */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.9 }}
-              className="absolute -bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl text-center shadow-xl"
+              className="absolute -bottom-6 left-1/2 -translate-x-1/2 px-4 md:px-6 py-3 rounded-2xl text-center shadow-xl whitespace-nowrap"
               style={{ backgroundColor: C.tealDark, border: `2px solid ${C.lime}` }}
             >
-              <p className="text-white text-xl font-extrabold">2.5 kg</p>
+              <p className="text-white text-lg md:text-xl font-extrabold">2.5 kg</p>
               <p className="text-white/70 text-xs font-extrabold">CO₂ saved per bag</p>
             </motion.div>
           </motion.div>
@@ -353,11 +355,10 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════ WHY YUGODA */}
-      {/* Whole section pulled up over the stats bar via negative marginTop + zIndex */}
       <div style={{ position: 'relative', zIndex: 3, marginTop: '-80px' }}>
 
       {/* ── Cream: headline ── */}
-      <div style={{ backgroundColor: C.cream, paddingTop: '80px', paddingBottom: '160px' }}>
+      <div style={{ backgroundColor: C.cream, paddingTop: '80px', paddingBottom: '80px' }}>
         <div className="text-center px-6">
           <p className="text-sm font-extrabold uppercase tracking-widest mb-3" style={{ color: C.coral }}>
             Why choose YuGoDa
@@ -369,10 +370,11 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Green: height ≈ half bag rendered height so dividing line bisects bag ── */}
-      <div style={{ backgroundColor: '#1a3d2b', position: 'relative', overflow: 'visible', height: '280px' }}>
+      {/* ── Green: features + bag image ── */}
+      <div style={{ backgroundColor: '#1a3d2b', position: 'relative', overflow: 'hidden' }} className="py-12 md:py-0 md:h-[280px]">
 
-        <div style={{
+        {/* Bag image — desktop: centered straddling boundary; mobile: smaller, above features */}
+        <div className="hidden md:block" style={{
           position: 'absolute',
           top: '-160px',
           left: '49%',
@@ -393,19 +395,56 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* Features row — two equal halves, bag column is a transparent gap */}
+        {/* Mobile bag image */}
+        <div className="md:hidden flex justify-center mb-8 px-6">
+          <motion.img
+            src={bagImage}
+            alt="YuGoDa surprise bag"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            style={{ maxWidth: '200px', filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.4))' }}
+          />
+        </div>
+
+        {/* Features — desktop: 3-col grid around bag; mobile: 2x2 grid */}
+        <div className="md:hidden max-w-sm mx-auto px-6 grid grid-cols-2 gap-6">
+          {[
+            { icon: <DollarSign className="w-5 h-5" />, title: 'Save up to 70%', desc: 'Restaurant-quality food at a fraction of the price.' },
+            { icon: <Leaf className="w-5 h-5" />, title: 'Reduce waste', desc: 'Every bag rescued means less food in landfill.' },
+            { icon: <Gift className="w-5 h-5" />, title: 'Surprise every time', desc: 'A mystery selection unique to every visit.' },
+            { icon: <MapPin className="w-5 h-5" />, title: 'Shops near you', desc: 'Bakeries, cafés and grocers in your area.' },
+          ].map(({ icon, title, desc }, i) => (
+            <motion.div
+              key={title}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: C.lime, color: '#1a3d2b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {icon}
+              </div>
+              <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.9rem', color: '#fff', margin: 0 }}>{title}</h3>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{desc}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Desktop 3-col features */}
         <div
+          className="hidden md:grid"
           style={{
             maxWidth: 1280,
             margin: '0 auto',
             padding: '0 48px',
-            height: '100%',
-            display: 'grid',
+            height: '280px',
             gridTemplateColumns: '1fr 480px 1fr',
             alignItems: 'center',
           }}
         >
-          {/* ── Left: 2 features, top-aligned, equal gap ── */}
           <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: '24px', paddingTop: '24px' }}>
             {[
               { icon: <DollarSign className="w-5 h-5" />, title: 'Save up to 70%', desc: 'Restaurant-quality food at a fraction of the price.' },
@@ -427,11 +466,7 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
-
-          {/* ── Centre gap ── */}
           <div />
-
-          {/* ── Right: 2 features, top-aligned, equal gap — mirror of left ── */}
           <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', alignItems: 'flex-start', justifyContent: 'flex-start', paddingLeft: '24px', paddingTop: '24px' }}>
             {[
               { icon: <Gift   className="w-5 h-5" />, title: 'Surprise every time', desc: 'A mystery selection unique to every visit.' },
@@ -733,7 +768,7 @@ export default function LandingPage() {
           </div>
 
           <div
-            className="rounded-3xl overflow-hidden p-8"
+            className="rounded-3xl overflow-hidden p-5 md:p-8"
             style={{ backgroundColor: '#fff', boxShadow: '0 8px 40px rgba(27,94,82,0.08)' }}
           >
             {[
@@ -783,7 +818,7 @@ export default function LandingPage() {
       {/* ════════════════════════════════════ FINAL CTA */}
       <section className="py-16 px-6">
         <div
-          className="max-w-4xl mx-auto rounded-3xl p-12 text-center relative overflow-hidden"
+          className="max-w-4xl mx-auto rounded-3xl p-8 md:p-12 text-center relative overflow-hidden"
           style={{ backgroundColor: C.teal }}
         >
           <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-15 pointer-events-none" style={{ backgroundColor: C.lime }} />

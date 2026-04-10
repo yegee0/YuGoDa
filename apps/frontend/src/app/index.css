@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-eco-primary: #1A4D2E;
-  --color-eco-secondary: #FF9F1C;
+  --color-eco-primary: #1B5E52;
+  --color-eco-secondary: #ad3115;
+  --color-eco-lime: #748f2b;
   --color-eco-bg: var(--bg-color);
   --color-eco-surface: var(--surface-color);
   --color-eco-text: var(--text-color);
@@ -10,17 +11,17 @@
   --color-eco-border: var(--border-color);
 
   --radius-eco: 16px;
-  --shadow-eco: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-eco: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg-color: #F9F9F9;
-  --surface-color: #FFFFFF;
-  --text-color: #1F2937;
-  --muted-color: #6B7280;
-  --border-color: #F3F4F6;
+  --bg-color: #1b5e52;
+  --surface-color: #748f2b;
+  --text-color: #1B1B1B;
+  --muted-color: #1B3A2E;
+  --border-color: rgba(0, 0, 0, 0.13);
 }
 
 .dark {
@@ -31,21 +32,53 @@
   --border-color: #2D2D2D;
 }
 
+/* ── App inner-page layout background ───────────────────── */
+.app-leaf-bg {
+  background-color: #1b5e52;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Nunito', 'Inter', system-ui, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal overflow on mobile */
+* {
+  box-sizing: border-box;
+}
+
+/* Hide scrollbar utility (used on horizontal scrollers) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Improve tap targets on mobile */
+@media (max-width: 767px) {
+  button, a, [role="button"] {
+    min-height: 40px;
+  }
 }
 
 /* Custom utility classes for the Eco-Modernism design system */
 .eco-card {
   background-color: var(--surface-color);
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid var(--border-color);
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 2px 12px rgba(27, 27, 27, 0.06);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.2s ease;
+}
+
+.eco-card:hover {
+  box-shadow: 0 8px 24px rgba(27, 27, 27, 0.1);
 }
 
 /* Bag card entrance animation — CSS only, immune to re-render cycles */
@@ -66,19 +99,23 @@ body {
 
 
 .eco-button-primary {
-  @apply bg-[#1A4D2E] text-white rounded-[16px] px-6 py-3 font-medium transition-transform active:scale-95 hover:bg-[#133b23] flex items-center justify-center gap-2;
+  @apply bg-[#1B5E52] text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#164d43] hover:shadow-lg flex items-center justify-center gap-2;
+}
+
+.eco-button-coral {
+  @apply bg-[#ad3115] text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] hover:shadow-lg flex items-center justify-center gap-2;
 }
 
 .eco-button-secondary {
-  @apply bg-[#FF9F1C] text-white rounded-[16px] px-6 py-3 font-medium transition-transform active:scale-95 hover:bg-[#e68a19] flex items-center justify-center gap-2;
+  @apply bg-[#ad3115] text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] flex items-center justify-center gap-2;
 }
 
 .eco-button-outline {
-  border: 2px solid #1A4D2E;
-  color: #1A4D2E;
-  border-radius: 16px;
+  border: 2px solid #1B5E52;
+  color: #1B5E52;
+  border-radius: 9999px;
   padding: 0.75rem 1.5rem;
-  font-weight: 500;
+  font-weight: 700;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -87,12 +124,13 @@ body {
 }
 
 .eco-button-outline:hover {
-  background-color: rgba(26, 77, 46, 0.05);
+  background-color: rgba(27, 94, 82, 0.06);
 }
 
-.dark .eco-button-outline {
-  border-color: #2D6A4F;
-  color: #2D6A4F;
+/* Display font utility for Bebas Neue headings */
+.font-display {
+  font-family: 'Bebas Neue', 'Archivo Black', sans-serif;
+  letter-spacing: 0.02em;
 }
 
 /* ── Landing page ticker animation ────────────────────── */
@@ -128,3 +166,44 @@ body {
 .partner-track:hover {
   animation-play-state: paused;
 }
+
+/* ── Inner-app theme: lime (#748f2b) card surfaces ──────── */
+/* CSS custom rules sit outside @layer utilities so they win  */
+/* over Tailwind's utility layer for equal-specificity rules. */
+
+/* All white-background card/panel divs → lime */
+.bg-white {
+  background-color: #748f2b;
+}
+/* Form inputs keep white/neutral — usability exception */
+input.bg-white,
+textarea.bg-white,
+select.bg-white {
+  background-color: #ffffff;
+}
+
+/* Borders on lime surfaces: standard light gray is invisible → darken */
+.border-\[\#E8E0D5\] { border-color: rgba(0,0,0,0.14); }
+.divide-\[\#E8E0D5\] > * + * { border-color: rgba(0,0,0,0.14); }
+.border-\[\#F5F0E8\]  { border-color: rgba(0,0,0,0.10); }
+
+/* Muted / secondary text: #8FA396 and similar light grays are
+   near-invisible on lime #748f2b — replace with readable dark green */
+.text-\[\#8FA396\]  { color: #1B3A2E; }
+.text-\[\#B0BDB7\]  { color: #2A4A3A; }
+.text-\[\#C5BDB5\]  { color: #3A5040; }
+.text-\[\#7A9B88\]  { color: #1B3A2E; }
+
+/* Hover tint on lime cards */
+.hover\:bg-\[\#F5F0E8\]:hover { background-color: rgba(0,0,0,0.07); }
+.bg-\[\#F5F0E8\]    { background-color: rgba(0,0,0,0.07); }
+
+/* eco-card on lime */
+.eco-card {
+  background-color: #748f2b;
+  border-color: rgba(0,0,0,0.14);
+}
+
+/* Page backgrounds for inner app */
+.bg-\[\#0F2A1C\] { background-color: #1b5e52; }
+.bg-eco-bg      { background-color: #1b5e52; }

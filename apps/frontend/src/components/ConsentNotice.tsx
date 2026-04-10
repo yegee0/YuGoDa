@@ -74,9 +74,9 @@ export default function ConsentNotice() {
                     transition={{ type: 'spring', stiffness: 280, damping: 30 }}
                     className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-2xl px-4"
                 >
-                    <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl overflow-hidden">
+                    <div className="bg-white border border-[#E8E0D5] rounded-3xl shadow-2xl overflow-hidden">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-[#1A4D2E] to-[#2D6A4F] p-5 flex items-center gap-3">
+                        <div className="bg-gradient-to-r from-[#1B5E52] to-[#2D6A4F] p-5 flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
                                 <Cookie className="w-5 h-5 text-white" />
                             </div>
@@ -91,11 +91,11 @@ export default function ConsentNotice() {
 
                         {/* Body */}
                         <div className="p-5">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            <p className="text-sm text-gray-600 mb-4">
                                 We and our partners use cookies and similar technologies to store information on your device. Some are essential for the site to work; others help us improve your experience.
                                 You can choose what to allow below, or visit our{' '}
-                                <a href="#" className="text-[#1A4D2E] font-semibold hover:underline">Cookie Policy</a> and{' '}
-                                <a href="#" className="text-[#1A4D2E] font-semibold hover:underline">Privacy Policy</a>.
+                                <a href="#" className="text-[#1B5E52] font-semibold hover:underline">Cookie Policy</a> and{' '}
+                                <a href="#" className="text-[#1B5E52] font-semibold hover:underline">Privacy Policy</a>.
                             </p>
 
                             {/* Customize Section */}
@@ -108,14 +108,14 @@ export default function ConsentNotice() {
                                         className="mb-4 space-y-2 overflow-hidden"
                                     >
                                         {CATEGORIES.map((cat) => (
-                                            <div key={cat.key} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                                            <div key={cat.key} className="flex items-center gap-3 p-3 bg-[#F5F0E8] rounded-2xl">
                                                 <div className="flex-1">
-                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cat.label}</p>
-                                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{cat.desc}</p>
+                                                    <p className="text-sm font-bold text-[#1B1B1B]">{cat.label}</p>
+                                                    <p className="text-[11px] text-[#8FA396] mt-0.5">{cat.desc}</p>
                                                 </div>
                                                 <button
                                                     onClick={() => !cat.locked && setPrefs(p => ({ ...p, [cat.key]: !p[cat.key] }))}
-                                                    className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${prefs[cat.key] ? 'bg-[#1A4D2E]' : 'bg-gray-200 dark:bg-gray-700'
+                                                    className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${prefs[cat.key] ? 'bg-[#1B5E52]' : 'bg-gray-200'
                                                         } ${cat.locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                                                 >
                                                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${prefs[cat.key] ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -131,7 +131,7 @@ export default function ConsentNotice() {
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => setShowCustomize(!showCustomize)}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-2xl text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[#F5F0E8] text-gray-700 rounded-2xl text-xs font-bold hover:bg-[#E8E0D5] transition-colors"
                                 >
                                     {showCustomize ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                     {showCustomize ? 'Hide options' : 'Customize'}
@@ -140,7 +140,7 @@ export default function ConsentNotice() {
                                 {showCustomize && (
                                     <button
                                         onClick={saveCustom}
-                                        className="flex items-center gap-1.5 px-4 py-2.5 border-2 border-[#1A4D2E] text-[#1A4D2E] rounded-2xl text-xs font-bold hover:bg-[#1A4D2E]/5 transition-colors"
+                                        className="flex items-center gap-1.5 px-4 py-2.5 border-2 border-[#1B5E52] text-[#1B5E52] rounded-2xl text-xs font-bold hover:bg-[#1B5E52]/5 transition-colors"
                                     >
                                         <Check className="w-3.5 h-3.5" /> Save Preferences
                                     </button>
@@ -148,14 +148,14 @@ export default function ConsentNotice() {
 
                                 <button
                                     onClick={rejectAll}
-                                    className="px-4 py-2.5 border-2 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-2xl text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                    className="px-4 py-2.5 border-2 border-[#E8E0D5] text-[#8FA396] rounded-2xl text-xs font-bold hover:bg-[#F5F0E8] transition-colors"
                                 >
                                     Reject Non-Essential
                                 </button>
 
                                 <button
                                     onClick={acceptAll}
-                                    className="ml-auto flex items-center gap-1.5 px-6 py-2.5 bg-[#1A4D2E] text-white rounded-2xl text-xs font-bold hover:bg-[#133b23] transition-colors shadow-lg shadow-[#1A4D2E]/20"
+                                    className="ml-auto flex items-center gap-1.5 px-6 py-2.5 bg-[#1B5E52] text-white rounded-2xl text-xs font-bold hover:bg-[#164d43] transition-colors shadow-lg shadow-[#1B5E52]/20"
                                 >
                                     <Check className="w-3.5 h-3.5" /> Allow All Cookies
                                 </button>

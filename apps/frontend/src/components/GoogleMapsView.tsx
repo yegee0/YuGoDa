@@ -45,7 +45,7 @@ function getCategoryColor(category?: string) {
         case 'Vegan': return '#0D9488';
         case 'Sushi': return '#2563EB';
         case 'Pizza': return '#DB2777';
-        default: return '#1A4D2E';
+        default: return '#1B5E52';
     }
 }
 
@@ -97,7 +97,7 @@ function MapContent({ bags, userLocation, onBagSelect, selectedBag, mapId }: Omi
             <AdvancedMarker position={userLocation}>
                 <div style={{
                     width: 20, height: 20,
-                    background: '#1A4D2E',
+                    background: '#1B5E52',
                     border: '3px solid white',
                     borderRadius: '50%',
                     boxShadow: '0 0 0 6px rgba(26,77,46,0.2)',
@@ -140,7 +140,7 @@ function MapContent({ bags, userLocation, onBagSelect, selectedBag, mapId }: Omi
                             }}>🛍</div>
                             <div style={{
                                 background: 'white',
-                                color: '#1A4D2E',
+                                color: '#1B5E52',
                                 fontSize: 10,
                                 fontWeight: 900,
                                 padding: '2px 8px',
