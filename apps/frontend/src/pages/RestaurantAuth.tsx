@@ -4,6 +4,7 @@ import { authPartner } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
+import AddressAutocomplete from '@/components/shared/AddressAutocomplete';
 
 // ── palette ────────────────────────────────────────────────────
 const C = {
@@ -14,9 +15,7 @@ const C = {
 };
 
 // ── font helpers ───────────────────────────────────────────────
-const playfair: React.CSSProperties = { fontFamily: '"Playfair Display", Georgia, serif' };
-const dm:       React.CSSProperties = { fontFamily: '"DM Sans", system-ui, sans-serif' };
-const mono:     React.CSSProperties = { fontFamily: '"DM Mono", "Courier New", monospace' };
+import { FONT_PLAYFAIR as playfair, FONT_DM as dm, FONT_MONO as mono } from '@/lib/constants';
 
 // ── icons ──────────────────────────────────────────────────────
 function MailIcon() {
@@ -119,6 +118,7 @@ export default function RestaurantAuth() {
     email: '', password: '',
     phone: '', businessName: '',
     address: '', businessType: 'Restaurant',
+    lat: 0, lng: 0,
   });
   const set = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -152,6 +152,7 @@ export default function RestaurantAuth() {
         await api.post('/stores', {
           name: form.businessName, category: form.businessType,
           address: form.address, phone: form.phone, email: form.email,
+          ...(form.lat && form.lng ? { location: JSON.stringify({ lat: form.lat, lng: form.lng }) } : {}),
         }).catch(() => {});
         setMsg('Account created! Redirecting…');
       }
@@ -393,12 +394,18 @@ export default function RestaurantAuth() {
                   {/* address */}
                   <div>
                     <label style={lbl}>Business address</label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={iconWrap}><MapPinIcon /></span>
-                      <input type="text" value={form.address} onChange={set('address')}
-                        onFocus={() => setFocused('address')} onBlur={() => setFocused('')}
-                        placeholder="Start typing…" style={inp('address')} />
-                    </div>
+                    <AddressAutocomplete
+                      value={form.address}
+                      onChange={(address, coords) => {
+                        setForm(p => ({
+                          ...p,
+                          address,
+                          lat: coords?.lat ?? p.lat,
+                          lng: coords?.lng ?? p.lng,
+                        }));
+                      }}
+                      placeholder="Start typing your address…"
+                    />
                   </div>
 
                   {/* business type */}

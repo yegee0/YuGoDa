@@ -1,10 +1,12 @@
 package yugoda.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Bag;
+import yugoda.model.Store;
 import yugoda.repository.BagRepository;
+import yugoda.repository.StoreRepository;
 import yugoda.security.UserPrincipal;
 import yugoda.service.BagService;
+import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +21,8 @@ public class BagController extends BaseController {
 
     private final BagService bagService;
     private final BagRepository bagRepository;
-    private final ObjectMapper objectMapper;
+    private final StoreRepository storeRepository;
+    private final EntityEnricher enricher;
 
     // GET /
     @GetMapping
@@ -38,7 +41,18 @@ public class BagController extends BaseController {
         List<Bag> bags = bagService.listBags(dietaryType, merchantType, minPrice, maxPrice,
                 minRating, sortBy, search, restaurantId, showAllBool);
 
-        List<Map<String, Object>> enriched = bags.stream().map(this::enrichBag).toList();
+        // Cache store logos to avoid N+1 queries
+        Map<String, String> logoCache = new HashMap<>();
+        List<Map<String, Object>> enriched = bags.stream().map(bag -> {
+            Map<String, Object> map = enrichBag(bag);
+            String rid = bag.getRestaurantId();
+            if (!logoCache.containsKey(rid)) {
+                Store store = storeRepository.findById(rid).orElse(null);
+                logoCache.put(rid, store != null ? store.getLogo() : null);
+            }
+            map.put("storeLogo", logoCache.get(rid));
+            return map;
+        }).toList();
         return ResponseEntity.ok(Map.of("success", true, "bags", enriched));
     }
 
@@ -109,16 +123,7 @@ public class BagController extends BaseController {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> enrichBag(Bag bag) {
-        Map<String, Object> map = objectMapper.convertValue(bag, Map.class);
-        try {
-            map.put("coordinates", bag.getCoordinates() != null
-                    ? objectMapper.readValue(bag.getCoordinates(), Object.class) : null);
-            map.put("tags", bag.getTags() != null
-                    ? objectMapper.readValue(bag.getTags(), List.class) : List.of());
-        } catch (Exception ignored) {}
-        map.put("isLastChance", bag.getIsLastChance() != null && bag.getIsLastChance() == 1);
-        return map;
+        return enricher.enrichBag(bag);
     }
 }

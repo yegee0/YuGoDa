@@ -57,12 +57,18 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
     >
       <div className="relative h-48 w-full overflow-hidden">
         <Link to={`/store/${bag.restaurantId || 'pizza-bulls'}`}>
-          <img
-            src={bag.image}
-            alt={bag.restaurantName}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            referrerPolicy="no-referrer"
-          />
+          {bag.image || bag.storeLogo ? (
+            <img
+              src={bag.image || bag.storeLogo}
+              alt={bag.restaurantName}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#1A4D2E]/20 to-[#1A4D2E]/5 flex items-center justify-center">
+              <ShoppingBag className="w-12 h-12 text-[#1A4D2E]/30" />
+            </div>
+          )}
         </Link>
 
         {bag.isCurrentlyOpen === false && (
@@ -94,6 +100,12 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
         <div className="absolute top-3 left-3 bg-[#1A4D2E] text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
           {bag.available} {t('left')}
         </div>
+
+        {bag.storeLogo && (
+          <div className="absolute bottom-3 right-3 w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-lg">
+            <img src={bag.storeLogo} alt={bag.restaurantName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          </div>
+        )}
       </div>
 
       <div className="p-4 flex-1 flex flex-col">

@@ -7,15 +7,16 @@ import {
   Trash2, Plus, Minus, CreditCard, Banknote, Wallet,
   ChevronRight, X, ShoppingBag, Truck, Package, Check, Shield
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
-
-const TL = (amount: number) => `₺${amount.toFixed(2)}`;
+import { TL } from '@/lib/formatters';
 
 const STEPS = ['Cart', 'Delivery', 'Payment', 'Confirm'] as const;
 type Step = typeof STEPS[number];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { cart, removeFromCart, updateCartQuantity, clearCart } = useStore();
   const [step, setStep] = useState<Step>('Cart');
   const [deliveryOption, setDeliveryOption] = useState<'delivery' | 'takeaway'>('delivery');
@@ -58,7 +59,7 @@ export default function CheckoutPage() {
         setShow3DSecure(true);
       } else {
         clearCart();
-        toast.success('Your order has been received!');
+        toast.success(t('Order received'));
         navigate('/discover');
       }
     } catch (error) {
@@ -80,7 +81,7 @@ export default function CheckoutPage() {
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
-            <span className="font-bold text-gray-900 dark:text-white text-lg">Checkout</span>
+            <span className="font-bold text-gray-900 dark:text-white text-lg">{t('Checkout')}</span>
           </div>
 
           {/* Step indicator */}
@@ -123,11 +124,11 @@ export default function CheckoutPage() {
             {/* STEP 1 — Cart */}
             {step === 'Cart' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">Your Items</h2>
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Your Items')}</h2>
                 {cart.length === 0 ? (
                   <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-12 text-center">
                     <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-400 font-medium">Your cart is empty</p>
+                    <p className="text-gray-400 font-medium">{t('Your cart is empty')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -171,11 +172,11 @@ export default function CheckoutPage() {
             {/* STEP 2 — Delivery */}
             {step === 'Delivery' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">Delivery Options</h2>
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Delivery Options')}</h2>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'delivery', label: 'Delivery', sub: `+${TL(15)} fee`, icon: Truck },
-                    { id: 'takeaway', label: 'Take Away', sub: 'Free', icon: Package },
+                    { id: 'delivery', label: t('Delivery'), sub: `+${TL(15)} fee`, icon: Truck },
+                    { id: 'takeaway', label: t('Take Away'), sub: t('Free'), icon: Package },
                   ].map(({ id, label, sub, icon: Icon }) => (
                     <button
                       key={id}
@@ -205,7 +206,7 @@ export default function CheckoutPage() {
                           : 'bg-white dark:bg-[#1a1a1a] border-gray-100 dark:border-white/10 text-gray-700 dark:text-gray-200'
                       }`}
                     >
-                      {amount === 0 ? 'None' : `₺${amount}`}
+                      {amount === 0 ? t('None') : `₺${amount}`}
                     </button>
                   ))}
                 </div>
@@ -215,12 +216,12 @@ export default function CheckoutPage() {
             {/* STEP 3 — Payment */}
             {step === 'Payment' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">Payment Method</h2>
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Payment Method')}</h2>
                 <div className="space-y-3">
                   {[
-                    { id: 'card',   label: 'Credit / Debit Card',  sub: 'Secure via İyzico infrastructure', icon: CreditCard },
-                    { id: 'wallet', label: 'YuGoPay Wallet',        sub: 'Pay from your YuGoDa balance',     icon: Wallet },
-                    { id: 'cash',   label: 'Cash on Delivery',      sub: 'Pay when you receive your order',  icon: Banknote },
+                    { id: 'card',   label: t('Credit / Debit Card'),  sub: t('Secure via iyzico'), icon: CreditCard },
+                    { id: 'wallet', label: t('YuGoPay Wallet'),        sub: t('Pay from balance'),     icon: Wallet },
+                    { id: 'cash',   label: t('Cash on Delivery'),      sub: t('Pay on receive'),  icon: Banknote },
                   ].map(({ id, label, sub, icon: Icon }) => (
                     <button
                       key={id}
@@ -254,7 +255,7 @@ export default function CheckoutPage() {
             {/* STEP 4 — Confirm */}
             {step === 'Confirm' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">Review Order</h2>
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Review Order')}</h2>
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl divide-y divide-gray-50 dark:divide-white/5 shadow-sm">
                   {cart.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-4">
@@ -270,24 +271,24 @@ export default function CheckoutPage() {
 
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 space-y-2 shadow-sm text-sm">
                   <div className="flex justify-between text-gray-500">
-                    <span>Delivery</span>
-                    <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : 'Free'}</span>
+                    <span>{t('Delivery')}</span>
+                    <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
                   </div>
                   {tip > 0 && (
                     <div className="flex justify-between text-gray-500">
-                      <span>Tip</span>
+                      <span>{t('Tip')}</span>
                       <span className="font-medium dark:text-gray-300">{TL(tip)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-base pt-2 border-t border-dashed border-gray-100 dark:border-white/10 text-gray-900 dark:text-white">
-                    <span>Total</span>
+                    <span>{t('Total')}</span>
                     <span className="text-[#1A4D2E] dark:text-green-400">{TL(total)}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-gray-400 px-1">
                   <Shield className="w-4 h-4 flex-shrink-0" />
-                  <span>Your payment is protected by İyzico's secure payment infrastructure.</span>
+                  <span>{t('Payment protected')}</span>
                 </div>
               </>
             )}
@@ -298,25 +299,25 @@ export default function CheckoutPage() {
         {/* ── Order summary sidebar ── */}
         <div className="space-y-4 lg:sticky lg:top-24 self-start">
           <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 shadow-sm space-y-3">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm">Order Summary</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm">{t('Order Summary')}</h3>
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-gray-500">
-                <span>Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} items)</span>
+                <span>{t('Subtotal')} ({cart.reduce((s, i) => s + i.quantity, 0)} {t('items')})</span>
                 <span className="font-medium dark:text-gray-300">{TL(subtotal)}</span>
               </div>
               <div className="flex justify-between text-gray-500">
-                <span>Delivery fee</span>
-                <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : 'Free'}</span>
+                <span>{t('Delivery fee')}</span>
+                <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
               </div>
               {tip > 0 && (
                 <div className="flex justify-between text-gray-500">
-                  <span>Tip</span>
+                  <span>{t('Tip')}</span>
                   <span className="font-medium dark:text-gray-300">{TL(tip)}</span>
                 </div>
               )}
             </div>
             <div className="border-t border-gray-100 dark:border-white/10 pt-3 flex justify-between font-bold text-gray-900 dark:text-white">
-              <span>Total</span>
+              <span>{t('Total')}</span>
               <span className="text-[#1A4D2E] dark:text-green-400 text-lg">{TL(total)}</span>
             </div>
           </div>
@@ -328,7 +329,7 @@ export default function CheckoutPage() {
                 onClick={() => setStep(STEPS[stepIndex - 1])}
                 className="flex-1 py-3.5 rounded-xl border-2 border-gray-200 dark:border-white/10 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-sm"
               >
-                Back
+                {t('Back')}
               </button>
             )}
             {stepIndex < STEPS.length - 1 ? (
@@ -337,7 +338,7 @@ export default function CheckoutPage() {
                 disabled={cart.length === 0}
                 className="flex-1 py-3.5 rounded-xl bg-[#1A4D2E] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#133b23] transition-colors disabled:opacity-40 text-sm"
               >
-                Continue <ChevronRight className="w-4 h-4" />
+                {t('Continue')} <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button
@@ -348,10 +349,10 @@ export default function CheckoutPage() {
                 {isProcessing ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    Processing…
+                    {t('Processing')}
                   </>
                 ) : (
-                  <>Place Order <ChevronRight className="w-4 h-4" /></>
+                  <>{t('Place Order')} <ChevronRight className="w-4 h-4" /></>
                 )}
               </button>
             )}
@@ -403,13 +404,13 @@ export default function CheckoutPage() {
                     onClick={() => setShow3DSecure(false)}
                     className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-white/5 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors text-sm"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </button>
                   <button
-                    onClick={() => { clearCart(); toast.success('Your order has been received!'); navigate('/discover'); }}
+                    onClick={() => { clearCart(); toast.success(t('Order received')); navigate('/discover'); }}
                     className="flex-1 py-3 rounded-xl bg-[#1A4D2E] text-white font-bold hover:bg-[#133b23] transition-colors text-sm flex items-center justify-center gap-2"
                   >
-                    <Check className="w-4 h-4" /> Verify
+                    <Check className="w-4 h-4" /> {t('Verify')}
                   </button>
                 </div>
               </div>

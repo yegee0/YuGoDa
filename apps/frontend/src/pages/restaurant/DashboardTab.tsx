@@ -19,6 +19,7 @@ export interface DashboardTabProps {
   todaySales: number;
   activeOrders: number;
   avgRating: string;
+  commissionRate?: number;
 }
 
 export default function DashboardTab({
@@ -28,6 +29,7 @@ export default function DashboardTab({
   todaySales,
   activeOrders,
   avgRating,
+  commissionRate,
 }: DashboardTabProps) {
   const { isDarkMode } = useStore();
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export default function DashboardTab({
     <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Today's Revenue"   value={TL(todaySales)}     icon={<DollarSign className="w-5 h-5" />}  color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" sub="Delivered orders" />
+        <StatCard label="Today's Net Revenue" value={TL(todaySales)}    icon={<DollarSign className="w-5 h-5" />}  color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" sub={`After ${commissionRate ?? 15}% commission`} />
         <StatCard label="Active Orders"     value={activeOrders}       icon={<Package className="w-5 h-5" />}     color="bg-blue-50 dark:bg-blue-900/20 text-blue-600"           sub="Pending + preparing" />
         <StatCard label="Total Orders"      value={orders.length}      icon={<ShoppingBag className="w-5 h-5" />} color="bg-purple-50 dark:bg-purple-900/20 text-purple-600"     sub="All time" />
         <StatCard label="Avg Rating"        value={avgRating}          icon={<Star className="w-5 h-5" />}        color="bg-amber-50 dark:bg-amber-900/20 text-amber-500"         sub={`${reviews.length} reviews`} />

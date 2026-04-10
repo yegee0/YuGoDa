@@ -24,14 +24,13 @@ const C = {
 };
 
 // ── font helpers ───────────────────────────────────────────────
-const playfair: React.CSSProperties = { fontFamily: '"Playfair Display", Georgia, serif' };
-const dm:       React.CSSProperties = { fontFamily: '"DM Sans", system-ui, sans-serif' };
+import { FONT_PLAYFAIR as playfair, FONT_DM as dm } from '@/lib/constants';
 
 // ── stats data ─────────────────────────────────────────────────
 const STATS = [
-  { value: '50K+',  label: 'Meals rescued' },
-  { value: '1,200+', label: 'Partner stores' },
-  { value: '32 ton', label: 'Food saved' },
+  { value: '47',   label: 'Meals rescued' },
+  { value: '9',    label: 'Partner stores' },
+  { value: '70%',  label: 'Avg. discount' },
 ];
 
 // ── blob SVG paths (decorative, low opacity) ──────────────────
@@ -359,6 +358,29 @@ export default function Auth() {
           </div>
 
           {/* stats row — bottom anchored */}
+          <h2 style={{
+            ...playfair,
+            fontSize: 'clamp(18px, 2vw, 24px)',
+            fontWeight: 600,
+            color: C.cream,
+            margin: 0,
+            marginBottom: '8px',
+            lineHeight: 1.3,
+          }}>
+            Making a Difference,{' '}
+            <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>One Meal at a Time</em>
+          </h2>
+          <p style={{
+            ...dm,
+            fontSize: '11px',
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(197,241,53,0.5)',
+            marginBottom: '16px',
+          }}>
+            Our impact so far
+          </p>
           <div style={{
             display: 'flex',
             gap: '32px',

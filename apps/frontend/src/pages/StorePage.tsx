@@ -9,13 +9,13 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import type { Bag, StoreProfile, OperatingHours } from '@/types';
-
-const TL = (n: number) => `₺${n.toFixed(2)}`;
+import type { Bag, StoreProfile, OperatingHours, Review } from '@/types';
+import { TL } from '@/lib/formatters';
+import { DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
 
 function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefined): boolean {
   if (!operatingHours || !Array.isArray(operatingHours)) return true;
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const days = DAY_NAMES;
   const now = new Date();
   const slot = operatingHours.find((s: OperatingHours) => s.day === days[now.getDay()]);
   if (!slot || !slot.isOpen) return false;
@@ -30,6 +30,7 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
   onInc: () => void;
   onDec: () => void;
 }) {
+  const { t } = useTranslation();
   const discount = bag.originalPrice > bag.price
     ? Math.round((1 - bag.price / bag.originalPrice) * 100)
     : 0;
@@ -63,13 +64,13 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
           )}
           {bag.available > 0 && bag.available <= 2 && (
             <span className="flex items-center gap-1 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
-              <Zap className="w-2.5 h-2.5" /> Only {bag.available} left
+              <Zap className="w-2.5 h-2.5" /> {t('Only {{count}} left', { count: bag.available })}
             </span>
           )}
         </div>
         {bag.available === 0 && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="text-white font-black text-sm bg-black/60 px-3 py-1 rounded-full">Sold Out</span>
+            <span className="text-white font-black text-sm bg-black/60 px-3 py-1 rounded-full">{t('Sold Out')}</span>
           </div>
         )}
       </div>
@@ -98,7 +99,7 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
           </div>
 
           {bag.available === 0 ? (
-            <span className="text-xs text-gray-400 font-bold">Unavailable</span>
+            <span className="text-xs text-gray-400 font-bold">{t('Unavailable')}</span>
           ) : cartQty === 0 ? (
             <button
               onClick={onAdd}
@@ -131,6 +132,7 @@ export default function StorePage() {
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [store, setStore] = useState<StoreProfile | null>(null);
   const [bags, setBags] = useState<Bag[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('');
   const [showInfo, setShowInfo] = useState(false);
@@ -145,6 +147,9 @@ export default function StorePage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+    api.get(`/reviews?restaurantId=${id}`)
+      .then((data: { reviews?: Review[] }) => setReviews(data.reviews || []))
+      .catch(() => {});
   }, [id]);
 
   const categories: Record<string, Bag[]> = bags.reduce((acc: Record<string, Bag[]>, bag: Bag) => {
@@ -163,7 +168,7 @@ export default function StorePage() {
 
   const cartItems = cart.filter(c => bags.some(b => b.id === c.id));
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const deliveryFee = deliveryType === 'delivery' ? 15 : 0;
+  const deliveryFee = deliveryType === 'delivery' ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryFee;
   const isFavStore = store ? favorites.includes(store.id) : false;
   const isOpen = store ? isStoreCurrentlyOpen(store.operatingHours) : true;
@@ -180,10 +185,10 @@ export default function StorePage() {
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-gray-50 dark:bg-[#0a0a0a]">
         <ShoppingBag className="w-16 h-16 text-gray-200 mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Store not found</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('Store not found')}</h2>
         <p className="text-gray-400 mt-2 text-sm">This store may no longer be available.</p>
         <button onClick={() => navigate('/discover')} className="mt-6 px-6 py-3 bg-[#1A4D2E] text-white rounded-2xl font-bold">
-          Back to Discover
+          {t('Back to Discover')}
         </button>
       </div>
     );
@@ -242,7 +247,7 @@ export default function StorePage() {
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     isOpen ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' : 'bg-red-50 dark:bg-red-900/20 text-red-500'
                   }`}>
-                    {isOpen ? 'Open now' : 'Closed'}
+                    {isOpen ? t('Open now') : t('Closed')}
                   </span>
                   {store.rating > 0 && (
                     <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
@@ -273,10 +278,10 @@ export default function StorePage() {
                 </div>
               )}
               <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-full">
-                <CreditCard className="w-3 h-3" /> Card · Cash · Wallet
+                <CreditCard className="w-3 h-3" /> {t('Card · Cash · Wallet')}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 px-3 py-1.5 rounded-full">
-                <Truck className="w-3 h-3" /> Delivery available
+                <Truck className="w-3 h-3" /> {t('Delivery available')}
               </div>
             </div>
 
@@ -326,12 +331,12 @@ export default function StorePage() {
         )}
 
         {/* ── Bag grid ── */}
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-8" id="bags">
           {catKeys.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-[#111] rounded-3xl border-2 border-dashed border-gray-100 dark:border-white/5">
               <ShoppingBag className="w-12 h-12 text-gray-200 dark:text-white/10 mx-auto mb-3" />
-              <p className="font-bold text-gray-400 text-sm">No packages available right now</p>
-              <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Check back later for surprise bags</p>
+              <p className="font-bold text-gray-400 text-sm">{t('No packages available right now')}</p>
+              <p className="text-xs text-gray-300 dark:text-white/20 mt-1">{t('Check back later for surprise bags')}</p>
             </div>
           ) : (
             catKeys.map(cat => (
@@ -369,6 +374,40 @@ export default function StorePage() {
             ))
           )}
         </div>
+        {/* ── Reviews ── */}
+        {reviews.length > 0 && (
+          <div className="px-6 pb-8">
+            <h2 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              {t('Reviews')}
+              <span className="text-xs font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">{reviews.length}</span>
+            </h2>
+            <div className="space-y-3">
+              {reviews.map(review => (
+                <div key={review.id} className="bg-white dark:bg-[#111] rounded-2xl p-4 border border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                      {review.userName || t('Anonymous')}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200 dark:text-white/10'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  {review.comment && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{review.comment}</p>
+                  )}
+                  {review.createdAt && (
+                    <p className="text-[10px] text-gray-300 dark:text-white/20 mt-2">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Right sidebar (basket) ── */}
@@ -422,7 +461,7 @@ export default function StorePage() {
               >
                 <ShoppingBag className="w-12 h-12 text-gray-200 dark:text-white/10 mb-3" />
                 <p className="font-bold text-gray-400 text-sm">{t('Your basket is empty')}</p>
-                <p className="text-xs text-gray-300 dark:text-white/20 mt-1">Add bags to get started</p>
+                <p className="text-xs text-gray-300 dark:text-white/20 mt-1">{t('Add bags to get started')}</p>
               </motion.div>
             ) : (
               cartItems.map(item => (
@@ -471,17 +510,17 @@ export default function StorePage() {
           {cartItems.length > 0 && (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                <span>Subtotal</span>
+                <span>{t('Subtotal')}</span>
                 <span>{TL(subtotal)}</span>
               </div>
               {deliveryType === 'delivery' && (
                 <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                  <span>Delivery fee</span>
+                  <span>{t('Delivery fee')}</span>
                   <span>{TL(deliveryFee)}</span>
                 </div>
               )}
               <div className="flex justify-between font-black text-gray-900 dark:text-white pt-2 border-t border-gray-100 dark:border-white/5">
-                <span>Total</span>
+                <span>{t('Total')}</span>
                 <span>{TL(total)}</span>
               </div>
             </div>

@@ -1,9 +1,9 @@
 package yugoda.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.User;
 import yugoda.security.UserPrincipal;
 import yugoda.service.UserService;
+import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.*;
 public class UserController extends BaseController {
 
     private final UserService userService;
-    private final ObjectMapper objectMapper;
+    private final EntityEnricher enricher;
 
     // POST /register
     @PostMapping("/register")
@@ -87,15 +87,7 @@ public class UserController extends BaseController {
         return ResponseEntity.ok(Map.of("success", true, "users", users));
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> enrichUser(User user) {
-        Map<String, Object> map = objectMapper.convertValue(user, Map.class);
-        // Parse JSON fields
-        try {
-            map.put("favorites", objectMapper.readValue(user.getFavorites() != null ? user.getFavorites() : "[]", List.class));
-            map.put("addresses", objectMapper.readValue(user.getAddresses() != null ? user.getAddresses() : "[]", List.class));
-        } catch (Exception ignored) {}
-        map.put("notificationsEnabled", user.getNotificationsEnabled() != null && user.getNotificationsEnabled() == 1);
-        return map;
+        return enricher.enrichUser(user);
     }
 }

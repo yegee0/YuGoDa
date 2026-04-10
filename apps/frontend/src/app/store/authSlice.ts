@@ -1,24 +1,7 @@
 import { StateCreator } from 'zustand';
 import { User } from 'firebase/auth';
 import { api } from '@/lib/api';
-import type { Address } from '@/types';
-
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName: string;
-  firstName?: string;
-  lastName?: string;
-  photoURL?: string;
-  role: 'customer' | 'restaurant' | 'admin' | 'driver';
-  favorites: string[];
-  walletBalance: number;
-  countryCode?: string;
-  mobileNumber?: string;
-  notificationsEnabled: boolean;
-  preferredLanguage: string;
-  addresses: Address[];
-}
+import type { Address, UserProfile } from '@/types';
 
 export interface AuthSlice {
   user: User | null;

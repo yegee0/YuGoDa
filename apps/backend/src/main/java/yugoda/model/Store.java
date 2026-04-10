@@ -37,6 +37,14 @@ public class Store {
     private String email;
     private String logo;
 
+    @Column(columnDefinition = "TEXT")
+    private String coverImage;
+
+    private Double commissionRate = 15.0;
+
+    @Column(columnDefinition = "TEXT")
+    private String bankingDetails;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

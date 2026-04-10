@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Store, MapPin, CalendarDays, Edit3, ShoppingBag,
+  Store, MapPin, CalendarDays, Edit3, ShoppingBag, Landmark, Map,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import type { StoreProfile, OperatingHours } from '@/types';
+import type { StoreProfile, OperatingHours, BankingDetails } from '@/types';
+import { AddressAutocomplete } from '@/components/shared';
+import LocationPickerMap from '@/components/LocationPickerMap';
 
 const DIETARY_TAGS = ['Vegan', 'Vegetarian', 'Halal', 'Gluten-Free', 'Organic', 'Dairy-Free'];
 
@@ -31,9 +33,13 @@ export default function ProfileTab({
   logoFileRef,
   coverFileRef,
 }: ProfileTabProps) {
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   return (
-    <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-2xl space-y-5">
+    <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="max-w-4xl space-y-5">
+
+      {/* Store identity + Banking side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
       {/* Store identity */}
       <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
@@ -127,7 +133,25 @@ export default function ProfileTab({
           <div>
             <label className={labelCls}>Address</label>
             {isEditingProfile ? (
-              <input type="text" value={editedProfile?.address || ''} onChange={e => editedProfile && setEditedProfile({ ...editedProfile, address: e.target.value })} className={inputCls} placeholder="Store address" />
+              <div className="space-y-2">
+                <AddressAutocomplete
+                  value={editedProfile?.address || ''}
+                  onChange={(addr, coords) => {
+                    if (!editedProfile) return;
+                    const update: Partial<StoreProfile> = { address: addr };
+                    if (coords) update.location = coords;
+                    setEditedProfile({ ...editedProfile, ...update });
+                  }}
+                  placeholder="Store address"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLocationPicker(true)}
+                  className="flex items-center gap-1.5 text-xs font-bold text-[#1A4D2E] hover:underline"
+                >
+                  <Map className="w-3.5 h-3.5" /> Pick on Map
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300">
                 <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" /> {storeProfile?.address || 'Not set'}
@@ -177,6 +201,51 @@ export default function ProfileTab({
         </div>
       </div>
 
+      {/* Banking Details */}
+      <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Landmark className="w-4 h-4 text-[#1A4D2E]" />
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm">Banking Details</h4>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {[
+            { key: 'iban' as const, label: 'IBAN', placeholder: 'TR00 0000 0000 0000 0000 0000 00' },
+            { key: 'accountHolder' as const, label: 'Account Holder', placeholder: 'Full name' },
+            { key: 'bankName' as const, label: 'Bank Name', placeholder: 'Bank name' },
+            { key: 'branchCode' as const, label: 'Branch Code', placeholder: 'Branch code' },
+            { key: 'taxId' as const, label: 'Tax ID', placeholder: 'Tax identification number' },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <label className={labelCls}>{label}</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={(editedProfile?.bankingDetails as BankingDetails)?.[key] || ''}
+                  onChange={e => {
+                    if (!editedProfile) return;
+                    setEditedProfile({
+                      ...editedProfile,
+                      bankingDetails: {
+                        ...(editedProfile.bankingDetails || {}),
+                        [key]: e.target.value,
+                      },
+                    });
+                  }}
+                  className={inputCls}
+                  placeholder={placeholder}
+                />
+              ) : (
+                <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 text-sm text-gray-700 dark:text-gray-300">
+                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || 'Not set'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      </div>{/* end grid */}
+
       {/* Schedule */}
       <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
@@ -221,6 +290,24 @@ export default function ProfileTab({
           })}
         </div>
       </div>
+
+      {/* Location Picker Modal */}
+      {showLocationPicker && (
+        <div className="fixed inset-0 z-[120]">
+          <LocationPickerMap
+            mode="restaurant"
+            initialLocation={editedProfile?.location}
+            initialName={editedProfile?.address}
+            onConfirm={(coords, name) => {
+              if (editedProfile) {
+                setEditedProfile({ ...editedProfile, address: name, location: coords });
+              }
+              setShowLocationPicker(false);
+            }}
+            onClose={() => setShowLocationPicker(false)}
+          />
+        </div>
+      )}
     </motion.div>
   );
 }

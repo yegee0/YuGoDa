@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Package } from 'lucide-react';
+import { Package, Clock, FileText } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Order, OrderStatus } from '@/types';
 import { StatusBadge, TL } from './StorePanel';
 
 export interface OrdersTabProps {
   orders: Order[];
-  onUpdateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  onUpdateOrderStatus: (orderId: string, status: OrderStatus, trackingInfo?: { estimatedPickupTime?: string; trackingNotes?: string }) => Promise<void>;
 }
 
 export default function OrdersTab({ orders, onUpdateOrderStatus }: OrdersTabProps) {
   const [orderFilter, setOrderFilter] = useState<string>('all');
+  const [trackingInputs, setTrackingInputs] = useState<Record<string, { time: string; notes: string }>>({});
 
   const displayOrders = orderFilter === 'all' ? orders : orders.filter(o => o.status === orderFilter);
 
@@ -79,7 +80,13 @@ export default function OrdersTab({ orders, onUpdateOrderStatus }: OrdersTabProp
                     </>
                   )}
                   {order.status === 'preparing' && (
-                    <button onClick={() => onUpdateOrderStatus(order.id, 'ready')} className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                    <button
+                      onClick={() => {
+                        const info = trackingInputs[order.id];
+                        onUpdateOrderStatus(order.id, 'ready', info ? { estimatedPickupTime: info.time || undefined, trackingNotes: info.notes || undefined } : undefined);
+                      }}
+                      className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                    >
                       Mark Ready
                     </button>
                   )}
@@ -90,6 +97,44 @@ export default function OrdersTab({ orders, onUpdateOrderStatus }: OrdersTabProp
                   )}
                 </div>
               </div>
+
+              {/* Tracking info inputs for active orders */}
+              {(order.status === 'preparing' || order.status === 'ready') && (
+                <div className="w-full pt-3 mt-3 border-t border-gray-50 dark:border-white/5 flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="time"
+                      value={trackingInputs[order.id]?.time ?? order.estimatedPickupTime ?? ''}
+                      onChange={e => setTrackingInputs(prev => ({ ...prev, [order.id]: { ...prev[order.id], time: e.target.value, notes: prev[order.id]?.notes ?? order.trackingNotes ?? '' } }))}
+                      className="px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:border-[#1A4D2E]"
+                      placeholder="Pickup time"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                    <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={trackingInputs[order.id]?.notes ?? order.trackingNotes ?? ''}
+                      onChange={e => setTrackingInputs(prev => ({ ...prev, [order.id]: { ...prev[order.id], notes: e.target.value, time: prev[order.id]?.time ?? order.estimatedPickupTime ?? '' } }))}
+                      className="w-full px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:border-[#1A4D2E]"
+                      placeholder="Notes for customer..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Show existing tracking info for other statuses */}
+              {order.status !== 'preparing' && order.status !== 'ready' && (order.estimatedPickupTime || order.trackingNotes) && (
+                <div className="w-full pt-3 mt-3 border-t border-gray-50 dark:border-white/5 flex flex-wrap gap-3 text-xs text-gray-400">
+                  {order.estimatedPickupTime && (
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pickup: {order.estimatedPickupTime}</span>
+                  )}
+                  {order.trackingNotes && (
+                    <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> {order.trackingNotes}</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

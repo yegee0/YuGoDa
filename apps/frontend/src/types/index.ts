@@ -11,6 +11,8 @@ export interface UserProfile {
   role: 'customer' | 'restaurant' | 'admin' | 'driver';
   favorites: string[];
   walletBalance: number;
+  countryCode?: string;
+  mobileNumber?: string;
   addresses: Address[];
   notificationsEnabled: boolean;
   preferredLanguage: string;
@@ -32,7 +34,7 @@ export interface Address {
 }
 
 // ── Orders ───────────────────────────────────────────────
-export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'confirmed' | 'completed';
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivering' | 'delivered' | 'cancelled';
 
 export interface Order {
   id: string;
@@ -50,6 +52,8 @@ export interface Order {
   paymentMethod?: string;
   createdAt?: string;
   updatedAt?: string;
+  estimatedPickupTime?: string;
+  trackingNotes?: string;
 }
 
 export interface CartItem {
@@ -79,7 +83,17 @@ export interface StoreProfile {
   status?: 'pending' | 'active' | 'rejected';
   rating?: number;
   totalOrders?: number;
+  commissionRate?: number;
+  bankingDetails?: BankingDetails;
   createdAt?: string;
+}
+
+export interface BankingDetails {
+  iban?: string;
+  accountHolder?: string;
+  bankName?: string;
+  branchCode?: string;
+  taxId?: string;
 }
 
 export interface OperatingHours {
@@ -115,6 +129,7 @@ export interface Bag {
   countdown?: string;
   distance?: string;
   prepTime?: number;
+  storeLogo?: string;
   createdAt?: string;
 }
 
@@ -149,8 +164,12 @@ export interface Transaction {
   id: string;
   orderId?: string;
   userId?: string;
+  restaurantId?: string;
   amount: number;
   tip?: number;
+  commissionRate?: number;
+  commissionAmount?: number;
+  restaurantAmount?: number;
   status?: string;
   paymentMethod?: string;
   createdAt?: string;

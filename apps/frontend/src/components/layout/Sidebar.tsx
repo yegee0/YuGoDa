@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Leaf } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function SidebarItem({ icon, label, active, collapsed, onClick }: {
@@ -35,11 +35,13 @@ export function Sidebar({ children }: { children: (collapsed: boolean) => React.
     >
       <div className="h-16 flex items-center px-6 border-b border-eco-border">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-eco-primary flex items-center justify-center text-white font-bold shrink-0">
-            E
+          <div className="w-8 h-8 rounded-xl bg-eco-primary flex items-center justify-center text-white shrink-0">
+            <Leaf className="w-4 h-4" />
           </div>
           {!isSidebarCollapsed && (
-            <span className="text-xl font-bold text-eco-primary dark:text-[#2D6A4F] tracking-tight">YuGoDa</span>
+            <span className="text-xl font-black text-gray-900 dark:text-white tracking-tight">
+              Yu<span className="text-[#FF9F1C]">Go</span>Da
+            </span>
           )}
         </Link>
       </div>

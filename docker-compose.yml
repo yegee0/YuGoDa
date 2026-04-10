@@ -38,7 +38,7 @@ services:
       SERVER_PORT: "4000"
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-postgres}
+      DB_NAME: ${DB_NAME:-yugoda}
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       # Allow requests from the browser-facing frontend origin

@@ -49,9 +49,11 @@ export default function Header() {
   return (
     <header className="h-16 bg-eco-surface border-b border-eco-border flex items-center justify-between px-8 z-40 transition-colors">
       <div className="flex items-center gap-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
-          {currentView === 'discover' ? t('Discover') : t(currentView.replace('-', ' '))}
-        </h2>
+        {currentView !== 'discover' && (
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
+            {t(currentView.replace('-', ' '))}
+          </h2>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

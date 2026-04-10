@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Menu, X, Leaf, ArrowRight, ChevronDown, Star,
   ShoppingBag, Users, TrendingUp, Heart,
-  CheckCircle2, Apple, Play,
+  CheckCircle2,
   Pizza, Utensils, Soup,
   DollarSign, Gift, MapPin,
   Croissant, CakeSlice,
@@ -37,14 +37,8 @@ const sectionIds: Record<string, string> = {
 // ── ticker words ───────────────────────────────────────
 const TICKER_WORDS = [
   'PASTRIES', 'BREADS', 'GROCERIES', 'SANDWICH', 'SUSHI', 'PIZZA',
-  'MUFFINS', 'BURGERS', 'POKE', 'DONUTS', 'BURGER KING', "DUNKIN'",
-  "McDONALD'S", 'STARBUCKS', 'SALADS', 'WRAPS', 'BURRITOS', 'RAMEN',
-];
-
-// ── partner brands (text-only marquee) ────────────────
-const PARTNER_BRANDS = [
-  "Greggs", "Starbucks", "Yo! Sushi", "Burger King", "M&B",
-  "Greene King", "Pret", "Wagamama", "Nando's", "Costa",
+  'MUFFINS', 'BURGERS', 'POKE', 'DONUTS', 'SALADS', 'WRAPS',
+  'BURRITOS', 'RAMEN', 'BAGELS', 'TACOS',
 ];
 
 // ── animated counter ───────────────────────────────────
@@ -98,70 +92,6 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-// ── partner marquee component ──────────────────────────
-function PartnerMarquee() {
-  // One full set of brands with · separators
-  const set = PARTNER_BRANDS.flatMap((brand, i) => [
-    <span
-      key={`b${i}`}
-      style={{
-        fontFamily: '"Archivo Black", sans-serif',
-        fontSize: '1rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: '#e8604c',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-      }}
-    >
-      {brand}
-    </span>,
-    <span
-      key={`d${i}`}
-      style={{
-        fontFamily: '"Archivo Black", sans-serif',
-        fontSize: '1.1rem',
-        color: 'rgba(232,96,76,0.3)',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-        padding: '0 22px',
-        display: 'inline-block',
-      }}
-    >
-      ·
-    </span>,
-  ]);
-
-  return (
-    <div style={{ backgroundColor: '#f5f0e8', padding: '22px 0 20px' }}>
-      {/* label — outside the overflow container so it's never clipped */}
-      <p style={{
-        textAlign: 'center',
-        fontFamily: '"Archivo Black", sans-serif',
-        fontSize: '10px',
-        letterSpacing: '0.18em',
-        textTransform: 'uppercase',
-        color: 'rgba(232,96,76,0.35)',
-        marginBottom: '16px',
-        userSelect: 'none',
-      }}>
-        Trusted by stores &amp; restaurants
-      </p>
-
-      {/* overflow wrapper — contains only the scrolling strip */}
-      <div style={{ overflow: 'hidden' }}>
-        {/* 4 copies so the track always fills the viewport at every animation frame */}
-        <div className="partner-track">
-          {set.map((el) => React.cloneElement(el, { key: `A-${el.key}` }))}
-          {set.map((el) => React.cloneElement(el, { key: `B-${el.key}` }))}
-          {set.map((el) => React.cloneElement(el, { key: `C-${el.key}` }))}
-          {set.map((el) => React.cloneElement(el, { key: `D-${el.key}` }))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -339,25 +269,6 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* App store buttons */}
-            <div className="flex flex-wrap gap-3">
-              {[
-                { icon: <Apple className="w-5 h-5 text-white" />, line1: 'Download on', line2: 'App Store' },
-                { icon: <Play className="w-5 h-5 text-white fill-current" />, line1: 'Get it on', line2: 'Google Play' },
-              ].map(({ icon, line1, line2 }) => (
-                <div
-                  key={line2}
-                  className="flex items-center gap-3 px-5 py-3 rounded-2xl cursor-pointer hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.2)' }}
-                >
-                  {icon}
-                  <div>
-                    <p className="text-white/60 text-[10px] font-extrabold uppercase tracking-widest">{line1}</p>
-                    <p className="text-white text-sm font-extrabold">{line2}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </motion.div>
 
           {/* Right – bag illustration */}
@@ -426,10 +337,10 @@ export default function LandingPage() {
       <section style={{ backgroundColor: C.tealDark }} className="py-14">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: 10000, suffix: '+', label: 'Bags saved daily' },
-            { value: 3200,  suffix: '+', label: 'Partner stores' },
-            { value: 70,    suffix: '%', label: 'Avg. discount' },
-            { value: 25000, suffix: 't', label: 'CO₂ avoided' },
+            { value: 47,    suffix: '',    label: 'Bags rescued' },
+            { value: 9,     suffix: '+',  label: 'Partner stores' },
+            { value: 70,    suffix: '%',  label: 'Avg. discount' },
+            { value: 83,    suffix: ' kg', label: 'CO₂ avoided' },
           ].map(({ value, suffix, label }) => (
             <div key={label}>
               <p className="text-white" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 3.5rem)' }}>
@@ -747,18 +658,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════ PARTNER MARQUEE */}
-      <PartnerMarquee />
-
       {/* ════════════════════════════════════ IMPACT */}
       <section id="impact" className="py-24" style={{ backgroundColor: C.tealDark }}>
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.lime }}>
-              Our impact
+              Our mission
             </p>
             <h2 className="text-white leading-none" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 4rem)' }}>
-              MAKING A REAL <span style={{ color: C.coral }}>DIFFERENCE</span>
+              WHERE WE'RE <span style={{ color: C.coral }}>HEADING</span>
             </h2>
           </div>
 
@@ -766,21 +674,21 @@ export default function LandingPage() {
             {[
               {
                 icon: <Leaf className="w-8 h-8" />,
-                title: 'Climate impact',
-                desc: 'Food waste accounts for ~8% of global greenhouse gas emissions. Every bag rescued is a direct contribution to a healthier climate.',
-                stat: '2.5 kg CO₂', statLabel: 'saved per bag',
+                title: 'Climate action',
+                desc: 'Food waste accounts for ~8% of global greenhouse gas emissions. Every bag rescued is a direct step toward a healthier planet.',
+                stat: '10,000 kg', statLabel: 'CO₂ to prevent in year 1',
               },
               {
                 icon: <Users className="w-8 h-8" />,
-                title: 'Community access',
-                desc: 'We make quality food accessible to everyone, regardless of budget — building more equitable, resilient communities.',
-                stat: '500K+', statLabel: 'customers served',
+                title: 'Community impact',
+                desc: 'We aim to make quality food accessible to everyone — building more equitable, resilient communities one meal at a time.',
+                stat: '5,000', statLabel: 'meals to rescue in year 1',
               },
               {
                 icon: <TrendingUp className="w-8 h-8" />,
-                title: 'Business resilience',
-                desc: "Restaurants recover margin on food they'd otherwise discard — helping small businesses stay profitable and sustainable.",
-                stat: '$1.2M+', statLabel: 'revenue recovered',
+                title: 'Growing together',
+                desc: "We're building a network of local restaurants and stores committed to zero waste — turning surplus into opportunity.",
+                stat: '100+', statLabel: 'partner stores by 2027',
               },
             ].map(({ icon, title, desc, stat, statLabel }, i) => (
               <motion.div
@@ -835,7 +743,7 @@ export default function LandingPage() {
               },
               {
                 q: 'How much do I save?',
-                a: 'Typical savings are 50–70% off the original retail value. A $3 bag might contain $10 worth of food. The exact value depends on the store.',
+                a: 'Typical savings are 50–70% off the original retail value. A ₺30 bag might contain ₺100 worth of food. The exact value depends on the store.',
               },
               {
                 q: 'Where do I pick up my bag?',
@@ -848,6 +756,22 @@ export default function LandingPage() {
               {
                 q: 'How do I become a partner store?',
                 a: "Click 'Join as a business' above, register, and complete your store profile. Our team will verify your listing within 24 hours and you can start selling bags immediately after.",
+              },
+              {
+                q: 'What payment methods do you accept?',
+                a: 'We accept credit and debit cards processed securely via iyzico, as well as YuGoPay wallet balance and cash on delivery for supported stores.',
+              },
+              {
+                q: 'Can I filter by dietary restrictions?',
+                a: 'Yes! Stores tag their bags with dietary labels like vegan, vegetarian, halal, gluten-free, and organic. Use the filters on the Discover page to find bags that match your preferences.',
+              },
+              {
+                q: 'What if something is wrong with my order?',
+                a: 'Contact our support team within 2 hours of pickup. We review every case individually and offer refunds or credits when appropriate.',
+              },
+              {
+                q: 'Do you offer delivery?',
+                a: 'Some partner stores offer delivery in addition to pickup. Check each store page for delivery availability and estimated delivery times.',
               },
             ].map(item => (
               <FaqItem key={item.q} {...item} />
@@ -876,7 +800,7 @@ export default function LandingPage() {
             SOME <span style={{ color: C.coral }}>FOOD?</span>
           </h2>
           <p className="text-white/70 font-extrabold mb-8 relative z-10">
-            Download the app or browse on web — it's free to join.
+            Sign up on web — it's free to join.
           </p>
           <div className="flex flex-wrap justify-center gap-4 relative z-10">
             <button
@@ -912,24 +836,14 @@ export default function LandingPage() {
             <p className="text-white/50 text-xs leading-relaxed font-extrabold mb-5">
               Fight food waste. Save money.<br />Save the planet.
             </p>
-            <div className="flex gap-3">
-              {['🐦', '📸', '💼', '▶️'].map((icon, i) => (
-                <button
-                  key={i}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-base hover:opacity-70 transition-opacity"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
+            <p className="text-white/30 text-xs font-bold">Coming soon on social media.</p>
           </div>
 
           {/* Link columns */}
           {[
-            { heading: 'Product',  links: ['How it works', 'Browse bags', 'For businesses', 'Pricing'] },
-            { heading: 'Company',  links: ['About us', 'Blog', 'Careers', 'Press'] },
-            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Cookie settings', 'Admin'] },
+            { heading: 'Product',  links: ['How it works', 'Browse bags', 'For businesses'] },
+            { heading: 'Company',  links: ['About us'] },
+            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Admin'] },
           ].map(({ heading, links }) => (
             <div key={heading}>
               <h4 className="text-xs font-extrabold uppercase tracking-widest mb-4" style={{ color: C.lime }}>
@@ -943,6 +857,10 @@ export default function LandingPage() {
                         if (link === 'Admin') navigate('/admin-auth');
                         else if (link === 'Browse bags') navigate('/discover');
                         else if (link === 'For businesses') scrollTo('for-businesses');
+                        else if (link === 'About us') navigate('/about');
+                        else if (link === 'Privacy policy') navigate('/privacy');
+                        else if (link === 'Terms of service') navigate('/terms');
+                        else if (link === 'How it works') scrollTo('how-it-works');
                       }}
                       className="text-white/50 text-xs font-extrabold hover:text-white/90 transition-colors"
                     >
