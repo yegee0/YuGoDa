@@ -57,7 +57,7 @@ jobs:
             --port 4000 \
             --memory 1Gi \
             --allow-unauthenticated \
-            --set-env-vars "^@^SPRING_DATASOURCE_URL=jdbc:postgresql:///${DB_NAME:-postgres}?cloudSqlInstance=${DB_HOST}&socketFactory=com.google.cloud.sql.postgres.SocketFactory&ipTypes=PUBLIC@SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}@SPRING_DATASOURCE_PASSWORD=${DB_PASS}@SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver@SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect@IYZICO_API_KEY=${IYZ_KEY}@IYZICO_SECRET_KEY=${IYZ_SECRET}@IYZICO_BASE_URL=${IYZ_URL}@FIREBASE_PROJECT_ID=${FB_PROJECT}@SERVER_PORT=4000"
+            --set-env-vars "^@^SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:5432/${DB_NAME:-postgres}@SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}@SPRING_DATASOURCE_PASSWORD=${DB_PASS}@SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver@SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect@IYZICO_API_KEY=${IYZ_KEY}@IYZICO_SECRET_KEY=${IYZ_SECRET}@IYZICO_BASE_URL=${IYZ_URL}@FIREBASE_PROJECT_ID=${FB_PROJECT}@SERVER_PORT=4000"
 
       - name: Capture Backend URL
         id: backend-url

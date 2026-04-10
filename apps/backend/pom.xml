@@ -40,13 +40,6 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <!-- Google Cloud SQL PostgreSQL Socket Factory -->
-        <dependency>
-            <groupId>com.google.cloud.sql</groupId>
-            <artifactId>postgres-socket-factory</artifactId>
-            <version>1.17.1</version>
-        </dependency>
-
         <!-- Jackson for JSON -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
