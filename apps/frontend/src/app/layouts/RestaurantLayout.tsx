@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Sidebar, SidebarItem } from '@/components/layout/Sidebar';
+import { Sidebar, SidebarItem, SidebarSection } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { Store, BarChart3, Package, Truck, Star, UserCircle, Headset } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,78 +9,78 @@ export default function RestaurantLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentView = location.pathname.split('/')[2] || 'dashboard';
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    setMobileNavOpen(false);
+  };
 
   return (
-    <div className="min-h-screen bg-eco-bg flex font-sans transition-colors duration-300">
-      <Sidebar>
+    <div className="min-h-screen app-leaf-bg flex font-sans transition-colors duration-300">
+      <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)}>
         {(isSidebarCollapsed) => (
           <>
-            <div className={`px-4 py-2 mt-2 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
-              Overview
-            </div>
+            <SidebarSection label="Overview" collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<BarChart3 className="w-5 h-5 shrink-0" />}
               label="Dashboard"
               active={currentView === 'dashboard'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/dashboard')}
+              onClick={() => handleNavClick('/restaurant/dashboard')}
             />
-            
-            <div className={`px-4 py-2 mt-6 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
-              Operations
-            </div>
+
+            <SidebarSection label="Operations" collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<Package className="w-5 h-5 shrink-0" />}
               label="Orders"
               active={currentView === 'orders'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/orders')}
+              onClick={() => handleNavClick('/restaurant/orders')}
             />
             <SidebarItem
               icon={<Store className="w-5 h-5 shrink-0" />}
               label="Inventory"
               active={currentView === 'inventory'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/inventory')}
+              onClick={() => handleNavClick('/restaurant/inventory')}
             />
             <SidebarItem
               icon={<Truck className="w-5 h-5 shrink-0" />}
               label="Drivers"
               active={currentView === 'drivers'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/drivers')}
+              onClick={() => handleNavClick('/restaurant/drivers')}
             />
 
-            <div className={`px-4 py-2 mt-6 mb-1 text-[10px] font-black text-gray-400 uppercase tracking-wider ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
-              Engagement
-            </div>
+            <SidebarSection label="Engagement" collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<Star className="w-5 h-5 shrink-0" />}
               label="Reviews"
               active={currentView === 'reviews'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/reviews')}
+              onClick={() => handleNavClick('/restaurant/reviews')}
             />
             <SidebarItem
               icon={<Headset className="w-5 h-5 shrink-0" />}
               label="Support"
               active={currentView === 'support'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/support')}
+              onClick={() => handleNavClick('/restaurant/support')}
             />
             <SidebarItem
               icon={<UserCircle className="w-5 h-5 shrink-0" />}
               label="Store Profile"
               active={currentView === 'profile'}
               collapsed={isSidebarCollapsed}
-              onClick={() => navigate('/restaurant/profile')}
+              onClick={() => handleNavClick('/restaurant/profile')}
             />
           </>
         )}
       </Sidebar>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Header onMenuOpen={() => setMobileNavOpen(true)} />
         <main className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
             <motion.div

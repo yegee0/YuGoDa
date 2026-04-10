@@ -109,15 +109,15 @@ export default function AdminPanel() {
   });
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-white/50 dark:bg-[#0a0a0a]">
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#1b5e52' }}>
       {/* Header */}
-      <div className="px-6 pt-6 pb-2">
-        <h2 className="text-2xl font-black text-[#1A4D2E] dark:text-emerald-500 mb-1">{headerInfo.title}</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{headerInfo.subtitle}</p>
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-2">
+        <h2 className="text-xl md:text-2xl font-black text-white mb-1">{headerInfo.title}</h2>
+        <p className="text-sm mb-4 md:mb-6" style={{ color: 'rgba(255,255,255,0.72)' }}>{headerInfo.subtitle}</p>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 pt-4 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-2 md:pt-4 pb-8">
         <AnimatePresence mode="wait">
 
           {activeTab === 'dashboard' && (
@@ -157,13 +157,13 @@ export default function AdminPanel() {
           {/* Live Chat - inline placeholder */}
           {activeTab === 'live-chat' && (
             <motion.div key="live-chat" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-[600px] flex flex-col space-y-4">
-              <div className="bg-white dark:bg-[#111] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex-1 flex flex-col">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-1">Live Chat Dashboard</h3>
-                <p className="text-sm text-gray-400 mb-6">Manage incoming chat requests from customers.</p>
-                <div className="flex-1 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center border border-gray-100 dark:border-gray-800 border-dashed">
+              <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm flex-1 flex flex-col">
+                <h3 className="font-bold text-[#1B1B1B] mb-1">Live Chat Dashboard</h3>
+                <p className="text-sm text-[#8FA396] mb-6">Manage incoming chat requests from customers.</p>
+                <div className="flex-1 rounded-xl bg-[#F5F0E8] flex items-center justify-center border border-[#E8E0D5] border-dashed">
                      <div className="text-center">
-                         <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                         <p className="font-bold text-gray-400 dark:text-gray-500">No active chats in queue</p>
+                         <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                         <p className="font-bold text-[#8FA396]">No active chats in queue</p>
                      </div>
                 </div>
               </div>

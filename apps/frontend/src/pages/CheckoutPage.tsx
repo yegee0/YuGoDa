@@ -95,18 +95,18 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0d]">
+    <div className="min-h-screen" style={{ backgroundColor: '#1b5e52' }}>
       {/* Top bar */}
-      <div className="bg-white dark:bg-[#111] border-b border-gray-100 dark:border-white/5 sticky top-0 z-10">
+      <div className="border-b sticky top-0 z-10" style={{ backgroundColor: '#1b5e52', borderColor: 'rgba(0,0,0,0.12)' }}>
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-white/15"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-white" />
             </button>
-            <span className="font-bold text-gray-900 dark:text-white text-lg">{t('Checkout')}</span>
+            <span className="font-bold text-white text-lg">{t('Checkout')}</span>
           </div>
 
           {/* Step indicator */}
@@ -115,17 +115,17 @@ export default function CheckoutPage() {
               <React.Fragment key={s}>
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
                   i === stepIndex
-                    ? 'bg-[#1A4D2E] text-white'
+                    ? 'bg-[#ad3115] text-white'
                     : i < stepIndex
-                    ? 'text-[#1A4D2E] dark:text-green-400'
-                    : 'text-gray-300 dark:text-white/20'
+                    ? 'text-white'
+                    : 'text-white/40'
                 }`}>
                   {i < stepIndex ? <Check className="w-3 h-3" /> : null}
                   <span className="hidden sm:inline">{s}</span>
                   <span className="sm:hidden">{i + 1}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-4 h-px ${i < stepIndex ? 'bg-[#1A4D2E]' : 'bg-gray-200 dark:bg-white/10'}`} />
+                  <div className={`w-4 h-px ${i < stepIndex ? 'bg-[#1B5E52]' : 'bg-[#E8E0D5]'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -149,11 +149,11 @@ export default function CheckoutPage() {
             {/* STEP 1 — Cart */}
             {step === 'Cart' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Your Items')}</h2>
+                <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1">{t('Your Items')}</h2>
                 {cart.length === 0 ? (
-                  <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-12 text-center">
+                  <div className="bg-white rounded-2xl p-12 text-center">
                     <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-400 font-medium">{t('Your cart is empty')}</p>
+                    <p className="text-[#8FA396] font-medium">{t('Your cart is empty')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -164,25 +164,25 @@ export default function CheckoutPage() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 flex items-center gap-4 shadow-sm"
+                        className="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
                       >
                         <img src={item.image || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'; }} />
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 dark:text-white truncate">{item.name}</h3>
-                          <p className="text-xs text-gray-400 mb-1">{item.restaurantName}</p>
-                          <span className="text-sm font-bold text-[#1A4D2E] dark:text-green-400">{TL(item.price)}</span>
+                          <h3 className="font-bold text-[#1B1B1B] truncate">{item.name}</h3>
+                          <p className="text-xs text-[#8FA396] mb-1">{item.restaurantName}</p>
+                          <span className="text-sm font-bold text-[#1B5E52]">{TL(item.price)}</span>
                         </div>
-                        <div className="flex items-center gap-1 bg-gray-50 dark:bg-white/5 rounded-xl p-1">
+                        <div className="flex items-center gap-1 bg-[#F5F0E8] rounded-xl p-1">
                           <button
                             onClick={() => item.quantity > 1 ? updateCartQuantity(item.id, item.quantity - 1) : removeFromCart(item.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-white/10 transition-colors text-gray-500"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-[#8FA396]"
                           >
                             {item.quantity > 1 ? <Minus className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5 text-red-400" />}
                           </button>
-                          <span className="w-7 text-center font-bold text-sm dark:text-white">{item.quantity}</span>
+                          <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
                           <button
                             onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-white/10 transition-colors text-gray-500"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-[#8FA396]"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
@@ -197,7 +197,7 @@ export default function CheckoutPage() {
             {/* STEP 2 — Delivery */}
             {step === 'Delivery' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Delivery Options')}</h2>
+                <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1">{t('Delivery Options')}</h2>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'delivery', label: t('Delivery'), sub: `+${TL(15)} fee`, icon: Truck },
@@ -208,18 +208,18 @@ export default function CheckoutPage() {
                       onClick={() => setDeliveryOption(id as 'delivery' | 'takeaway')}
                       className={`p-5 rounded-2xl border-2 text-left transition-all ${
                         deliveryOption === id
-                          ? 'border-[#1A4D2E] bg-[#1A4D2E]/5 dark:bg-[#1A4D2E]/10'
-                          : 'border-gray-100 dark:border-white/10 bg-white dark:bg-[#1a1a1a]'
+                          ? 'border-[#1B5E52] bg-[#1B5E52]/5'
+                          : 'border-[#E8E0D5] bg-white'
                       }`}
                     >
-                      <Icon className={`w-6 h-6 mb-3 ${deliveryOption === id ? 'text-[#1A4D2E]' : 'text-gray-400'}`} />
-                      <p className="font-bold text-gray-900 dark:text-white">{label}</p>
-                      <p className={`text-xs mt-0.5 font-medium ${deliveryOption === id ? 'text-[#1A4D2E]' : 'text-gray-400'}`}>{sub}</p>
+                      <Icon className={`w-6 h-6 mb-3 ${deliveryOption === id ? 'text-[#1B5E52]' : 'text-[#8FA396]'}`} />
+                      <p className="font-bold text-[#1B1B1B]">{label}</p>
+                      <p className={`text-xs mt-0.5 font-medium ${deliveryOption === id ? 'text-[#1B5E52]' : 'text-[#8FA396]'}`}>{sub}</p>
                     </button>
                   ))}
                 </div>
 
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1 pt-2">Add a Tip</h2>
+                <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1 pt-2">Add a Tip</h2>
                 <div className="grid grid-cols-4 gap-3">
                   {[0, 10, 20, 50].map(amount => (
                     <button
@@ -227,8 +227,8 @@ export default function CheckoutPage() {
                       onClick={() => setTip(amount)}
                       className={`py-3 rounded-xl font-bold text-sm transition-all border-2 ${
                         tip === amount
-                          ? 'bg-[#1A4D2E] border-[#1A4D2E] text-white'
-                          : 'bg-white dark:bg-[#1a1a1a] border-gray-100 dark:border-white/10 text-gray-700 dark:text-gray-200'
+                          ? 'bg-[#1B5E52] border-[#1B5E52] text-white'
+                          : 'bg-white border-[#E8E0D5] text-gray-700'
                       }`}
                     >
                       {amount === 0 ? t('None') : `₺${amount}`}
@@ -241,7 +241,7 @@ export default function CheckoutPage() {
             {/* STEP 3 — Payment */}
             {step === 'Payment' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Payment Method')}</h2>
+                <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1">{t('Payment Method')}</h2>
                 <div className="space-y-3">
                   {[
                     { id: 'card',   label: t('Credit / Debit Card'),  sub: t('Secure via iyzico'), icon: CreditCard },
@@ -253,21 +253,21 @@ export default function CheckoutPage() {
                       onClick={() => setPaymentMethod(id as 'card' | 'cash' | 'wallet')}
                       className={`w-full p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${
                         paymentMethod === id
-                          ? 'border-[#1A4D2E] bg-[#1A4D2E]/5 dark:bg-[#1A4D2E]/10'
-                          : 'border-gray-100 dark:border-white/10 bg-white dark:bg-[#1a1a1a]'
+                          ? 'border-[#1B5E52] bg-[#1B5E52]/5'
+                          : 'border-[#E8E0D5] bg-white'
                       }`}
                     >
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        paymentMethod === id ? 'bg-[#1A4D2E] text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500'
+                        paymentMethod === id ? 'bg-[#1B5E52] text-white' : 'bg-[#F5F0E8] text-[#8FA396]'
                       }`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="text-left flex-1">
-                        <p className="font-bold text-gray-900 dark:text-white text-sm">{label}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                        <p className="font-bold text-[#1B1B1B] text-sm">{label}</p>
+                        <p className="text-xs text-[#8FA396] mt-0.5">{sub}</p>
                       </div>
                       {paymentMethod === id && (
-                        <div className="w-5 h-5 rounded-full bg-[#1A4D2E] flex items-center justify-center flex-shrink-0">
+                        <div className="w-5 h-5 rounded-full bg-[#1B5E52] flex items-center justify-center flex-shrink-0">
                           <Check className="w-3 h-3 text-white" />
                         </div>
                       )}
@@ -280,16 +280,16 @@ export default function CheckoutPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border-2 border-[#1A4D2E]/20 space-y-4"
+                    className="bg-white rounded-2xl p-5 border-2 border-[#1B5E52]/20 space-y-4"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <CreditCard className="w-4 h-4 text-[#1A4D2E]" />
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Card Details</span>
+                      <CreditCard className="w-4 h-4 text-[#1B5E52]" />
+                      <span className="text-sm font-bold text-gray-700">Card Details</span>
                     </div>
 
                     {/* Card number */}
                     <div>
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Card Number</label>
+                      <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Card Number</label>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -302,7 +302,7 @@ export default function CheckoutPage() {
                           setCardDetails(d => ({ ...d, number: formatted }));
                           setCardErrors(er => ({ ...er, number: '' }));
                         }}
-                        className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors tracking-widest ${cardErrors.number ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                        className={`w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none transition-colors tracking-widest ${cardErrors.number ? 'border-red-400' : 'border-[#E8E0D5] focus:border-[#1B5E52]'}`}
                       />
                       {cardErrors.number && <p className="text-xs text-red-500 mt-1">{cardErrors.number}</p>}
                     </div>
@@ -310,7 +310,7 @@ export default function CheckoutPage() {
                     {/* Expiry + CVV */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Expiry</label>
+                        <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Expiry</label>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -323,12 +323,12 @@ export default function CheckoutPage() {
                             setCardDetails(d => ({ ...d, expiry: val }));
                             setCardErrors(er => ({ ...er, expiry: '' }));
                           }}
-                          className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.expiry ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.expiry ? 'border-red-400' : 'border-[#E8E0D5] focus:border-[#1B5E52]'}`}
                         />
                         {cardErrors.expiry && <p className="text-xs text-red-500 mt-1">{cardErrors.expiry}</p>}
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">CVV</label>
+                        <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">CVV</label>
                         <input
                           type="password"
                           inputMode="numeric"
@@ -340,7 +340,7 @@ export default function CheckoutPage() {
                             setCardDetails(d => ({ ...d, cvv: val }));
                             setCardErrors(er => ({ ...er, cvv: '' }));
                           }}
-                          className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.cvv ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                          className={`w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.cvv ? 'border-red-400' : 'border-[#E8E0D5] focus:border-[#1B5E52]'}`}
                         />
                         {cardErrors.cvv && <p className="text-xs text-red-500 mt-1">{cardErrors.cvv}</p>}
                       </div>
@@ -353,38 +353,38 @@ export default function CheckoutPage() {
             {/* STEP 4 — Confirm */}
             {step === 'Confirm' && (
               <>
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">{t('Review Order')}</h2>
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl divide-y divide-gray-50 dark:divide-white/5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1">{t('Review Order')}</h2>
+                <div className="bg-white rounded-2xl divide-y divide-[#F5F0E8] shadow-sm">
                   {cart.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-4">
                       <img src={item.image || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'} alt={item.name} className="w-10 h-10 rounded-lg object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'; }} />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{item.name}</p>
-                        <p className="text-xs text-gray-400">×{item.quantity}</p>
+                        <p className="font-bold text-sm text-[#1B1B1B] truncate">{item.name}</p>
+                        <p className="text-xs text-[#8FA396]">×{item.quantity}</p>
                       </div>
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{TL(item.price * item.quantity)}</span>
+                      <span className="text-sm font-bold text-gray-700">{TL(item.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 space-y-2 shadow-sm text-sm">
-                  <div className="flex justify-between text-gray-500">
+                <div className="bg-white rounded-2xl p-4 space-y-2 shadow-sm text-sm">
+                  <div className="flex justify-between text-[#8FA396]">
                     <span>{t('Delivery')}</span>
-                    <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
+                    <span className="font-medium">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
                   </div>
                   {tip > 0 && (
-                    <div className="flex justify-between text-gray-500">
+                    <div className="flex justify-between text-[#8FA396]">
                       <span>{t('Tip')}</span>
-                      <span className="font-medium dark:text-gray-300">{TL(tip)}</span>
+                      <span className="font-medium">{TL(tip)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-base pt-2 border-t border-dashed border-gray-100 dark:border-white/10 text-gray-900 dark:text-white">
+                  <div className="flex justify-between font-bold text-base pt-2 border-t border-dashed border-[#E8E0D5] text-[#1B1B1B]">
                     <span>{t('Total')}</span>
-                    <span className="text-[#1A4D2E] dark:text-green-400">{TL(total)}</span>
+                    <span className="text-[#1B5E52]">{TL(total)}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-gray-400 px-1">
+                <div className="flex items-center gap-2 text-xs text-[#8FA396] px-1">
                   <Shield className="w-4 h-4 flex-shrink-0" />
                   <span>{t('Payment protected')}</span>
                 </div>
@@ -396,27 +396,27 @@ export default function CheckoutPage() {
 
         {/* ── Order summary sidebar ── */}
         <div className="space-y-4 lg:sticky lg:top-24 self-start">
-          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 shadow-sm space-y-3">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm">{t('Order Summary')}</h3>
+          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+            <h3 className="font-bold text-[#1B1B1B] text-sm">{t('Order Summary')}</h3>
             <div className="space-y-1.5 text-sm">
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-[#8FA396]">
                 <span>{t('Subtotal')} ({cart.reduce((s, i) => s + i.quantity, 0)} {t('items')})</span>
-                <span className="font-medium dark:text-gray-300">{TL(subtotal)}</span>
+                <span className="font-medium">{TL(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-[#8FA396]">
                 <span>{t('Delivery fee')}</span>
-                <span className="font-medium dark:text-gray-300">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
+                <span className="font-medium">{deliveryOption === 'delivery' ? TL(deliveryFee) : t('Free')}</span>
               </div>
               {tip > 0 && (
-                <div className="flex justify-between text-gray-500">
+                <div className="flex justify-between text-[#8FA396]">
                   <span>{t('Tip')}</span>
-                  <span className="font-medium dark:text-gray-300">{TL(tip)}</span>
+                  <span className="font-medium">{TL(tip)}</span>
                 </div>
               )}
             </div>
-            <div className="border-t border-gray-100 dark:border-white/10 pt-3 flex justify-between font-bold text-gray-900 dark:text-white">
+            <div className="border-t border-[#E8E0D5] pt-3 flex justify-between font-bold text-[#1B1B1B]">
               <span>{t('Total')}</span>
-              <span className="text-[#1A4D2E] dark:text-green-400 text-lg">{TL(total)}</span>
+              <span className="text-[#1B5E52] text-lg">{TL(total)}</span>
             </div>
           </div>
 
@@ -425,7 +425,7 @@ export default function CheckoutPage() {
             {stepIndex > 0 && (
               <button
                 onClick={() => setStep(STEPS[stepIndex - 1])}
-                className="flex-1 py-3.5 rounded-xl border-2 border-gray-200 dark:border-white/10 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-sm"
+                className="flex-1 py-3.5 rounded-xl border-2 border-[#E8E0D5] font-bold text-gray-600 hover:bg-[#F5F0E8] transition-colors text-sm"
               >
                 {t('Back')}
               </button>
@@ -437,7 +437,7 @@ export default function CheckoutPage() {
                   setStep(STEPS[stepIndex + 1]);
                 }}
                 disabled={cart.length === 0}
-                className="flex-1 py-3.5 rounded-xl bg-[#1A4D2E] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#133b23] transition-colors disabled:opacity-40 text-sm"
+                className="flex-1 py-3.5 rounded-xl bg-[#1B5E52] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#164d43] transition-colors disabled:opacity-40 text-sm"
               >
                 {t('Continue')} <ChevronRight className="w-4 h-4" />
               </button>
@@ -445,7 +445,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handleConfirmOrder}
                 disabled={isProcessing || cart.length === 0}
-                className="flex-1 py-3.5 rounded-xl bg-[#1A4D2E] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#133b23] transition-colors disabled:opacity-40 text-sm"
+                className="flex-1 py-3.5 rounded-xl bg-[#1B5E52] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#164d43] transition-colors disabled:opacity-40 text-sm"
               >
                 {isProcessing ? (
                   <>
@@ -470,7 +470,7 @@ export default function CheckoutPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="bg-white dark:bg-[#161616] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+              className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
             >
               <div className="bg-[#0d0d0d] px-6 py-5 flex items-center justify-between">
                 <span className="text-white font-black italic text-xl tracking-tight">iyzico</span>
@@ -483,19 +483,19 @@ export default function CheckoutPage() {
               <div className="p-7 space-y-6">
                 <div className="text-center">
                   <p className="text-xs text-gray-400 font-medium mb-1">YuGoDa Food Prevention</p>
-                  <p className="text-3xl font-black text-gray-900 dark:text-white">{TL(total)}</p>
+                  <p className="text-3xl font-black text-[#1B1B1B]">{TL(total)}</p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 space-y-3">
-                  <p className="text-xs text-center text-gray-400 leading-relaxed">
+                <div className="bg-[#F5F0E8] rounded-2xl p-4 space-y-3">
+                  <p className="text-xs text-center text-[#8FA396] leading-relaxed">
                     Verification code sent to<br />
-                    <span className="font-bold text-gray-600 dark:text-gray-300">+90 5** *** 12 34</span>
+                    <span className="font-bold text-gray-600">+90 5** *** 12 34</span>
                   </p>
                   <input
                     type="text"
                     inputMode="numeric"
                     placeholder="_ _ _ _ _ _"
-                    className="w-full text-center tracking-[0.6em] font-black text-xl p-4 bg-white dark:bg-[#1a1a1a] rounded-xl border-2 border-gray-100 dark:border-white/10 focus:border-[#1A4D2E] outline-none transition-colors text-gray-900 dark:text-white placeholder-gray-300"
+                    className="w-full text-center tracking-[0.6em] font-black text-xl p-4 bg-white rounded-xl border-2 border-[#E8E0D5] focus:border-[#1B5E52] outline-none transition-colors text-[#1B1B1B] placeholder-gray-300"
                     maxLength={6}
                   />
                 </div>
@@ -503,13 +503,13 @@ export default function CheckoutPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShow3DSecure(false)}
-                    className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-white/5 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors text-sm"
+                    className="flex-1 py-3 rounded-xl bg-[#F5F0E8] font-bold text-gray-600 hover:bg-[#E8E0D5] transition-colors text-sm"
                   >
                     {t('Cancel')}
                   </button>
                   <button
                     onClick={() => { clearCart(); toast.success(t('Order received')); navigate('/discover'); }}
-                    className="flex-1 py-3 rounded-xl bg-[#1A4D2E] text-white font-bold hover:bg-[#133b23] transition-colors text-sm flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-[#1B5E52] text-white font-bold hover:bg-[#164d43] transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" /> {t('Verify')}
                   </button>

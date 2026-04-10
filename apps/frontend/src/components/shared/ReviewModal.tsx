@@ -52,17 +52,17 @@ export default function ReviewModal({ isOpen, onClose, restaurantId, restaurantN
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="relative bg-white dark:bg-[#161616] rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            className="relative bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/5">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-white">{t('Rate your order')}</h3>
+                <h3 className="font-bold text-gray-900">{t('Rate your order')}</h3>
                 <p className="text-xs text-gray-400 mt-0.5">{restaurantName}</p>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors"
               >
                 <X className="w-4 h-4 text-gray-400" />
               </button>
@@ -87,7 +87,7 @@ export default function ReviewModal({ isOpen, onClose, restaurantId, restaurantN
                         className={`w-9 h-9 transition-colors ${
                           isFilled
                             ? 'fill-amber-400 text-amber-400'
-                            : 'text-gray-200 dark:text-white/10'
+                            : 'text-gray-200'
                         }`}
                       />
                     </button>
@@ -101,14 +101,14 @@ export default function ReviewModal({ isOpen, onClose, restaurantId, restaurantN
                 onChange={e => setComment(e.target.value)}
                 placeholder={t('Write a comment (optional)')}
                 rows={3}
-                className="w-full p-3 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1A4D2E]/30 transition-all"
+                className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1B5E52]/30 transition-all"
               />
 
               {/* Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={rating < 1 || submitting}
-                className="w-full py-3.5 bg-[#1A4D2E] text-white rounded-xl font-bold text-sm hover:bg-[#133b23] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-[#1B5E52] text-white rounded-xl font-bold text-sm hover:bg-[#164d43] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

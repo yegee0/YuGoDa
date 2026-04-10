@@ -12,7 +12,7 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   if (!isAuthReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-eco-bg">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1A4D2E] border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-[#1B5E52] border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -25,7 +25,7 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   if (!userProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-eco-bg">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1A4D2E] border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-[#1B5E52] border-t-transparent rounded-full"></div>
       </div>
     );
   }

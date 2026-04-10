@@ -160,24 +160,26 @@ export default function StorePanel() {
   // ── Loading ──
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-[#0a0a0a]">
-        <Loader2 className="w-8 h-8 text-[#1A4D2E] animate-spin" />
+      <div className="h-full flex items-center justify-center" style={{ backgroundColor: '#1b5e52' }}>
+        <Loader2 className="w-8 h-8 text-[#748f2b] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#1b5e52' }}>
 
       {/* Page header */}
-      <div className="px-8 pt-7 pb-5 bg-white dark:bg-[#111] border-b border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
+      <div className="px-4 md:px-8 pt-4 md:pt-7 pb-4 md:pb-5 border-b flex items-center justify-between flex-shrink-0 gap-3"
+           style={{ backgroundColor: '#1b5e52', borderColor: 'rgba(0,0,0,0.12)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1A4D2E]/10 text-[#1A4D2E] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+               style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
             {page.icon}
           </div>
           <div>
-            <h1 className="text-xl font-black text-gray-900 dark:text-white leading-tight">{page.title}</h1>
-            <p className="text-xs text-gray-400 mt-0.5">{page.sub}</p>
+            <h1 className="text-xl font-black text-white leading-tight">{page.title}</h1>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.72)' }}>{page.sub}</p>
           </div>
         </div>
 
@@ -185,7 +187,7 @@ export default function StorePanel() {
         {activeTab === 'inventory' && (
           <button
             onClick={() => setShowAddPackage(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#1A4D2E] text-white rounded-xl text-sm font-bold hover:bg-[#133b23] transition-colors shadow-sm shadow-[#1A4D2E]/20"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#1B5E52] text-white rounded-xl text-sm font-bold hover:bg-[#164d43] transition-colors shadow-sm shadow-[#1B5E52]/20"
           >
             <Plus className="w-4 h-4" /> Create Package
           </button>
@@ -196,8 +198,8 @@ export default function StorePanel() {
             disabled={isSavingProfile}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 ${
               isEditingProfile
-                ? 'bg-[#1A4D2E] text-white hover:bg-[#133b23] shadow-sm shadow-[#1A4D2E]/20'
-                : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
+                ? 'bg-[#1B5E52] text-white hover:bg-[#164d43] shadow-sm shadow-[#1B5E52]/20'
+                : 'text-white hover:bg-white/20'
             }`}
           >
             {isEditingProfile
@@ -211,7 +213,7 @@ export default function StorePanel() {
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <AnimatePresence mode="wait">
 
           {activeTab === 'dashboard' && (
@@ -229,6 +231,8 @@ export default function StorePanel() {
           {activeTab === 'orders' && (
             <OrdersTab
               orders={orders}
+              inventory={inventory}
+              coverImage={storeProfile?.coverImage}
               onUpdateOrderStatus={handleUpdateOrderStatus}
             />
           )}

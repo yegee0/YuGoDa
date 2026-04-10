@@ -239,7 +239,7 @@ export default function RestaurantAuth() {
             backdropFilter: 'blur(18px)',
             WebkitBackdropFilter: 'blur(18px)',
             borderRadius: '20px',
-            padding: '44px 40px',
+            padding: 'clamp(28px, 5vw, 44px) clamp(20px, 4.5vw, 40px)',
             boxShadow: '0 32px 80px rgba(0,0,0,0.45)',
             border: '1px solid rgba(197,241,53,0.08)',
             ...dm,

@@ -98,7 +98,7 @@ export const CHART_DATA = [
 ];
 
 export const PIE_DATA = [
-  { name: 'Bakery', value: 400, color: '#1A4D2E' },
+  { name: 'Bakery', value: 400, color: '#1B5E52' },
   { name: 'Vegan', value: 300, color: '#2D6A4F' },
   { name: 'Groceries', value: 300, color: '#FF9F1C' },
   { name: 'Hot Meals', value: 200, color: '#FFBF69' },

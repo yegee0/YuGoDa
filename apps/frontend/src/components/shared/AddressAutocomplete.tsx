@@ -76,7 +76,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
           }}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           placeholder={placeholder || 'Search address...'}
-          className={`w-full pl-9 pr-8 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A4D2E]/30 transition-all ${className || ''}`}
+          className={`w-full pl-9 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B5E52]/30 transition-all ${className || ''}`}
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
@@ -84,12 +84,12 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       </div>
 
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
           {suggestions.map((s, i) => (
             <button
               key={i}
               onClick={() => handleSelect(s)}
-              className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border-b border-gray-50 dark:border-white/5 last:border-0 flex items-start gap-2"
+              className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 flex items-start gap-2"
             >
               <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
               <span className="line-clamp-2">{s.display_name}</span>

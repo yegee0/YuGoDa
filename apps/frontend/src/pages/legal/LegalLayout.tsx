@@ -11,25 +11,25 @@ export default function LegalLayout({ title, children }: LegalLayoutProps) {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
+    <div className="min-h-screen" style={{ backgroundColor: '#1b5e52' }}>
       {/* Header */}
-      <header className="bg-white dark:bg-[#111] border-b border-gray-100 dark:border-white/5 sticky top-0 z-10">
+      <header className="border-b sticky top-0 z-10" style={{ backgroundColor: '#1b5e52', borderColor: 'rgba(0,0,0,0.12)' }}>
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-white/15"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-500" />
+              <ChevronLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="font-bold text-gray-900 dark:text-white text-lg">{title}</h1>
+            <h1 className="font-black text-white text-lg">{title}</h1>
           </div>
           <button onClick={() => navigate('/')} className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#1A4D2E] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#ad3115' }}>
               <Leaf className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-black text-gray-900 dark:text-white">
-              Yu<span className="text-[#FF9F1C]">Go</span>Da
+            <span className="text-sm font-black text-white">
+              Yu<span style={{ color: '#ad3115' }}>Go</span>Da
             </span>
           </button>
         </div>
@@ -37,8 +37,8 @@ export default function LegalLayout({ title, children }: LegalLayoutProps) {
 
       {/* Content */}
       <main className="max-w-3xl mx-auto px-6 py-12">
-        <div className="bg-white dark:bg-[#111] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-white/5">
-          <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-600 dark:prose-p:text-gray-400 prose-li:text-gray-600 dark:prose-li:text-gray-400">
+        <div className="bg-white rounded-2xl p-8 shadow-sm border border-[#E8E0D5]">
+          <div className="prose prose-sm max-w-none prose-headings:text-[#1B1B1B] prose-p:text-[#5C6B63] prose-li:text-[#5C6B63]">
             {children}
           </div>
         </div>

@@ -89,7 +89,7 @@ export default function FoodChatbot() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-24 right-6 w-16 h-16 bg-[#FF9F1C] text-white rounded-full shadow-2xl flex items-center justify-center z-[200] group overflow-hidden"
+          className="fixed bottom-20 md:bottom-24 right-4 md:right-6 w-14 h-14 md:w-16 md:h-16 bg-[#FF9F1C] text-white rounded-full shadow-2xl flex items-center justify-center z-[200] group overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <MessageCircle className="w-7 h-7 relative z-10" />
@@ -108,10 +108,10 @@ export default function FoodChatbot() {
             initial={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 40, x: 20 }}
-            className="fixed bottom-24 right-6 w-[380px] h-[550px] bg-white dark:bg-[#0F0F0F] rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden z-[201] border border-gray-200 dark:border-gray-800"
+            className="fixed bottom-24 right-3 md:right-6 w-[calc(100vw-24px)] max-w-[380px] h-[500px] md:h-[550px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden z-[201] border border-gray-200"
           >
             {/* Header */}
-            <div className="bg-[#1A4D2E] p-5 flex justify-between items-center text-white relative overflow-hidden">
+            <div className="bg-[#1B5E52] p-5 flex justify-between items-center text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
               <div className="flex items-center gap-3 relative z-10">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
@@ -134,7 +134,7 @@ export default function FoodChatbot() {
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth bg-[#F9F9F9] dark:bg-[#0A0A0A]">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth bg-[#F9F9F9]">
               {messages.map((m, i) => (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
@@ -143,13 +143,13 @@ export default function FoodChatbot() {
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${m.role === 'user' ? 'bg-[#FF9F1C]' : 'bg-[#1A4D2E]'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${m.role === 'user' ? 'bg-[#FF9F1C]' : 'bg-[#1B5E52]'}`}>
                       {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
                     </div>
                     <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
                       m.role === 'user' 
                         ? 'bg-[#FF9F1C] text-white rounded-tr-none' 
-                        : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-gray-700'
+                        : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                     }`}>
                       {m.text}
                     </div>
@@ -158,8 +158,8 @@ export default function FoodChatbot() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="flex gap-3 items-center bg-white dark:bg-gray-800 p-4 rounded-2xl rounded-tl-none border border-gray-100 dark:border-gray-700 shadow-sm">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#1A4D2E]" />
+                  <div className="flex gap-3 items-center bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#1B5E52]" />
                     <span className="text-xs font-medium text-gray-500 italic">EcoBot is typing...</span>
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function FoodChatbot() {
             </div>
 
             {/* Input */}
-            <div className="p-5 bg-white dark:bg-[#0F0F0F] border-t border-gray-100 dark:border-gray-800">
+            <div className="p-5 bg-white border-t border-gray-100">
               <div className="flex gap-3 items-center">
                 <div className="flex-1 relative">
                   <input
@@ -176,7 +176,7 @@ export default function FoodChatbot() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Ask about surplus food..."
-                    className="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#1A4D2E]/20 outline-none dark:text-white transition-all pr-12"
+                    className="w-full bg-gray-100 border-none rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#1B5E52]/20 outline-none transition-all pr-12"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
                     <Sparkles className="w-4 h-4" />
@@ -185,7 +185,7 @@ export default function FoodChatbot() {
                 <button
                   onClick={handleSend}
                   disabled={isLoading || !input.trim()}
-                  className="w-12 h-12 bg-[#1A4D2E] text-white rounded-2xl flex items-center justify-center hover:bg-[#133b23] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#1A4D2E]/20 transition-all shrink-0"
+                  className="w-12 h-12 bg-[#1B5E52] text-white rounded-2xl flex items-center justify-center hover:bg-[#164d43] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#1B5E52]/20 transition-all shrink-0"
                 >
                   <Send className="w-5 h-5" />
                 </button>

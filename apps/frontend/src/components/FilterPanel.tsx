@@ -72,7 +72,7 @@ function Section({ title, badge, children }: { title: string; badge?: number; ch
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</h3>
           {badge ? (
-            <span className="w-5 h-5 bg-[#1A4D2E] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="w-5 h-5 bg-[#1B5E52] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
               {badge}
             </span>
           ) : null}
@@ -142,26 +142,26 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-[#141414] shadow-2xl z-[101] flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl z-[101] flex flex-col"
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+            <div className="p-6 border-b border-[#E8E0D5] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1A4D2E]/10 flex items-center justify-center text-[#1A4D2E]">
+                <div className="w-10 h-10 rounded-xl bg-[#1B5E52]/10 flex items-center justify-center text-[#1B5E52]">
                   <Filter className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-none">{t('Filters')}</h2>
+                  <h2 className="text-xl font-black text-[#1B1B1B] leading-none">{t('Filters')}</h2>
                   {totalActive > 0 && (
-                    <p className="text-xs text-[#1A4D2E] font-semibold mt-0.5">{totalActive} active</p>
+                    <p className="text-xs text-[#1B5E52] font-black mt-0.5">{totalActive} active</p>
                   )}
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                className="p-2 hover:bg-[#F5F0E8] rounded-full transition-colors"
               >
-                <X className="w-6 h-6 text-gray-500" />
+                <X className="w-5 h-5 text-[#8FA396]" />
               </button>
             </div>
 
@@ -176,8 +176,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                       key={opt.id}
                       onClick={() => setFilters({ sortBy: opt.id as 'lowest' | 'highest' | 'nearest' | 'fastest' })}
                       className={`flex items-center gap-2 p-3 rounded-2xl text-sm font-bold transition-all border ${filters.sortBy === opt.id
-                        ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-lg shadow-[#1A4D2E]/20'
-                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-100 dark:border-gray-700 hover:border-[#1A4D2E]/40'
+                        ? 'bg-[#1B5E52] text-white border-[#1B5E52] shadow-lg shadow-[#1B5E52]/20'
+                        : 'bg-[#F5F0E8] text-[#5C6B63] border-[#E8E0D5] hover:border-[#1B5E52]/40'
                         }`}
                     >
                       {opt.icon}
@@ -191,17 +191,17 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
               <Section title={t('Price Range')}>
                 <div className="space-y-3 px-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">₺0</span>
-                    <span className="font-bold text-[#1A4D2E]">
+                    <span className="text-[#8FA396]">₺0</span>
+                    <span className="font-bold text-[#1B5E52]">
                       ₺{filters.priceRange[0]} – ₺{filters.priceRange[1]}
                     </span>
-                    <span className="text-gray-500 dark:text-gray-400">₺100</span>
+                    <span className="text-[#8FA396]">₺100</span>
                   </div>
                   {/* Dual range track */}
                   <div className="relative h-6 flex items-center">
-                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full relative">
+                    <div className="w-full h-2 bg-[#E8E0D5] rounded-full relative">
                       <div
-                        className="absolute h-2 bg-[#1A4D2E] rounded-full"
+                        className="absolute h-2 bg-[#1B5E52] rounded-full"
                         style={{
                           left: `${filters.priceRange[0]}%`,
                           width: `${filters.priceRange[1] - filters.priceRange[0]}%`,
@@ -236,8 +236,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                         key={`${lo}-${hi}`}
                         onClick={() => setFilters({ priceRange: [lo, hi] })}
                         className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${filters.priceRange[0] === lo && filters.priceRange[1] === hi
-                          ? 'bg-[#1A4D2E] text-white border-[#1A4D2E]'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-transparent hover:border-[#1A4D2E]/30'
+                          ? 'bg-[#1B5E52] text-white border-[#1B5E52]'
+                          : 'bg-[#F5F0E8] text-[#8FA396] border-transparent hover:border-[#1B5E52]/30'
                           }`}
                       >
                         Under ${hi}
@@ -257,8 +257,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                         key={opt.id}
                         onClick={() => toggleDietary(opt.id)}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all border ${active
-                          ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-md'
-                          : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-[#1A4D2E]/30'
+                          ? 'bg-[#1B5E52] text-white border-[#1B5E52] shadow-md'
+                          : 'bg-[#F5F0E8] text-[#5C6B63] border-[#E8E0D5] hover:border-[#1B5E52]/30'
                           }`}
                       >
                         <span className="flex items-center text-current">{opt.icon}</span>
@@ -280,8 +280,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                         key={opt.id}
                         onClick={() => toggleMerchant(opt.id)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold transition-all border ${active
-                          ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-md'
-                          : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-[#1A4D2E]/30'
+                          ? 'bg-[#1B5E52] text-white border-[#1B5E52] shadow-md'
+                          : 'bg-[#F5F0E8] text-[#5C6B63] border-[#E8E0D5] hover:border-[#1B5E52]/30'
                           }`}
                       >
                         <span className="flex items-center text-current">{opt.icon}</span>
@@ -302,7 +302,7 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                       onClick={() => setFilters({ minRating: filters.minRating === rating ? 0 : rating })}
                       className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold border transition-all ${filters.minRating === rating
                         ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20'
-                        : 'bg-gray-50 dark:bg-gray-800/50 border-transparent text-gray-600 dark:text-gray-400 hover:border-amber-200'
+                        : 'bg-[#F5F0E8] border-transparent text-[#8FA396] hover:border-amber-200'
                         }`}
                     >
                       <Star className="w-3.5 h-3.5" />
@@ -327,8 +327,8 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
                         setFilters({ pickupTime: newTime });
                       }}
                       className={`flex flex-col items-center p-3 rounded-2xl text-xs font-bold border transition-all ${filters.pickupTime === opt.id
-                        ? 'bg-[#1A4D2E] text-white border-[#1A4D2E] shadow-lg'
-                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#1A4D2E]/30'
+                        ? 'bg-[#1B5E52] text-white border-[#1B5E52] shadow-lg'
+                        : 'bg-[#F5F0E8] border-[#E8E0D5] text-[#8FA396] hover:border-[#1B5E52]/30'
                         }`}
                     >
                       {opt.icon}
@@ -340,17 +340,17 @@ export default function FilterPanel({ isOpen, onClose }: FilterPanelProps) {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-[#141414] flex gap-3 shrink-0">
+            <div className="p-6 border-t border-[#E8E0D5] bg-[#F5F0E8]/60 flex gap-3 shrink-0">
               <button
                 onClick={resetFilters}
-                className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700"
+                className="flex items-center justify-center gap-2 px-5 py-4 rounded-full font-black text-[#8FA396] hover:bg-[#E8E0D5] transition-colors border border-[#E8E0D5]"
               >
                 <RotateCcw className="w-4 h-4" />
                 Reset
               </button>
               <button
                 onClick={onClose}
-                className="flex-1 py-4 bg-[#1A4D2E] text-white rounded-2xl font-bold shadow-lg shadow-[#1A4D2E]/20 hover:bg-[#133b23] transition-colors"
+                className="flex-1 py-4 bg-[#1B5E52] text-white rounded-full font-black shadow-lg shadow-[#1B5E52]/20 hover:bg-[#164d43] transition-colors"
               >
                 {totalActive > 0 ? `Apply ${totalActive} Filter${totalActive > 1 ? 's' : ''}` : 'Apply Filters'}
               </button>

@@ -30,8 +30,16 @@ const initialFilters: Filters = {
 };
 
 export const createUiSlice: StateCreator<UiSlice> = (set) => ({
-  isDarkMode: localStorage.getItem('theme') !== 'light',
-  setIsDarkMode: (isDarkMode) => set({ isDarkMode }),
+  isDarkMode: localStorage.getItem('theme') === 'dark',
+  setIsDarkMode: (isDarkMode) => {
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    set({ isDarkMode });
+  },
   filters: initialFilters,
   setFilters: (newFilters) => set((state) => ({
     filters: { ...state.filters, ...newFilters }
