@@ -35,7 +35,9 @@ export interface UseIyzicoPaymentReturn {
     clearPayment: () => void;
 }
 
-const PAYMENT_API_BASE = "http://localhost:4000/api/payment";
+const PAYMENT_API_BASE = import.meta.env.VITE_API_BASE_URL 
+    ? `${import.meta.env.VITE_API_BASE_URL}/payment` 
+    : "http://localhost:4000/api/payment";
 
 export function useIyzicoPayment(): UseIyzicoPaymentReturn {
     const [checkoutFormHtml, setCheckoutFormHtml] = useState<string | null>(null);
