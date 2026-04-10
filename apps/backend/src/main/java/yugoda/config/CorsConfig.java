@@ -12,8 +12,8 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.frontend-url:}")
-    private String frontendUrl;
+    @Value("${app.cors.allowed-origins:}")
+    private List<String> allowedOrigins;
 
     @Bean
     public CorsFilter corsFilter() {
@@ -22,8 +22,12 @@ public class CorsConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
 
-        if (frontendUrl != null && !frontendUrl.isBlank()) {
-            config.setAllowedOrigins(List.of(frontendUrl));
+        List<String> origins = allowedOrigins.stream()
+                .filter(o -> o != null && !o.isBlank())
+                .toList();
+
+        if (!origins.isEmpty()) {
+            config.setAllowedOrigins(origins);
         } else {
             config.setAllowedOriginPatterns(List.of("http://localhost*", "http://localhost:*"));
         }
