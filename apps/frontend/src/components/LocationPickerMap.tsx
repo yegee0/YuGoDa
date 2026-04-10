@@ -44,6 +44,8 @@ interface Props {
     mode?: 'customer' | 'restaurant';
 }
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+
 export default function LocationPickerMap({ initialLocation, initialName, onConfirm, onClose, mode = 'customer' }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
@@ -52,6 +54,8 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
     const [geocoding, setGeocoding] = useState(false);
     const [pendingCoords, setPendingCoords] = useState(initialLocation || ISTANBUL);
     const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Stores the last parsed street address from reverse geocoding for form pre-fill
+    const geocodedApartmentRef = useRef('');
 
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -65,22 +69,56 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
 
     const reverseGeocode = useCallback(async (lat: number, lng: number) => {
         setGeocoding(true);
+        geocodedApartmentRef.current = '';
         try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-                { headers: { 'Accept-Language': 'tr,en' } }
-            );
-            const data = await res.json();
-            const name =
-                data.address?.neighbourhood ||
-                data.address?.suburb ||
-                data.address?.quarter ||
-                data.address?.district ||
-                data.address?.city ||
-                data.address?.town ||
-                data.display_name?.split(',')[0] ||
-                `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            setAddress(name);
+            if (GOOGLE_MAPS_API_KEY) {
+                // Single Google Geocoding call — used for both the address label and form pre-fill
+                const res = await fetch(
+                    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=tr`
+                );
+                const data = await res.json();
+                const results: Array<{ address_components: Array<{ long_name: string; types: string[] }> }> =
+                    data.results ?? [];
+
+                if (results.length > 0) {
+                    const components = results[0].address_components;
+                    const get = (type: string) =>
+                        components.find(c => c.types.includes(type))?.long_name ?? '';
+
+                    // Label shown in the bottom card and the sheet subtitle
+                    const name =
+                        get('sublocality_level_1') ||
+                        get('neighborhood') ||
+                        get('sublocality') ||
+                        get('locality') ||
+                        `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    setAddress(name);
+
+                    // Apartment pre-fill: route first, then building number (Turkish convention)
+                    const route = get('route');
+                    const streetNumber = get('street_number');
+                    geocodedApartmentRef.current = [route, streetNumber].filter(Boolean).join(' ');
+                } else {
+                    setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+            } else {
+                // Fallback: Nominatim (free, no key required) — no structured fields available
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                    { headers: { 'Accept-Language': 'tr,en' } }
+                );
+                const data = await res.json();
+                const name =
+                    data.address?.neighbourhood ||
+                    data.address?.suburb ||
+                    data.address?.quarter ||
+                    data.address?.district ||
+                    data.address?.city ||
+                    data.address?.town ||
+                    data.display_name?.split(',')[0] ||
+                    `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                setAddress(name);
+            }
         } catch {
             setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         } finally {
@@ -139,9 +177,9 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
         }
         setSaving(true);
         try {
-            const payload = {
-                lat: pendingCoords.lat,
-                lng: pendingCoords.lng,
+            const newAddress = {
+                latitude: pendingCoords.lat,
+                longitude: pendingCoords.lng,
                 addressLabel: address,
                 apartment: form.apartment,
                 unit: form.unit,
@@ -152,15 +190,15 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                 tag: form.tag,
             };
 
-            // Save to local state + localStorage immediately — never fails
-            const updatedAddresses = [...(userProfile?.addresses || []), payload];
+            const updatedAddresses = [...(userProfile?.addresses || []), newAddress];
+
+            // Persist to backend — PUT /users/me with the full addresses array
+            await api.put('/users/me', { addresses: updatedAddresses });
+
+            // Update local state only after the backend confirms
             if (userProfile) {
                 setUserProfile({ ...userProfile, addresses: updatedAddresses });
             }
-            localStorage.setItem('yugoda_saved_address', JSON.stringify(payload));
-
-            // Fire-and-forget API sync — isolated so any error never reaches the outer catch
-            try { api.patch('/user/address', payload).catch(() => {}); } catch { /* ignore */ }
 
             toast.success('Address saved!');
             setShowForm(false);
@@ -228,7 +266,14 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                         </div>
                     </div>
                     <button
-                        onClick={() => mode === 'restaurant' ? onConfirm(pendingCoords, address) : setShowForm(true)}
+                        onClick={() => {
+                            if (mode === 'restaurant') {
+                                onConfirm(pendingCoords, address);
+                            } else {
+                                setForm(f => ({ ...f, apartment: geocodedApartmentRef.current }));
+                                setShowForm(true);
+                            }
+                        }}
                         disabled={geocoding}
                         className="w-full flex items-center justify-center gap-2 bg-[#1A4D2E] text-white py-3 rounded-full font-bold text-sm hover:bg-[#133b23] transition-colors disabled:opacity-60"
                     >

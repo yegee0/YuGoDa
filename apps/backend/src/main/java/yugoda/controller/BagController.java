@@ -41,16 +41,17 @@ public class BagController extends BaseController {
         List<Bag> bags = bagService.listBags(dietaryType, merchantType, minPrice, maxPrice,
                 minRating, sortBy, search, restaurantId, showAllBool);
 
-        // Cache store logos to avoid N+1 queries
-        Map<String, String> logoCache = new HashMap<>();
+        // Cache full Store objects to avoid N+1 queries
+        Map<String, Store> storeCache = new HashMap<>();
         List<Map<String, Object>> enriched = bags.stream().map(bag -> {
             Map<String, Object> map = enrichBag(bag);
             String rid = bag.getRestaurantId();
-            if (!logoCache.containsKey(rid)) {
-                Store store = storeRepository.findById(rid).orElse(null);
-                logoCache.put(rid, store != null ? store.getLogo() : null);
+            if (!storeCache.containsKey(rid)) {
+                storeCache.put(rid, storeRepository.findById(rid).orElse(null));
             }
-            map.put("storeLogo", logoCache.get(rid));
+            Store store = storeCache.get(rid);
+            map.put("storeLogo",       store != null ? store.getLogo()       : null);
+            map.put("storeCoverImage", store != null ? store.getCoverImage() : null);
             return map;
         }).toList();
         return ResponseEntity.ok(Map.of("success", true, "bags", enriched));

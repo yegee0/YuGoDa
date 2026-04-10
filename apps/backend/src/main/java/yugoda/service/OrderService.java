@@ -5,6 +5,7 @@ import yugoda.model.Notification;
 import yugoda.model.Order;
 import yugoda.model.Store;
 import yugoda.model.Transaction;
+import yugoda.model.User;
 import yugoda.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,8 @@ public class OrderService {
     private final StoreRepository storeRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final FcmService fcmService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -58,6 +62,13 @@ public class OrderService {
         try {
             order.setItems(body.get("items") != null ? objectMapper.writeValueAsString(body.get("items")) : "[]");
         } catch (Exception ignored) { order.setItems("[]"); }
+
+        // Generate a 4-digit delivery verification code
+        order.setDeliveryCode(String.valueOf(ThreadLocalRandom.current().nextInt(1000, 10000)));
+
+        // Store customer delivery coordinates (only for delivery orders)
+        if (body.get("deliveryLat") instanceof Number lat) order.setDeliveryLat(lat.doubleValue());
+        if (body.get("deliveryLng") instanceof Number lng) order.setDeliveryLng(lng.doubleValue());
 
         orderRepository.save(order);
 
@@ -128,7 +139,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateStatus(String orderId, String uid, String role, String status, String estimatedPickupTime, String trackingNotes) {
+    public Order updateStatus(String orderId, String uid, String role, String status, String estimatedPickupTime, String trackingNotes, String inputDeliveryCode) {
         List<String> validStatuses = List.of("pending", "confirmed", "preparing", "ready",
                 "picked_up", "delivering", "delivered", "cancelled");
         if (!validStatuses.contains(status)) {
@@ -138,6 +149,14 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Sipariş bulunamadı."));
         if (!"admin".equals(role) && !order.getRestaurantId().equals(uid) && !order.getUserId().equals(uid)) {
             throw new SecurityException("Bu siparişi güncelleme yetkiniz yok.");
+        }
+
+        // Verify delivery code when transitioning to delivered
+        if ("delivered".equals(status) && order.getDeliveryCode() != null
+                && inputDeliveryCode != null && !inputDeliveryCode.isBlank()) {
+            if (!order.getDeliveryCode().equals(inputDeliveryCode.trim())) {
+                throw new IllegalArgumentException("Geçersiz teslimat kodu.");
+            }
         }
 
         order.setStatus(status);
@@ -163,7 +182,7 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        // Send notification
+        // In-app notification (DB)
         Map<String, String> messages = Map.of(
             "confirmed", "Siparişiniz onaylandı!",
             "preparing", "Siparişiniz hazırlanıyor.",
@@ -180,6 +199,25 @@ public class OrderService {
             notif.setMessage(messages.get(status));
             notificationRepository.save(notif);
         }
+
+        // FCM push notification
+        userRepository.findById(order.getUserId()).ifPresent(customer -> {
+            String pushBody = switch (status) {
+                case "preparing" -> "Siparişiniz onaylandı ve hazırlanıyor.";
+                case "ready"     -> "delivery".equals(order.getDeliveryType())
+                        ? null  // delivery orders don't become ready for pickup
+                        : "Siparişiniz hazır! Restorandan teslim alabilirsiniz.";
+                case "delivering" -> "delivery".equals(order.getDeliveryType())
+                        ? "Siparişiniz yola çıktı! Yakında kapınızda."
+                        : null;
+                case "delivered" -> "Siparişiniz teslim edildi. Afiyet olsun!";
+                case "cancelled" -> "Siparişiniz iptal edildi.";
+                default -> null;
+            };
+            if (pushBody != null) {
+                fcmService.sendPush(customer.getFcmToken(), "YuGoDa — Sipariş Güncelleme", pushBody);
+            }
+        });
 
         return order;
     }

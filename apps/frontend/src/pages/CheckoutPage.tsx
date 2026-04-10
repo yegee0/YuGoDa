@@ -17,11 +17,13 @@ type Step = typeof STEPS[number];
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { cart, removeFromCart, updateCartQuantity, clearCart } = useStore();
+  const { cart, removeFromCart, updateCartQuantity, clearCart, userProfile } = useStore();
   const [step, setStep] = useState<Step>('Cart');
   const [deliveryOption, setDeliveryOption] = useState<'delivery' | 'takeaway'>('delivery');
   const [tip, setTip] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash' | 'wallet'>('card');
+  const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '' });
+  const [cardErrors, setCardErrors] = useState({ number: '', expiry: '', cvv: '' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [show3DSecure, setShow3DSecure] = useState(false);
 
@@ -31,7 +33,24 @@ export default function CheckoutPage() {
 
   const stepIndex = STEPS.indexOf(step);
 
+  const validateCard = (): boolean => {
+    const errors = { number: '', expiry: '', cvv: '' };
+    const digits = cardDetails.number.replace(/\s/g, '');
+    if (digits.length !== 16 || !/^\d+$/.test(digits)) errors.number = 'Enter a valid 16-digit card number.';
+    const expiryMatch = cardDetails.expiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!expiryMatch) {
+      errors.expiry = 'Use MM/YY format.';
+    } else {
+      const month = parseInt(expiryMatch[1]);
+      if (month < 1 || month > 12) errors.expiry = 'Invalid month.';
+    }
+    if (!/^\d{3,4}$/.test(cardDetails.cvv)) errors.cvv = 'Enter 3 or 4 digits.';
+    setCardErrors(errors);
+    return !errors.number && !errors.expiry && !errors.cvv;
+  };
+
   const handleConfirmOrder = async () => {
+    if (paymentMethod === 'card' && !validateCard()) return;
     setIsProcessing(true);
     try {
       const restaurantGroups = cart.reduce((acc, item) => {
@@ -39,6 +58,11 @@ export default function CheckoutPage() {
         acc[item.restaurantId].push(item);
         return acc;
       }, {} as Record<string, typeof cart>);
+
+      // Attach customer delivery coordinates if available and delivery is selected
+      const deliveryAddr = deliveryOption === 'delivery'
+        ? (userProfile?.addresses ?? []).find(a => a.latitude && a.longitude)
+        : undefined;
 
       for (const [restaurantId, items] of Object.entries(restaurantGroups)) {
         await api.post('/orders', {
@@ -52,6 +76,7 @@ export default function CheckoutPage() {
           total,
           deliveryType: deliveryOption,
           paymentMethod,
+          ...(deliveryAddr ? { deliveryLat: deliveryAddr.latitude, deliveryLng: deliveryAddr.longitude } : {}),
         });
       }
 
@@ -141,7 +166,7 @@ export default function CheckoutPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-4 flex items-center gap-4 shadow-sm"
                       >
-                        <img src={item.image} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                        <img src={item.image || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'} alt={item.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'; }} />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-gray-900 dark:text-white truncate">{item.name}</h3>
                           <p className="text-xs text-gray-400 mb-1">{item.restaurantName}</p>
@@ -249,6 +274,79 @@ export default function CheckoutPage() {
                     </button>
                   ))}
                 </div>
+
+                {/* Card details form — shown only when card is selected */}
+                {paymentMethod === 'card' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border-2 border-[#1A4D2E]/20 space-y-4"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <CreditCard className="w-4 h-4 text-[#1A4D2E]" />
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Card Details</span>
+                    </div>
+
+                    {/* Card number */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Card Number</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="1234 5678 9012 3456"
+                        maxLength={19}
+                        value={cardDetails.number}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                          const formatted = raw.replace(/(.{4})/g, '$1 ').trim();
+                          setCardDetails(d => ({ ...d, number: formatted }));
+                          setCardErrors(er => ({ ...er, number: '' }));
+                        }}
+                        className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors tracking-widest ${cardErrors.number ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                      />
+                      {cardErrors.number && <p className="text-xs text-red-500 mt-1">{cardErrors.number}</p>}
+                    </div>
+
+                    {/* Expiry + CVV */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Expiry</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="MM/YY"
+                          maxLength={5}
+                          value={cardDetails.expiry}
+                          onChange={e => {
+                            let val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            if (val.length >= 3) val = val.slice(0, 2) + '/' + val.slice(2);
+                            setCardDetails(d => ({ ...d, expiry: val }));
+                            setCardErrors(er => ({ ...er, expiry: '' }));
+                          }}
+                          className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.expiry ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                        />
+                        {cardErrors.expiry && <p className="text-xs text-red-500 mt-1">{cardErrors.expiry}</p>}
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">CVV</label>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          placeholder="•••"
+                          maxLength={4}
+                          value={cardDetails.cvv}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setCardDetails(d => ({ ...d, cvv: val }));
+                            setCardErrors(er => ({ ...er, cvv: '' }));
+                          }}
+                          className={`w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-white/5 border text-sm text-gray-900 dark:text-white placeholder-gray-300 focus:outline-none transition-colors ${cardErrors.cvv ? 'border-red-400' : 'border-gray-100 dark:border-white/10 focus:border-[#1A4D2E]'}`}
+                        />
+                        {cardErrors.cvv && <p className="text-xs text-red-500 mt-1">{cardErrors.cvv}</p>}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </>
             )}
 
@@ -259,7 +357,7 @@ export default function CheckoutPage() {
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl divide-y divide-gray-50 dark:divide-white/5 shadow-sm">
                   {cart.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-4">
-                      <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover" />
+                      <img src={item.image || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'} alt={item.name} className="w-10 h-10 rounded-lg object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'; }} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{item.name}</p>
                         <p className="text-xs text-gray-400">×{item.quantity}</p>
@@ -334,7 +432,10 @@ export default function CheckoutPage() {
             )}
             {stepIndex < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(STEPS[stepIndex + 1])}
+                onClick={() => {
+                  if (step === 'Payment' && paymentMethod === 'card' && !validateCard()) return;
+                  setStep(STEPS[stepIndex + 1]);
+                }}
                 disabled={cart.length === 0}
                 className="flex-1 py-3.5 rounded-xl bg-[#1A4D2E] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#133b23] transition-colors disabled:opacity-40 text-sm"
               >

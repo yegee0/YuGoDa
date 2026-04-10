@@ -59,4 +59,11 @@ public class Order {
 
     @Column(columnDefinition = "TEXT")
     private String trackingNotes;
+
+    /** 4-digit code generated at order creation; customer shows it to courier to confirm delivery. */
+    private String deliveryCode;
+
+    /** Customer's delivery address coordinates (sent from checkout when deliveryType = 'delivery'). */
+    private Double deliveryLat;
+    private Double deliveryLng;
 }

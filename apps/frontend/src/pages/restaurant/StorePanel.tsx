@@ -7,6 +7,7 @@ import {
 import { AnimatePresence } from 'motion/react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
+import toast from 'react-hot-toast';
 import type { Order, Bag, Driver, Review, StoreProfile, OperatingHours, ChartDataPoint, OrderStatus } from '@/types';
 import { DAY_NAMES_SHORT, ORDER_POLL_INTERVAL } from '@/lib/constants';
 
@@ -45,6 +46,7 @@ export default function StorePanel() {
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editedProfile, setEditedProfile] = useState<StoreProfile | null>(null);
   const [schedule, setSchedule] = useState<OperatingHours[]>([
     { day: 'Monday',    isOpen: true,  open: '09:00', close: '22:00' },
@@ -100,20 +102,35 @@ export default function StorePanel() {
   }, [user]);
 
   // ── Shared handlers ──
-  const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus, trackingInfo?: { estimatedPickupTime?: string; trackingNotes?: string }) => {
+  const handleUpdateOrderStatus = async (
+    orderId: string,
+    status: OrderStatus,
+    trackingInfo?: { estimatedPickupTime?: string; trackingNotes?: string; deliveryCode?: string }
+  ) => {
     try {
       await api.put(`/orders/${orderId}/status`, { status, ...trackingInfo });
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...trackingInfo } : o));
-    } catch (err) { console.error(err); }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update order status.';
+      toast.error(message);
+      throw err;
+    }
   };
 
   const handleUpdateProfile = async () => {
     if (!user || !editedProfile) return;
+    setIsSavingProfile(true);
     try {
       await api.put(`/stores/${user.uid}`, { ...editedProfile, operatingHours: schedule });
       setStoreProfile({ ...editedProfile, operatingHours: schedule });
       setIsEditingProfile(false);
-    } catch (err) { console.error(err); }
+      toast.success('Profile saved successfully.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save profile. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   // ── Derived data ──
@@ -125,7 +142,7 @@ export default function StorePanel() {
   const commissionRate = storeProfile?.commissionRate ?? 15;
   const todaySalesGross = orders.filter(o => o.status === 'delivered').reduce((acc, o) => acc + (o.price || 0), 0);
   const todaySales = todaySalesGross * (1 - commissionRate / 100);
-  const activeOrders = orders.filter(o => (['pending', 'preparing', 'ready'] as OrderStatus[]).includes(o.status)).length;
+  const activeOrders = orders.filter(o => (['pending', 'preparing', 'ready', 'delivering'] as OrderStatus[]).includes(o.status)).length;
   const avgRating = reviews.length > 0 ? (reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—';
 
   // ── Page header config ──
@@ -176,13 +193,19 @@ export default function StorePanel() {
         {activeTab === 'profile' && (
           <button
             onClick={() => isEditingProfile ? handleUpdateProfile() : setIsEditingProfile(true)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+            disabled={isSavingProfile}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 ${
               isEditingProfile
                 ? 'bg-[#1A4D2E] text-white hover:bg-[#133b23] shadow-sm shadow-[#1A4D2E]/20'
                 : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
             }`}
           >
-            {isEditingProfile ? <><CheckCircle className="w-4 h-4" /> Save Changes</> : <><Edit3 className="w-4 h-4" /> Edit Profile</>}
+            {isEditingProfile
+              ? isSavingProfile
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                : <><CheckCircle className="w-4 h-4" /> Save Changes</>
+              : <><Edit3 className="w-4 h-4" /> Edit Profile</>
+            }
           </button>
         )}
       </div>
@@ -220,7 +243,11 @@ export default function StorePanel() {
           )}
 
           {activeTab === 'drivers' && (
-            <DriversTab drivers={drivers} />
+            <DriversTab
+              drivers={drivers}
+              deliveringOrders={orders.filter(o => o.status === 'delivering')}
+              storeLocation={storeProfile?.location}
+            />
           )}
 
           {activeTab === 'reviews' && (
