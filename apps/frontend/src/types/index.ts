@@ -54,6 +54,11 @@ export interface Order {
   updatedAt?: string;
   estimatedPickupTime?: string;
   trackingNotes?: string;
+  /** 4-digit code shown to customer; restaurant must enter it to confirm delivery. */
+  deliveryCode?: string;
+  /** Customer delivery address coordinates (set at checkout for delivery orders). */
+  deliveryLat?: number;
+  deliveryLng?: number;
 }
 
 export interface CartItem {
@@ -130,6 +135,7 @@ export interface Bag {
   distance?: string;
   prepTime?: number;
   storeLogo?: string;
+  storeCoverImage?: string;
   createdAt?: string;
 }
 

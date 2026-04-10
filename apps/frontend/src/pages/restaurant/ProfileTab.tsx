@@ -64,9 +64,9 @@ export default function ProfileTab({
                 <input ref={logoFileRef} type="file" accept="image/*" className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0];
-                    if (!file || !editedProfile) return;
+                    if (!file) return;
                     const reader = new FileReader();
-                    reader.onloadend = () => setEditedProfile({ ...editedProfile, logo: reader.result as string });
+                    reader.onloadend = () => setEditedProfile(prev => prev ? { ...prev, logo: reader.result as string } : prev);
                     reader.readAsDataURL(file);
                   }}
                 />
@@ -121,9 +121,9 @@ export default function ProfileTab({
           <input ref={coverFileRef} type="file" accept="image/*" className="hidden"
             onChange={e => {
               const file = e.target.files?.[0];
-              if (!file || !editedProfile) return;
+              if (!file) return;
               const reader = new FileReader();
-              reader.onloadend = () => setEditedProfile({ ...editedProfile, coverImage: reader.result as string });
+              reader.onloadend = () => setEditedProfile(prev => prev ? { ...prev, coverImage: reader.result as string } : prev);
               reader.readAsDataURL(file);
             }}
           />

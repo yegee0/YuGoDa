@@ -35,6 +35,7 @@ public class Store {
     private Double rating = 0.0;
     private String phone;
     private String email;
+    @Column(columnDefinition = "TEXT")
     private String logo;
 
     @Column(columnDefinition = "TEXT")

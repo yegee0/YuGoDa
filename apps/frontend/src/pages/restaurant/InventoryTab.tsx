@@ -24,6 +24,7 @@ interface NewPackage {
   discount: number;
   available: number;
   pickupTime: string;
+  image: string;
 }
 
 export interface InventoryTabProps {
@@ -48,7 +49,7 @@ export default function InventoryTab({
   const [editingBag, setEditingBag] = useState<Bag | null>(null);
   const [newPackage, setNewPackage] = useState<NewPackage>({
     name: '', description: '', category: 'Bakery',
-    price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00',
+    price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00', image: '',
   });
   const [addPackageStatus, setAddPackageStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [addPackageError, setAddPackageError] = useState('');
@@ -76,13 +77,14 @@ export default function InventoryTab({
         available: newPackage.available,
         pickupTime: newPackage.pickupTime,
         merchantType: newPackage.category,
+        ...(newPackage.image.trim() ? { image: newPackage.image.trim() } : {}),
       }) as { bag?: Bag };
       if (data.bag) setInventory(prev => [data.bag!, ...prev]);
       setAddPackageStatus('success');
       setTimeout(() => {
         setShowAddPackage(false);
         setAddPackageStatus('idle');
-        setNewPackage({ name: '', description: '', category: 'Bakery', price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00' });
+        setNewPackage({ name: '', description: '', category: 'Bakery', price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00', image: '' });
       }, 1200);
     } catch (error: unknown) {
       setAddPackageStatus('error');
@@ -120,7 +122,7 @@ export default function InventoryTab({
                 <div key={bag.id} className="bg-white dark:bg-[#111] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm group">
                   <div className="relative h-32 bg-gradient-to-br from-[#1A4D2E]/10 to-[#1A4D2E]/5 overflow-hidden">
                     <img
-                      src={bag.image || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'}
+                      src={bag.image || bag.storeCoverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'}
                       alt=""
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"
@@ -212,6 +214,22 @@ export default function InventoryTab({
                   <label className={labelCls}>Pickup Time</label>
                   <input type="text" value={editingBag.pickupTime || ''} onChange={e => setEditingBag({ ...editingBag, pickupTime: e.target.value })} className={inputCls} placeholder="18:00 - 19:00" />
                 </div>
+                <div>
+                  <label className={labelCls}>Package Image URL <span className="normal-case font-normal text-gray-300">(optional)</span></label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={editingBag.image || ''}
+                    onChange={e => setEditingBag({ ...editingBag, image: e.target.value })}
+                    className={inputCls}
+                  />
+                  {(editingBag.image || '').trim() && (
+                    <img src={(editingBag.image || '').trim()} alt="preview" referrerPolicy="no-referrer"
+                      className="mt-2 h-24 w-full object-cover rounded-xl border border-gray-100 dark:border-white/10"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                </div>
               </div>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setEditingBag(null)} className="flex-1 py-3 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-xl font-bold">Cancel</button>
@@ -291,6 +309,22 @@ export default function InventoryTab({
                       onChange={e => setNewPackage({ ...newPackage, pickupTime: formatPickup(parsePickup(newPackage.pickupTime).start, e.target.value) })}
                       className={inputCls} />
                   </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Package Image URL <span className="normal-case font-normal text-gray-300">(optional)</span></label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={newPackage.image}
+                    onChange={e => setNewPackage({ ...newPackage, image: e.target.value })}
+                    className={inputCls}
+                  />
+                  {newPackage.image.trim() && (
+                    <img src={newPackage.image.trim()} alt="preview" referrerPolicy="no-referrer"
+                      className="mt-2 h-24 w-full object-cover rounded-xl border border-gray-100 dark:border-white/10"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

@@ -43,9 +43,9 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
     >
       {/* Image */}
       <div className="relative h-36 bg-gradient-to-br from-[#1A4D2E]/10 to-[#1A4D2E]/5 overflow-hidden">
-        {bag.image ? (
+        {bag.image || store.coverImage ? (
           <img
-            src={bag.image}
+            src={bag.image || store.coverImage}
             alt={bag.category}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             referrerPolicy="no-referrer"
@@ -362,7 +362,7 @@ export default function StorePage() {
                           name: `${bag.category} Magic Bag`,
                           price: bag.price,
                           quantity: 1,
-                          image: bag.image || '',
+                          image: bag.image || store.coverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
                         })}
                         onInc={() => updateCartQuantity(bag.id, qty + 1)}
                         onDec={() => qty > 1 ? updateCartQuantity(bag.id, qty - 1) : removeFromCart(bag.id)}

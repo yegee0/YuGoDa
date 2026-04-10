@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { authCustomer, authPartner, authAdmin } from '@/lib/firebase';
+import { authCustomer, authPartner, authAdmin, getCustomerFcmToken, listenForegroundMessages } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
@@ -61,6 +61,13 @@ export function useAuthInit() {
             if (data.user.favorites) {
               useStore.getState().setFavorites(data.user.favorites);
             }
+          }
+          // Register FCM push token and foreground listener for customer accounts only
+          if (role === 'customer') {
+            listenForegroundMessages();
+            getCustomerFcmToken().then(fcmToken => {
+              if (fcmToken) api.put('/users/me', { fcmToken }).catch(() => {});
+            }).catch(() => {});
           }
         } catch {
           // User not found in DB — auto-register so role is stored correctly
