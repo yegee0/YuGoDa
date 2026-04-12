@@ -100,7 +100,15 @@ const resources = {
       "Submit Review": "Submit Review",
       "Review submitted": "Review submitted!",
       "No orders yet": "No orders yet",
-      "Your order history will appear here": "Your order history will appear here"
+      "Your order history will appear here": "Your order history will appear here",
+      "chatbot_welcome": "Hi! I'm YuGoDa Assistant. I can help you find surprise bags, suggest meals based on your preferences, and answer questions about the platform. What are you looking for?",
+      "chatbot_title": "YuGoDa AI",
+      "chatbot_status": "Online & Ready",
+      "chatbot_typing": "YuGoDa AI is thinking...",
+      "chatbot_placeholder": "Ask about surprise bags...",
+      "chatbot_powered_by": "Powered by YuGoDa AI",
+      "chatbot_error": "Sorry, I'm having trouble connecting right now. Please try again later!",
+      "chatbot_suggestions": "Suggested for you"
     }
   },
   tr: {
@@ -200,7 +208,15 @@ const resources = {
       "Submit Review": "Değerlendirmeyi Gönder",
       "Review submitted": "Değerlendirme gönderildi!",
       "No orders yet": "Henüz sipariş yok",
-      "Your order history will appear here": "Sipariş geçmişiniz burada görünecek"
+      "Your order history will appear here": "Sipariş geçmişiniz burada görünecek",
+      "chatbot_welcome": "Merhaba! Ben YuGoDa Asistanı. Size sürpriz paketler bulmada, tercihlerinize göre önerilerde ve platform hakkındaki sorularınızda yardımcı olabilirim. Ne arıyorsunuz?",
+      "chatbot_title": "YuGoDa AI",
+      "chatbot_status": "Çevrimiçi ve Hazır",
+      "chatbot_typing": "YuGoDa AI düşünüyor...",
+      "chatbot_placeholder": "Sürpriz paketler hakkında sorun...",
+      "chatbot_powered_by": "YuGoDa AI ile güçlendirildi",
+      "chatbot_error": "Üzgünüm, şu anda bağlantı kurmakta sorun yaşıyorum. Lütfen daha sonra tekrar deneyin!",
+      "chatbot_suggestions": "Sizin için öneriler"
     }
   }
 };

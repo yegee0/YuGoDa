@@ -1,26 +1,22 @@
-import { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { Send, Bot, User, X, MessageCircle, Loader2, Sparkles } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Bot, User, X, MessageCircle, Loader2, Sparkles, MapPin, Clock, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
-import type { Order } from '@/types';
-
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
-interface Message {
-  role: 'user' | 'model';
-  text: string;
-}
+import { TL } from '@/lib/formatters';
+import { COLORS } from '@/lib/constants';
+import type { ChatMessageItem, ChatResponse, ChatRecommendation } from '@/types';
 
 export default function FoodChatbot() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: "Hi! I'm YuGoBot. I can help you find the perfect surprise bag or suggest what to eat based on your preferences. What are you in the mood for?" }
+  const [messages, setMessages] = useState<ChatMessageItem[]>([
+    { role: 'model', text: t('chatbot_welcome') }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<ChatRecommendation[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<ReturnType<typeof genAI.chats.create> | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -28,52 +24,47 @@ export default function FoodChatbot() {
     }
   }, [messages, isLoading]);
 
-  // Fetch order history when chatbot opens and build context-aware system prompt
-  useEffect(() => {
-    if (!isOpen) return;
-    api.get('/orders').then((data: { orders?: Order[] }) => {
-      const recentOrders = (data.orders || []).slice(0, 10);
-      const orderContext = recentOrders.length > 0
-        ? `\n\nThe user's recent orders:\n${recentOrders.map(o =>
-            `- ${o.restaurantName || 'Unknown restaurant'}: ${o.items?.map(i => i.name).join(', ') || 'surprise bag'} (${o.status})`
-          ).join('\n')}\n\nBased on their order history, you can suggest similar items they might enjoy or recommend healthier alternatives if they've been ordering frequently. Encourage variety and eco-friendly choices.`
-        : '';
-
-      chatRef.current = genAI.chats.create({
-        model: "gemini-3-flash-preview",
-        config: {
-          systemInstruction: `You are YuGoBot, a helpful assistant for a food waste prevention platform called YuGoDa. Your goal is to help users find surplus food bags, suggest meals based on their cravings, and encourage eco-friendly eating habits. Keep responses concise, friendly, and use emojis occasionally. If asked about specific bags, mention that they can find them in the 'Discover' tab.${orderContext}`,
-        },
-      });
-    }).catch(() => {
-      // Fallback: init without order history
-      if (!chatRef.current) {
-        chatRef.current = genAI.chats.create({
-          model: "gemini-3-flash-preview",
-          config: {
-            systemInstruction: "You are YuGoBot, a helpful assistant for a food waste prevention platform called YuGoDa. Your goal is to help users find surplus food bags, suggest meals based on their cravings, and encourage eco-friendly eating habits. Keep responses concise, friendly, and use emojis occasionally. If asked about specific bags, mention that they can find them in the 'Discover' tab.",
-          },
-        });
+  const getUserLocation = useCallback((): Promise<{ lat: number; lng: number } | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
       }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { timeout: 5000 }
+      );
     });
-  }, [isOpen]);
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', text: input };
+    const userMessage: ChatMessageItem = { role: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await chatRef.current.sendMessage({ message: input });
-      const text = response.text || "I'm sorry, I couldn't process that.";
+      const location = await getUserLocation();
+      const data = await api.post<ChatResponse>('/chat', {
+        message: currentInput,
+        location,
+      });
 
-      setMessages(prev => [...prev, { role: 'model', text }]);
+      setMessages(prev => [...prev, { role: 'model', text: data.reply }]);
+
+      if (data.recommendations?.length) {
+        setRecommendations(data.recommendations);
+      }
     } catch (error) {
-      console.error("Chatbot error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "Sorry, I'm having trouble connecting right now. Please try again later!" }]);
+      console.error('Chatbot error:', error);
+      setMessages(prev => [...prev, {
+        role: 'model',
+        text: t('chatbot_error'),
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +84,7 @@ export default function FoodChatbot() {
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           <MessageCircle className="w-7 h-7 relative z-10" />
-          <motion.div 
+          <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             className="absolute inset-0 border-2 border-dashed border-white/20 rounded-full scale-110"
@@ -118,15 +109,15 @@ export default function FoodChatbot() {
                   <Bot className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base leading-tight">YuGoBot AI</h3>
+                  <h3 className="font-bold text-base leading-tight">{t('chatbot_title')}</h3>
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-[10px] font-medium text-white/60 uppercase tracking-wider">Online & Ready</span>
+                    <span className="text-[10px] font-medium text-white/60 uppercase tracking-wider">{t('chatbot_status')}</span>
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)} 
+              <button
+                onClick={() => setIsOpen(false)}
                 className="hover:bg-white/10 p-2 rounded-xl transition-colors relative z-10"
               >
                 <X className="w-5 h-5" />
@@ -136,10 +127,10 @@ export default function FoodChatbot() {
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth bg-[#F9F9F9]">
               {messages.map((m, i) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  key={i} 
+                  key={i}
                   className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -147,8 +138,8 @@ export default function FoodChatbot() {
                       {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
                     </div>
                     <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                      m.role === 'user' 
-                        ? 'bg-[#FF9F1C] text-white rounded-tr-none' 
+                      m.role === 'user'
+                        ? 'bg-[#FF9F1C] text-white rounded-tr-none'
                         : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                     }`}>
                       {m.text}
@@ -156,11 +147,61 @@ export default function FoodChatbot() {
                   </div>
                 </motion.div>
               ))}
+
+              {/* Recommendation Cards */}
+              {recommendations.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-2"
+                >
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1">{t('chatbot_suggestions')}</p>
+                  {recommendations.slice(0, 3).map((rec) => (
+                    <div
+                      key={rec.bagId}
+                      className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{rec.restaurantName}</p>
+                          {rec.category && (
+                            <p className="text-xs text-gray-500">{rec.category}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="text-sm font-bold" style={{ color: COLORS.forest }}>{TL(rec.price)}</p>
+                          {rec.originalPrice && rec.originalPrice > rec.price && (
+                            <p className="text-[10px] text-gray-400 line-through">{TL(rec.originalPrice)}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
+                        {rec.distance && (
+                          <span className="flex items-center gap-0.5">
+                            <MapPin className="w-3 h-3" /> {rec.distance}
+                          </span>
+                        )}
+                        {rec.pickupTime && (
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="w-3 h-3" /> {rec.pickupTime}
+                          </span>
+                        )}
+                        {rec.dietaryType && (
+                          <span className="flex items-center gap-0.5">
+                            <Tag className="w-3 h-3" /> {rec.dietaryType}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="flex gap-3 items-center bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm">
                     <Loader2 className="w-4 h-4 animate-spin text-[#1B5E52]" />
-                    <span className="text-xs font-medium text-gray-500 italic">EcoBot is typing...</span>
+                    <span className="text-xs font-medium text-gray-500 italic">{t('chatbot_typing')}</span>
                   </div>
                 </div>
               )}
@@ -175,7 +216,7 @@ export default function FoodChatbot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Ask about surplus food..."
+                    placeholder={t('chatbot_placeholder')}
                     className="w-full bg-gray-100 border-none rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#1B5E52]/20 outline-none transition-all pr-12"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -191,7 +232,7 @@ export default function FoodChatbot() {
                 </button>
               </div>
               <p className="text-[10px] text-center text-gray-400 mt-3 font-medium uppercase tracking-widest">
-                Powered by Gemini AI
+                {t('chatbot_powered_by')}
               </p>
             </div>
           </motion.div>

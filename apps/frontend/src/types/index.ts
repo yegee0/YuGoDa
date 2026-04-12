@@ -234,3 +234,33 @@ export interface ChartDataPoint {
   revenue: number;
   orders: number;
 }
+
+// ── AI Chatbot ──────────────────────────────────────────
+export interface ChatMessageItem {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  location?: { lat: number; lng: number };
+}
+
+export interface ChatResponse {
+  success: boolean;
+  reply: string;
+  recommendations: ChatRecommendation[];
+}
+
+export interface ChatRecommendation {
+  bagId: string;
+  restaurantName: string;
+  category?: string;
+  price: number;
+  originalPrice?: number;
+  available?: number;
+  pickupTime?: string;
+  dietaryType?: string;
+  distance?: string;
+  rating?: number;
+}

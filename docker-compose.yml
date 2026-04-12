@@ -43,6 +43,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       # Allow requests from the browser-facing frontend origin
       FRONTEND_URL: "http://localhost:3000"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3131"
       # iyzico — override with real keys for production
       IYZICO_API_KEY: ${IYZICO_API_KEY:-dummy}
       IYZICO_SECRET_KEY: ${IYZICO_SECRET_KEY:-dummy}
@@ -57,6 +58,9 @@ services:
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-yugoda-5b36a}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud/application_default_credentials.json
+      # Ollama AI — host.docker.internal reaches the Windows host from inside Docker
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma4}
     volumes:
       # Mount the local gcloud config directory so ADC works inside the container.
       # USERPROFILE is a standard Windows shell variable (e.g. C:\Users\Gaming) and is
