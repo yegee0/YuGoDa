@@ -1,11 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, X, MessageCircle, Loader2, Sparkles, MapPin, Clock, Tag } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, X, MessageCircle, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
-import { TL } from '@/lib/formatters';
-import { COLORS } from '@/lib/constants';
-import type { ChatMessageItem, ChatResponse, ChatRecommendation } from '@/types';
+import type { ChatMessageItem, ChatResponse } from '@/types';
 
 export default function FoodChatbot() {
   const { t } = useTranslation();
@@ -15,7 +13,6 @@ export default function FoodChatbot() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<ChatRecommendation[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,20 +20,6 @@ export default function FoodChatbot() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
-
-  const getUserLocation = useCallback((): Promise<{ lat: number; lng: number } | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve(null);
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { timeout: 5000 }
-      );
-    });
-  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -48,17 +31,11 @@ export default function FoodChatbot() {
     setIsLoading(true);
 
     try {
-      const location = await getUserLocation();
       const data = await api.post<ChatResponse>('/chat', {
         message: currentInput,
-        location,
       });
 
       setMessages(prev => [...prev, { role: 'model', text: data.reply }]);
-
-      if (data.recommendations?.length) {
-        setRecommendations(data.recommendations);
-      }
     } catch (error) {
       console.error('Chatbot error:', error);
       setMessages(prev => [...prev, {
@@ -147,55 +124,6 @@ export default function FoodChatbot() {
                   </div>
                 </motion.div>
               ))}
-
-              {/* Recommendation Cards */}
-              {recommendations.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-2"
-                >
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1">{t('chatbot_suggestions')}</p>
-                  {recommendations.slice(0, 3).map((rec) => (
-                    <div
-                      key={rec.bagId}
-                      className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{rec.restaurantName}</p>
-                          {rec.category && (
-                            <p className="text-xs text-gray-500">{rec.category}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0 ml-2">
-                          <p className="text-sm font-bold" style={{ color: COLORS.forest }}>{TL(rec.price)}</p>
-                          {rec.originalPrice && rec.originalPrice > rec.price && (
-                            <p className="text-[10px] text-gray-400 line-through">{TL(rec.originalPrice)}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
-                        {rec.distance && (
-                          <span className="flex items-center gap-0.5">
-                            <MapPin className="w-3 h-3" /> {rec.distance}
-                          </span>
-                        )}
-                        {rec.pickupTime && (
-                          <span className="flex items-center gap-0.5">
-                            <Clock className="w-3 h-3" /> {rec.pickupTime}
-                          </span>
-                        )}
-                        {rec.dietaryType && (
-                          <span className="flex items-center gap-0.5">
-                            <Tag className="w-3 h-3" /> {rec.dietaryType}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
 
               {isLoading && (
                 <div className="flex justify-start">

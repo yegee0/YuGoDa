@@ -108,7 +108,10 @@ const resources = {
       "chatbot_placeholder": "Ask about surprise bags...",
       "chatbot_powered_by": "Powered by YuGoDa AI",
       "chatbot_error": "Sorry, I'm having trouble connecting right now. Please try again later!",
-      "chatbot_suggestions": "Suggested for you"
+      "chatbot_suggestions": "Suggested for you",
+      "ai_recommendations_title": "Picked for You",
+      "ai_recommendations_subtitle": "AI-powered suggestions",
+      "ai_recommendations_loading": "Finding the best deals for you..."
     }
   },
   tr: {
@@ -216,7 +219,10 @@ const resources = {
       "chatbot_placeholder": "Sürpriz paketler hakkında sorun...",
       "chatbot_powered_by": "YuGoDa AI ile güçlendirildi",
       "chatbot_error": "Üzgünüm, şu anda bağlantı kurmakta sorun yaşıyorum. Lütfen daha sonra tekrar deneyin!",
-      "chatbot_suggestions": "Sizin için öneriler"
+      "chatbot_suggestions": "Sizin için öneriler",
+      "ai_recommendations_title": "Senin İçin Seçtik",
+      "ai_recommendations_subtitle": "AI destekli öneriler",
+      "ai_recommendations_loading": "En iyi fırsatlar bulunuyor..."
     }
   }
 };

@@ -73,17 +73,33 @@ public class AiChatService {
         ollamaMessages.addAll(memory);
 
         // 5. Call Ollama
-        String reply = callOllama(ollamaMessages);
+        String rawReply = callOllama(ollamaMessages);
 
-        // 6. Add assistant reply to memory
+        // 6. Determine if recommendations should be shown
+        boolean showBags = false;
+        String reply = rawReply;
+
+        if (rawReply.contains("[SHOW_BAGS]")) {
+            showBags = true;
+            reply = rawReply.replace("[SHOW_BAGS]", "").stripTrailing();
+        } else if (rawReply.matches("(?s).*\\d+[.,]?\\d*\\s*TL.*")) {
+            showBags = true;
+        }
+
+        // 7. Add assistant reply to memory (cleaned, without tag)
         memory.add(Map.of("role", "assistant", "content", reply));
         trimMemory(memory);
 
-        // 7. Build structured recommendations from available bags
-        List<Map<String, Object>> recommendations = aiTools.getAvailableBags(null).stream()
-                .limit(5)
-                .map(this::bagToMap)
-                .collect(Collectors.toList());
+        // 8. Build structured recommendations only when relevant
+        List<Map<String, Object>> recommendations;
+        if (showBags) {
+            recommendations = aiTools.getAvailableBags(null).stream()
+                    .limit(5)
+                    .map(this::bagToMap)
+                    .collect(Collectors.toList());
+        } else {
+            recommendations = List.of();
+        }
 
         return new ChatResult(reply, recommendations);
     }

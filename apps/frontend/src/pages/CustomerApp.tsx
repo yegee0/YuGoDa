@@ -38,6 +38,7 @@ import { useBags } from '@/hooks/useBags';
 import { useLocationManager } from '@/hooks/useLocationManager';
 import FilterPanel from '@/components/FilterPanel';
 import CartDrawer from '@/components/CartDrawer';
+import AiRecommendations from '@/components/AiRecommendations';
 import { api } from '@/lib/api';
 import type { Bag, MapSuggestion, CartItem } from '@/types';
 
@@ -448,6 +449,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                   </p>
                 </div>
               </div>
+
+              {/* AI-powered recommendations */}
+              {activeTab === 'discover' && <AiRecommendations />}
 
               {/* Restaurant result cards */}
               {matchingRestaurants.length > 0 && (
