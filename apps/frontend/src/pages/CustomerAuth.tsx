@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { authCustomer } from '@/lib/firebase';
+import { authCustomer, signOutOtherProjects } from '@/lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -10,6 +10,7 @@ import {
   getRedirectResult,
 } from 'firebase/auth';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 
@@ -24,14 +25,10 @@ const C = {
 };
 
 // ── font helpers ───────────────────────────────────────────────
-import { FONT_PLAYFAIR as playfair, FONT_DM as dm } from '@/lib/constants';
+import { FONT_PLAYFAIR as playfair, FONT_DM as dm, LANDING_STATS } from '@/lib/constants';
 
-// ── stats data ─────────────────────────────────────────────────
-const STATS = [
-  { value: '47',   label: 'Meals rescued' },
-  { value: '9',    label: 'Partner stores' },
-  { value: '70%',  label: 'Avg. discount' },
-];
+// Auth page surfaces 3 of the 4 landing stats (CO₂ omitted — visual parity with design).
+const STATS = LANDING_STATS.slice(0, 3);
 
 // ── blob SVG paths (decorative, low opacity) ──────────────────
 function BlobLime() {
@@ -88,6 +85,7 @@ function ArrowRight({ animating }: { animating: boolean }) {
 
 // ─────────────────────────────────────────────────────────────
 export default function Auth() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { userProfile } = useStore();
@@ -136,12 +134,11 @@ export default function Auth() {
     getRedirectResult(authCustomer).catch(() => {/* no redirect pending */});
   }, []);
 
-  // ── redirect if already logged in ─────────────────────────
+  // ── redirect only if already logged in as the SAME role (customer) ─
+  // A different-role session does NOT redirect; the user can sign in to switch.
   useEffect(() => {
-    if (userProfile && !loading && !error) {
-      if (userProfile.role === 'admin')      navigate('/admin',      { replace: true });
-      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
-      else navigate('/discover', { replace: true });
+    if (userProfile?.role === 'customer' && !loading && !error) {
+      navigate('/discover', { replace: true });
     }
   }, [userProfile, navigate, loading, error]);
 
@@ -152,6 +149,9 @@ export default function Auth() {
     setMsg('');
     setLoading(true);
     try {
+      // Purge any other-role Firebase sessions first so the incoming principal
+      // is unambiguous and `useAuthInit` never holds two live roles at once.
+      await signOutOtherProjects('customer');
       if (tab === 'signin') {
         await signInWithEmailAndPassword(authCustomer, email, password);
       } else {
@@ -192,6 +192,9 @@ export default function Auth() {
     setLoading(true);
     const provider = new GoogleAuthProvider();
     try {
+      // Sign out other-role sessions BEFORE OAuth so a returning redirect can
+      // only resolve against the customer principal.
+      await signOutOtherProjects('customer');
       await signInWithPopup(authCustomer, provider);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code || '';
@@ -387,14 +390,14 @@ export default function Auth() {
             borderTop: '1px solid rgba(245,240,232,0.1)',
           }}>
             {STATS.map((s) => (
-              <div key={s.value}>
+              <div key={s.labelKey}>
                 <div style={{
                   ...playfair,
                   fontSize: '26px',
                   fontWeight: 600,
                   color: C.lime,
                   lineHeight: 1,
-                }}>{s.value}</div>
+                }}>{s.value}{s.suffix}</div>
                 <div style={{
                   ...dm,
                   fontSize: '11px',
@@ -402,7 +405,7 @@ export default function Auth() {
                   color: 'rgba(245,240,232,0.45)',
                   marginTop: '4px',
                   letterSpacing: '0.03em',
-                }}>{s.label}</div>
+                }}>{t(s.labelKey)}</div>
               </div>
             ))}
           </div>

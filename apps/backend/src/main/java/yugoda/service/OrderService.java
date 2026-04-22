@@ -102,12 +102,15 @@ public class OrderService {
         tx.setPaymentMethod(order.getPaymentMethod());
         transactionRepository.save(tx);
 
-        // Notify restaurant
+        // Notify restaurant of the new order.
         Notification notif = new Notification();
         notif.setId(UUID.randomUUID().toString());
         notif.setUserId(restaurantId);
-        notif.setTitle("Yeni Sipariş");
-        notif.setMessage("Yeni bir sipariş alındı. Sipariş ID: " + order.getId().substring(0, 8));
+        notif.setTitle("New Order");
+        notif.setMessage("A new order has been placed. Order ID: " + order.getId().substring(0, 8));
+        notif.setTitleKey("notif_new_order_title");
+        notif.setMessageKey("notif_new_order_message");
+        notif.setOrderId(order.getId());
         notificationRepository.save(notif);
 
         return order;
@@ -182,40 +185,55 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        // In-app notification (DB)
+        // In-app notification (DB). Stable English fallback plus i18n keys so
+        // the frontend can render in the recipient's preferred language.
         Map<String, String> messages = Map.of(
-            "confirmed", "Siparişiniz onaylandı!",
-            "preparing", "Siparişiniz hazırlanıyor.",
-            "ready", "Siparişiniz hazır!",
-            "delivering", "Siparişiniz yola çıktı!",
-            "delivered", "Siparişiniz teslim edildi.",
-            "cancelled", "Siparişiniz iptal edildi."
+            "confirmed",  "Your order has been confirmed!",
+            "preparing",  "Your order is being prepared.",
+            "ready",      "Your order is ready!",
+            "picked_up",  "Your order has been picked up.",
+            "delivering", "Your order is on the way!",
+            "delivered",  "Your order has been delivered.",
+            "cancelled",  "Your order has been cancelled."
+        );
+        Map<String, String> messageKeys = Map.of(
+            "confirmed",  "notif_order_confirmed",
+            "preparing",  "notif_order_preparing",
+            "ready",      "notif_order_ready",
+            "picked_up",  "notif_order_picked_up",
+            "delivering", "notif_order_delivering",
+            "delivered",  "notif_order_delivered",
+            "cancelled",  "notif_order_cancelled"
         );
         if (messages.containsKey(status)) {
             Notification notif = new Notification();
             notif.setId(UUID.randomUUID().toString());
             notif.setUserId(order.getUserId());
-            notif.setTitle("Sipariş Güncelleme");
+            notif.setTitle("Order Update");
             notif.setMessage(messages.get(status));
+            notif.setTitleKey("notif_order_update_title");
+            notif.setMessageKey(messageKeys.get(status));
+            notif.setOrderId(order.getId());
             notificationRepository.save(notif);
         }
 
         // FCM push notification
         userRepository.findById(order.getUserId()).ifPresent(customer -> {
             String pushBody = switch (status) {
-                case "preparing" -> "Siparişiniz onaylandı ve hazırlanıyor.";
+                case "preparing" -> "Your order has been confirmed and is being prepared.";
                 case "ready"     -> "delivery".equals(order.getDeliveryType())
                         ? null  // delivery orders don't become ready for pickup
-                        : "Siparişiniz hazır! Restorandan teslim alabilirsiniz.";
+                        : "Your order is ready! You can pick it up from the restaurant.";
+                case "picked_up" -> "Your order has been picked up.";
                 case "delivering" -> "delivery".equals(order.getDeliveryType())
-                        ? "Siparişiniz yola çıktı! Yakında kapınızda."
+                        ? "Your order is on the way! It will be at your door soon."
                         : null;
-                case "delivered" -> "Siparişiniz teslim edildi. Afiyet olsun!";
-                case "cancelled" -> "Siparişiniz iptal edildi.";
+                case "delivered" -> "Your order has been delivered. Enjoy!";
+                case "cancelled" -> "Your order has been cancelled.";
                 default -> null;
             };
             if (pushBody != null) {
-                fcmService.sendPush(customer.getFcmToken(), "YuGoDa — Sipariş Güncelleme", pushBody);
+                fcmService.sendPush(customer.getFcmToken(), "YuGoDa — Order Update", pushBody);
             }
         });
 

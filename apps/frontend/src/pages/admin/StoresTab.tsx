@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Store, Clock, CheckCircle, XCircle, Percent } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import type { StoreProfile } from '@/types';
 import { api } from '@/lib/api';
 
@@ -11,6 +12,7 @@ export interface StoresTabProps {
 }
 
 export default function StoresTab({ stores, onApproveStore, onUpdateStore }: StoresTabProps) {
+  const { t } = useTranslation();
   const [editingCommission, setEditingCommission] = useState<string | null>(null);
   const [commissionInput, setCommissionInput] = useState('');
 
@@ -31,7 +33,7 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
               </div>
             </div>
             <div>
-              <p className="text-xs text-[#8FA396] font-medium mb-1">Active Stores</p>
+              <p className="text-xs text-[#8FA396] font-medium mb-1">{t('admin_stores_active')}</p>
               <h3 className="text-2xl font-black text-[#1B1B1B]">{stores.filter(s => s.status === 'active').length}</h3>
             </div>
           </div>
@@ -42,28 +44,28 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
               </div>
             </div>
             <div>
-              <p className="text-xs text-[#8FA396] font-medium mb-1">Pending Approvals</p>
+              <p className="text-xs text-[#8FA396] font-medium mb-1">{t('admin_stores_pending')}</p>
               <h3 className="text-2xl font-black text-[#1B1B1B]">{stores.filter(s => s.status === 'pending').length}</h3>
             </div>
           </div>
       </div>
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E8E0D5] flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-bold text-[#1B1B1B]">All Stores ({stores.length})</h3>
+          <h3 className="font-bold text-[#1B1B1B]">{t('admin_stores_heading', { count: stores.length })}</h3>
           <div className="flex items-center gap-2">
             <span className="text-xs bg-amber-100 text-amber-600 px-2 py-1 rounded-lg font-bold">
-              {stores.filter(s => s.status === 'pending').length} Pending
+              {t('admin_stores_pending_chip', { count: stores.filter(s => s.status === 'pending').length })}
             </span>
             <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg font-bold">
-              {stores.filter(s => s.status === 'active').length} Active
+              {t('admin_stores_active_chip', { count: stores.filter(s => s.status === 'active').length })}
             </span>
           </div>
         </div>
         {stores.length === 0 ? (
           <div className="py-20 text-center">
             <Store className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="font-bold text-[#8FA396]">No stores found</p>
-            <p className="text-xs text-[#8FA396] mt-1">Stores registered on the platform will appear here.</p>
+            <p className="font-bold text-[#8FA396]">{t('admin_stores_empty_title')}</p>
+            <p className="text-xs text-[#8FA396] mt-1">{t('admin_stores_empty_body')}</p>
           </div>
         ) : (
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -75,8 +77,8 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
                       <Store className="w-5 h-5 text-[#1B5E52]" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-[#1B1B1B] text-sm">{store.name || 'Unnamed Store'}</h4>
-                      <p className="text-xs text-[#8FA396]">{store.category || 'Restaurant'}</p>
+                      <h4 className="font-bold text-[#1B1B1B] text-sm">{store.name || t('admin_stores_unnamed')}</h4>
+                      <p className="text-xs text-[#8FA396]">{store.category || t('admin_stores_default_category')}</p>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase ${
@@ -85,7 +87,7 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
                     'bg-amber-100 text-amber-600'
                   }`}>{store.status || 'pending'}</span>
                 </div>
-                <p className="text-xs text-[#8FA396] mb-3 line-clamp-2">{store.description || 'No description provided.'}</p>
+                <p className="text-xs text-[#8FA396] mb-3 line-clamp-2">{store.description || t('admin_stores_no_description')}</p>
 
                 {/* Commission rate */}
                 <div className="flex items-center gap-2 mb-3 p-2 rounded-xl bg-white border border-[#E8E0D5]">
@@ -103,17 +105,17 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
                         autoFocus
                       />
                       <span className="text-xs text-[#8FA396]">%</span>
-                      <button onClick={() => handleSaveCommission(store.id)} className="text-xs font-bold text-[#1B5E52] hover:underline ml-auto">Save</button>
-                      <button onClick={() => setEditingCommission(null)} className="text-xs font-bold text-[#8FA396] hover:underline">Cancel</button>
+                      <button onClick={() => handleSaveCommission(store.id)} className="text-xs font-bold text-[#1B5E52] hover:underline ml-auto">{t('admin_stores_save')}</button>
+                      <button onClick={() => setEditingCommission(null)} className="text-xs font-bold text-[#8FA396] hover:underline">{t('admin_stores_cancel')}</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 flex-1">
-                      <span className="text-xs font-bold text-[#1B1B1B]">Commission: {store.commissionRate ?? 15}%</span>
+                      <span className="text-xs font-bold text-[#1B1B1B]">{t('admin_stores_commission_label')}: {store.commissionRate ?? 15}%</span>
                       <button
                         onClick={() => { setEditingCommission(store.id); setCommissionInput(String(store.commissionRate ?? 15)); }}
                         className="text-xs font-bold text-[#1B5E52] hover:underline ml-auto"
                       >
-                        Edit
+                        {t('admin_stores_edit')}
                       </button>
                     </div>
                   )}
@@ -130,13 +132,13 @@ export default function StoresTab({ stores, onApproveStore, onUpdateStore }: Sto
                       onClick={() => onApproveStore(store.id, true)}
                       className="flex-1 py-2 bg-[#1B5E52] text-white rounded-xl text-xs font-bold hover:bg-[#1B5E52]/90 transition-colors flex items-center justify-center gap-1"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" /> Approve
+                      <CheckCircle className="w-3.5 h-3.5" /> {t('admin_stores_approve')}
                     </button>
                     <button
                       onClick={() => onApproveStore(store.id, false)}
                       className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
                     >
-                      <XCircle className="w-3.5 h-3.5" /> Reject
+                      <XCircle className="w-3.5 h-3.5" /> {t('admin_stores_reject')}
                     </button>
                   </div>
                 )}

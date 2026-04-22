@@ -52,6 +52,15 @@ public class NotificationController extends BaseController {
         }
     }
 
+    // PUT /mark-all-read
+    @PutMapping("/mark-all-read")
+    public ResponseEntity<Map<String, Object>> markAllRead(HttpServletRequest request) {
+        UserPrincipal user = getUser(request);
+        if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
+        int count = notificationService.markAllRead(user.getUid());
+        return ResponseEntity.ok(Map.of("success", true, "data", Map.of("count", count)));
+    }
+
     // POST /
     @PostMapping
     public ResponseEntity<Map<String, Object>> createNotification(HttpServletRequest request,

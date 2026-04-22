@@ -57,7 +57,12 @@ public class UserService {
             return userRepository.findById(uid).orElseThrow();
         }
 
-        String role = body.getOrDefault("role", "customer").toString();
+        // Security: only customer or restaurant are permitted for self-signup.
+        // Admin and driver roles MUST be assigned by an admin-gated endpoint
+        // (or manual DB promotion), never from the client body. Anything else
+        // collapses to the safe default "customer".
+        String requestedRole = body.getOrDefault("role", "customer").toString();
+        String role = ("restaurant".equals(requestedRole)) ? "restaurant" : "customer";
         User user = new User();
         user.setUid(uid);
         user.setEmail(email);
@@ -150,6 +155,17 @@ public class UserService {
         } catch (Exception ignored) {}
         userRepository.save(user);
         return favorites;
+    }
+
+    @Transactional
+    public User setAccountStatus(String uid, String status) {
+        if (!"active".equals(status) && !"suspended".equals(status) && !"banned".equals(status)) {
+            throw new IllegalArgumentException("Invalid account status.");
+        }
+        User user = userRepository.findById(uid)
+                .orElseThrow(() -> new NoSuchElementException("User not found."));
+        user.setAccountStatus(status);
+        return userRepository.save(user);
     }
 
     public List<User> listUsers(String role, String search) {

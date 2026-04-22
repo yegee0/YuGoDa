@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Leaf, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { COLORS } from '@/lib/constants';
 
 // ── Inline brand icons (safe — no dependency on lucide brand pack) ──
 const IconInstagram = ({ className }: { className?: string }) => (
@@ -181,7 +182,7 @@ export function Sidebar({
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'}
         `}
-        style={{ backgroundColor: '#ad3115', borderRight: '1px solid rgba(0,0,0,0.18)' }}
+        style={{ backgroundColor: COLORS.sidebarWarm, borderRight: '1px solid rgba(0,0,0,0.18)' }}
       >
         {/* Logo */}
         <div
@@ -191,16 +192,16 @@ export function Sidebar({
           <Link to="/" className="flex items-center gap-3 min-w-0 overflow-hidden">
             <div
               className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: '#1e2a20', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+              style={{ backgroundColor: COLORS.logoBg, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
             >
-              <Leaf className="w-4 h-4 text-white" />
+              <Leaf className="w-4 h-4" style={{ color: COLORS.logoIcon }} />
             </div>
             {!isSidebarCollapsed && (
               <span
                 className="text-xl font-black tracking-tight truncate"
                 style={{ fontFamily: "'Nunito', sans-serif", color: '#ffffff' }}
               >
-                Yu<span style={{ color: '#1e2a20' }}>Go</span>Da
+                Yu<span style={{ color: COLORS.logoAccent }}>Go</span>Da
               </span>
             )}
           </Link>

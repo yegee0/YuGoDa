@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Store, MapPin, CalendarDays, Edit3, ShoppingBag, Landmark, Map,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import type { StoreProfile, OperatingHours, BankingDetails } from '@/types';
 import { AddressAutocomplete } from '@/components/shared';
 import LocationPickerMap from '@/components/LocationPickerMap';
 
+// Dietary tags double as backend enum values — kept as English literals; UI
+// surfaces them verbatim (short, recognizable, already brand-common).
 const DIETARY_TAGS = ['Vegan', 'Vegetarian', 'Halal', 'Gluten-Free', 'Organic', 'Dairy-Free'];
 
 const inputCls = 'w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors';
@@ -33,6 +36,7 @@ export default function ProfileTab({
   logoFileRef,
   coverFileRef,
 }: ProfileTabProps) {
+  const { t } = useTranslation();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   return (
@@ -80,12 +84,12 @@ export default function ProfileTab({
                 value={editedProfile?.name || ''}
                 onChange={e => editedProfile && setEditedProfile({ ...editedProfile, name: e.target.value })}
                 className={inputCls}
-                placeholder="Store name"
+                placeholder={t('rest_profile_store_name_placeholder')}
               />
             ) : (
               <>
-                <h3 className="text-xl font-black text-[#1B1B1B]">{storeProfile?.name || 'My Store'}</h3>
-                <p className="text-sm text-[#8FA396] mt-0.5">{storeProfile?.category || 'Restaurant'}</p>
+                <h3 className="text-xl font-black text-[#1B1B1B]">{storeProfile?.name || t('rest_profile_fallback_name')}</h3>
+                <p className="text-sm text-[#8FA396] mt-0.5">{storeProfile?.category || t('rest_profile_fallback_category')}</p>
               </>
             )}
           </div>
@@ -93,7 +97,7 @@ export default function ProfileTab({
 
         {/* Cover image */}
         <div className="mb-4">
-          <label className={labelCls}>Cover Image <span className="normal-case font-normal text-[#8FA396]">(shown on Discover &amp; store page)</span></label>
+          <label className={labelCls}>{t('rest_profile_cover_label')} <span className="normal-case font-normal text-[#8FA396]">{t('rest_profile_cover_hint')}</span></label>
           <div className="relative h-32 rounded-2xl overflow-hidden bg-gradient-to-br from-[#1B5E52]/10 to-[#1B5E52]/5 border-2 border-dashed border-[#E8E0D5]">
             {(isEditingProfile ? editedProfile?.coverImage : storeProfile?.coverImage) ? (
               <img
@@ -105,7 +109,7 @@ export default function ProfileTab({
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-[#8FA396]">
                 <ShoppingBag className="w-8 h-8 opacity-30" />
-                <span className="text-xs">No cover image</span>
+                <span className="text-xs">{t('rest_profile_cover_empty')}</span>
               </div>
             )}
             {isEditingProfile && (
@@ -114,7 +118,7 @@ export default function ProfileTab({
                 onClick={() => coverFileRef.current?.click()}
                 className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity text-white font-bold text-sm gap-2"
               >
-                <Edit3 className="w-4 h-4" /> Change Photo
+                <Edit3 className="w-4 h-4" /> {t('rest_profile_change_photo')}
               </button>
             )}
           </div>
@@ -131,7 +135,7 @@ export default function ProfileTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Address</label>
+            <label className={labelCls}>{t('rest_profile_address_label')}</label>
             {isEditingProfile ? (
               <div className="space-y-2">
                 <AddressAutocomplete
@@ -142,29 +146,29 @@ export default function ProfileTab({
                     if (coords) update.location = coords;
                     setEditedProfile({ ...editedProfile, ...update });
                   }}
-                  placeholder="Store address"
+                  placeholder={t('rest_profile_address_placeholder')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowLocationPicker(true)}
                   className="flex items-center gap-1.5 text-xs font-bold text-[#1B5E52] hover:underline"
                 >
-                  <Map className="w-3.5 h-3.5" /> Pick on Map
+                  <Map className="w-3.5 h-3.5" /> {t('rest_profile_pick_on_map')}
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#F5F0E8] text-sm text-gray-700">
-                <MapPin className="w-4 h-4 text-[#8FA396] flex-shrink-0" /> {storeProfile?.address || 'Not set'}
+                <MapPin className="w-4 h-4 text-[#8FA396] flex-shrink-0" /> {storeProfile?.address || t('rest_profile_not_set')}
               </div>
             )}
           </div>
           <div>
-            <label className={labelCls}>Description</label>
+            <label className={labelCls}>{t('rest_profile_description_label')}</label>
             {isEditingProfile ? (
-              <textarea rows={2} value={editedProfile?.description || ''} onChange={e => editedProfile && setEditedProfile({ ...editedProfile, description: e.target.value })} className={`${inputCls} resize-none`} placeholder="Describe your store" />
+              <textarea rows={2} value={editedProfile?.description || ''} onChange={e => editedProfile && setEditedProfile({ ...editedProfile, description: e.target.value })} className={`${inputCls} resize-none`} placeholder={t('rest_profile_description_placeholder')} />
             ) : (
               <div className="px-4 py-3 rounded-xl bg-[#F5F0E8] text-sm text-gray-700 line-clamp-2">
-                {storeProfile?.description || 'No description'}
+                {storeProfile?.description || t('rest_profile_no_description')}
               </div>
             )}
           </div>
@@ -172,7 +176,7 @@ export default function ProfileTab({
 
         {/* Dietary tags */}
         <div className="pt-2">
-          <label className={labelCls}>Dietary Options</label>
+          <label className={labelCls}>{t('rest_profile_dietary_label')}</label>
           <div className="flex flex-wrap gap-2">
             {DIETARY_TAGS.map(tag => {
               const active = (isEditingProfile ? editedProfile?.dietaryTags : storeProfile?.dietaryTags || [])?.includes(tag);
@@ -205,18 +209,18 @@ export default function ProfileTab({
       <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
         <div className="flex items-center gap-2 mb-5">
           <Landmark className="w-4 h-4 text-[#1B5E52]" />
-          <h4 className="font-bold text-[#1B1B1B] text-sm">Banking Details</h4>
+          <h4 className="font-bold text-[#1B1B1B] text-sm">{t('rest_profile_banking_heading')}</h4>
         </div>
         <div className="grid grid-cols-1 gap-4">
           {[
-            { key: 'iban' as const, label: 'IBAN', placeholder: 'TR00 0000 0000 0000 0000 0000 00' },
-            { key: 'accountHolder' as const, label: 'Account Holder', placeholder: 'Full name' },
-            { key: 'bankName' as const, label: 'Bank Name', placeholder: 'Bank name' },
-            { key: 'branchCode' as const, label: 'Branch Code', placeholder: 'Branch code' },
-            { key: 'taxId' as const, label: 'Tax ID', placeholder: 'Tax identification number' },
-          ].map(({ key, label, placeholder }) => (
+            { key: 'iban' as const,          labelKey: 'rest_profile_banking_iban',          placeholderKey: 'rest_profile_banking_iban_placeholder' },
+            { key: 'accountHolder' as const, labelKey: 'rest_profile_banking_account_holder', placeholderKey: 'rest_profile_banking_account_holder_placeholder' },
+            { key: 'bankName' as const,      labelKey: 'rest_profile_banking_bank_name',     placeholderKey: 'rest_profile_banking_bank_name_placeholder' },
+            { key: 'branchCode' as const,    labelKey: 'rest_profile_banking_branch_code',   placeholderKey: 'rest_profile_banking_branch_code_placeholder' },
+            { key: 'taxId' as const,         labelKey: 'rest_profile_banking_tax_id',        placeholderKey: 'rest_profile_banking_tax_id_placeholder' },
+          ].map(({ key, labelKey, placeholderKey }) => (
             <div key={key}>
-              <label className={labelCls}>{label}</label>
+              <label className={labelCls}>{t(labelKey)}</label>
               {isEditingProfile ? (
                 <input
                   type="text"
@@ -232,11 +236,11 @@ export default function ProfileTab({
                     });
                   }}
                   className={inputCls}
-                  placeholder={placeholder}
+                  placeholder={t(placeholderKey)}
                 />
               ) : (
                 <div className="px-4 py-3 rounded-xl bg-[#F5F0E8] text-sm text-gray-700">
-                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || 'Not set'}
+                  {(storeProfile?.bankingDetails as BankingDetails)?.[key] || t('rest_profile_not_set')}
                 </div>
               )}
             </div>
@@ -250,7 +254,7 @@ export default function ProfileTab({
       <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
         <div className="flex items-center gap-2 mb-5">
           <CalendarDays className="w-4 h-4 text-[#1B5E52]" />
-          <h4 className="font-bold text-[#1B1B1B] text-sm">Weekly Schedule</h4>
+          <h4 className="font-bold text-[#1B1B1B] text-sm">{t('rest_profile_schedule_heading')}</h4>
         </div>
         <div className="space-y-2">
           {schedule.map((slot, index) => {
@@ -283,7 +287,7 @@ export default function ProfileTab({
                     />
                   </div>
                 ) : (
-                  <span className="text-xs text-[#8FA396] font-bold">Closed</span>
+                  <span className="text-xs text-[#8FA396] font-bold">{t('rest_profile_closed')}</span>
                 )}
               </div>
             );

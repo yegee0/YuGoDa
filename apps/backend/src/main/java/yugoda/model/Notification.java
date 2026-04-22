@@ -23,6 +23,12 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
+    private String titleKey;
+
+    private String messageKey;
+
+    private String orderId;
+
     private Integer read = 0;
 
     @CreationTimestamp

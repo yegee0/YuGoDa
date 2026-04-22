@@ -1,29 +1,27 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarItem } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { LayoutDashboard, Map as MapIcon, Heart, HelpCircle, MessageCircle, X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import FoodChatbot from '@/components/FoodChatbot';
 import ConsentNotice from '@/components/ConsentNotice';
 import SupportTicketModal from '@/components/SupportTicketModal';
+import LiveChatPanel from '@/components/LiveChatPanel';
+import { AccountStatusBanner } from '@/components/shared';
+import { useStore } from '@/app/store/useStore';
 
 export default function CustomerLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const currentView = location.pathname.split('/')[1] || 'discover';
+  const { userProfile } = useStore();
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showHelpCenter, setShowHelpCenter] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [showTicketModal, setShowTicketModal] = useState(false);
-
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model'; text: string }[]>([{ role: 'model', text: 'Hi! I am EcoBot. How can I help you save food today?' }]);
-  const [chatInput, setChatInput] = useState('');
-  const [isBotLoading, setIsBotLoading] = useState(false);
-  const [isEscalated, setIsEscalated] = useState(false);
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -79,6 +77,7 @@ export default function CustomerLayout() {
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header onMenuOpen={() => setMobileNavOpen(true)} />
+        <AccountStatusBanner status={userProfile?.accountStatus} />
         <main className="flex-1 overflow-hidden relative z-[10]">
           <AnimatePresence mode="wait">
             <motion.div
@@ -152,89 +151,8 @@ export default function CustomerLayout() {
         )}
       </AnimatePresence>
 
-      {/* Live Chat Modal */}
-      <AnimatePresence>
-        {showLiveChat && (
-          <div className="fixed bottom-0 right-0 md:bottom-8 md:right-8 z-[100] w-full md:w-80 h-[60vh] md:h-[450px] bg-white rounded-t-3xl md:rounded-3xl shadow-2xl border border-[#E8E0D5] overflow-hidden flex flex-col">
-            <div className="p-4 bg-[#1B5E52] text-white flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#748f2b] rounded-full animate-pulse" />
-                <span className="font-black text-sm">{isEscalated ? t('Live Agent (Active)') : t('YuGoBot AI')}</span>
-              </div>
-              <button onClick={() => setShowLiveChat(false)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <LiveChatPanel isOpen={showLiveChat} onClose={() => setShowLiveChat(false)} />
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#F5F0E8]">
-              {chatMessages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`p-3 rounded-2xl text-xs max-w-[80%] ${m.role === 'user'
-                    ? 'bg-[#1B5E52] text-white rounded-tr-none font-medium'
-                    : 'bg-white text-[#1B1B1B] rounded-tl-none shadow-sm font-medium border border-[#E8E0D5]'
-                    }`}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {isBotLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white rounded-2xl rounded-tl-none p-3 shadow-sm border border-[#E8E0D5] flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-[#8FA396] rounded-full animate-bounce" />
-                    <span className="w-1.5 h-1.5 bg-[#8FA396] rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 bg-[#8FA396] rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
-              )}
-              {isEscalated && (
-                <div className="bg-white p-3 rounded-xl border border-[#E8E0D5] text-[10px] text-[#8FA396] text-center font-bold">
-                  {t('You are now in the queue for a live representative.')}
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 border-t border-[#E8E0D5] bg-white">
-              {!isEscalated && chatMessages.length > 3 && (
-                <button
-                  onClick={() => setIsEscalated(true)}
-                  className="w-full mb-2 py-1.5 bg-[#ad3115]/10 text-[#ad3115] rounded-full text-[10px] font-black hover:bg-[#ad3115]/20 transition-colors"
-                >
-                  {t('Talk to a Human')}
-                </button>
-              )}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder={t('Type a message...')}
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && chatInput.trim()) {
-                      const msg = chatInput;
-                      setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
-                      setChatInput('');
-
-                      if (!isEscalated) {
-                        setIsBotLoading(true);
-                        setTimeout(() => {
-                          setChatMessages(prev => [...prev, { role: 'model', text: 'I understand you are asking about ' + msg + '. Could you please clarify or would you like to speak with an agent?' }]);
-                          setIsBotLoading(false);
-                        }, 1000);
-                      }
-                    }
-                  }}
-                  className="w-full bg-[#F5F0E8] border border-[#E8E0D5] rounded-full py-2 pl-4 pr-10 text-xs outline-none focus:border-[#1B5E52] transition-colors text-[#1B1B1B] font-medium"
-                />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1B5E52]">
-                  <MessageCircle className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <FoodChatbot />
       <ConsentNotice />
       <SupportTicketModal isOpen={showTicketModal} onClose={() => setShowTicketModal(false)} />
     </div>

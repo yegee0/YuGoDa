@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Leaf } from 'lucide-react';
+import { COLORS } from '@/lib/constants';
 
 interface LegalLayoutProps {
   title: string;
@@ -25,11 +26,11 @@ export default function LegalLayout({ title, children }: LegalLayoutProps) {
             <h1 className="font-black text-white text-lg">{title}</h1>
           </div>
           <button onClick={() => navigate('/')} className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#ad3115' }}>
-              <Leaf className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.logoBg }}>
+              <Leaf className="w-4 h-4" style={{ color: COLORS.logoIcon }} />
             </div>
             <span className="text-sm font-black text-white">
-              Yu<span style={{ color: '#ad3115' }}>Go</span>Da
+              Yu<span style={{ color: COLORS.logoAccent }}>Go</span>Da
             </span>
           </button>
         </div>

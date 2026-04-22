@@ -1,6 +1,7 @@
 import React from 'react';
 import { Truck, Star, MessageSquare, MapPin, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import type { Driver, Order } from '@/types';
 
 export interface DriversTabProps {
@@ -28,13 +29,14 @@ function etaMinutes(distKm: number): number {
 }
 
 export default function DriversTab({ drivers, deliveringOrders, storeLocation }: DriversTabProps) {
+  const { t } = useTranslation();
   return (
     <motion.div key="drivers" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
 
       {/* ── Active Deliveries ── */}
       {deliveringOrders.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">Active Deliveries</h3>
+          <h3 className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">{t('rest_drivers_active_deliveries')}</h3>
           {deliveringOrders.map(order => {
             const hasCoords = storeLocation && order.deliveryLat && order.deliveryLng;
             const distKm = hasCoords
@@ -59,7 +61,7 @@ export default function DriversTab({ drivers, deliveringOrders, storeLocation }:
                           <span className="ml-2 text-xs font-medium text-[#8FA396]">{order.restaurantName}</span>
                         )}
                       </p>
-                      <p className="text-xs text-cyan-600 font-bold mt-0.5">Out for delivery</p>
+                      <p className="text-xs text-cyan-600 font-bold mt-0.5">{t('rest_drivers_out_for_delivery')}</p>
                     </div>
                   </div>
 
@@ -69,7 +71,7 @@ export default function DriversTab({ drivers, deliveringOrders, storeLocation }:
                       <>
                         <div className="text-right">
                           <p className="text-[10px] text-[#8FA396] font-bold uppercase tracking-wide flex items-center gap-1 justify-end">
-                            <MapPin className="w-3 h-3" /> Distance
+                            <MapPin className="w-3 h-3" /> {t('rest_drivers_distance')}
                           </p>
                           <p className="font-black text-[#1B1B1B] text-sm">
                             {distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`}
@@ -77,13 +79,13 @@ export default function DriversTab({ drivers, deliveringOrders, storeLocation }:
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-[#8FA396] font-bold uppercase tracking-wide flex items-center gap-1 justify-end">
-                            <Clock className="w-3 h-3" /> ETA
+                            <Clock className="w-3 h-3" /> {t('rest_drivers_eta')}
                           </p>
                           <p className="font-black text-[#1B5E52] text-sm">{eta} min</p>
                         </div>
                       </>
                     ) : (
-                      <p className="text-xs text-[#B0BDB7] italic">Coordinates unavailable</p>
+                      <p className="text-xs text-[#B0BDB7] italic">{t('rest_drivers_coords_unavailable')}</p>
                     )}
                   </div>
                 </div>
@@ -96,12 +98,12 @@ export default function DriversTab({ drivers, deliveringOrders, storeLocation }:
       {/* ── Driver List ── */}
       <div className="space-y-3">
         {deliveringOrders.length > 0 && (
-          <h3 className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">Fleet</h3>
+          <h3 className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">{t('rest_drivers_fleet')}</h3>
         )}
         {drivers.length === 0 ? (
           <div className="bg-white rounded-2xl py-16 text-center border-2 border-dashed border-[#E8E0D5]">
             <Truck className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="font-bold text-[#8FA396] text-sm">No active drivers</p>
+            <p className="font-bold text-[#8FA396] text-sm">{t('rest_drivers_none_active')}</p>
           </div>
         ) : (
           drivers.map(driver => (
@@ -117,7 +119,7 @@ export default function DriversTab({ drivers, deliveringOrders, storeLocation }:
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-xs text-[#8FA396] mb-0.5">Rating</p>
+                  <p className="text-xs text-[#8FA396] mb-0.5">{t('rest_drivers_rating')}</p>
                   <div className="flex items-center gap-1 text-amber-500 font-black text-sm">
                     <Star className="w-3 h-3 fill-amber-500" /> {driver.rating || '5.0'}
                   </div>

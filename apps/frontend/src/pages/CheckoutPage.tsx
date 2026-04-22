@@ -115,7 +115,7 @@ export default function CheckoutPage() {
               <React.Fragment key={s}>
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
                   i === stepIndex
-                    ? 'bg-[#ad3115] text-white'
+                    ? 'bg-[#164d43] text-white ring-1 ring-white/30'
                     : i < stepIndex
                     ? 'text-white'
                     : 'text-white/40'
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
                   <span className="sm:hidden">{i + 1}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-4 h-px ${i < stepIndex ? 'bg-[#1B5E52]' : 'bg-[#E8E0D5]'}`} />
+                  <div className={`w-4 h-px ${i < stepIndex ? 'bg-white/50' : 'bg-white/20'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -425,7 +425,7 @@ export default function CheckoutPage() {
             {stepIndex > 0 && (
               <button
                 onClick={() => setStep(STEPS[stepIndex - 1])}
-                className="flex-1 py-3.5 rounded-xl border-2 border-[#E8E0D5] font-bold text-gray-600 hover:bg-[#F5F0E8] transition-colors text-sm"
+                className="flex-1 py-3.5 rounded-xl bg-white/15 border border-white/25 font-bold text-white hover:bg-white/25 transition-colors text-sm"
               >
                 {t('Back')}
               </button>
@@ -508,6 +508,7 @@ export default function CheckoutPage() {
                     {t('Cancel')}
                   </button>
                   <button
+                    // TODO(#74): wire to real iyzico 3DS before production payment cutover
                     onClick={() => { clearCart(); toast.success(t('Order received')); navigate('/discover'); }}
                     className="flex-1 py-3 rounded-xl bg-[#1B5E52] text-white font-bold hover:bg-[#164d43] transition-colors text-sm flex items-center justify-center gap-2"
                   >

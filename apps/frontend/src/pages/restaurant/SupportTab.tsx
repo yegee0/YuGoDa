@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Headset } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import type { SupportMessage, Dispute } from '@/types';
@@ -8,6 +9,7 @@ import type { SupportMessage, Dispute } from '@/types';
 export interface SupportTabProps {}
 
 export default function SupportTab(_props: SupportTabProps) {
+  const { t } = useTranslation();
   const { user } = useStore();
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [supportInput, setSupportInput] = useState('');
@@ -69,10 +71,10 @@ export default function SupportTab(_props: SupportTabProps) {
             <Headset className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-[#1B1B1B] text-sm">Admin Support Team</h3>
+            <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_support_chat_admin_team')}</h3>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              <p className="text-xs text-[#8FA396]">Typically replies in a few minutes</p>
+              <p className="text-xs text-[#8FA396]">{t('rest_support_chat_typing_reply')}</p>
             </div>
           </div>
         </div>
@@ -82,7 +84,7 @@ export default function SupportTab(_props: SupportTabProps) {
           {supportMessages.length === 0 && (
             <div className="flex justify-start">
               <div className="max-w-[75%] bg-white border border-[#E8E0D5] rounded-2xl rounded-tl-none p-4 shadow-sm">
-                <p className="text-sm text-[#1B1B1B]">Welcome to Partner Support! How can we help you today?</p>
+                <p className="text-sm text-[#1B1B1B]">{t('rest_support_chat_welcome')}</p>
               </div>
             </div>
           )}
@@ -108,7 +110,7 @@ export default function SupportTab(_props: SupportTabProps) {
               type="text"
               value={supportInput}
               onChange={e => setSupportInput(e.target.value)}
-              placeholder="Type your message to the admin team..."
+              placeholder={t('rest_support_chat_placeholder')}
               className="flex-1 bg-[#F5F0E8] rounded-xl px-4 py-3 text-sm text-[#1B1B1B] placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#1B5E52]/20 border border-transparent focus:border-[#1B5E52]/20"
             />
             <button

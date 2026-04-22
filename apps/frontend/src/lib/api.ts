@@ -10,6 +10,34 @@ import { authCustomer, authPartner, authAdmin } from './firebase';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
 /**
+ * Registered by a top-level app effect to force-logout + redirect when the
+ * backend rejects with "Account banned." Decoupled from this module so we
+ * don't pull `firebase.signOut` and router navigation into the fetch layer.
+ * Callers register a callback at startup; undefined means "not yet wired."
+ */
+let bannedHandler: (() => void) | null = null;
+export function setBannedHandler(handler: (() => void) | null): void {
+  bannedHandler = handler;
+}
+
+/**
+ * Error thrown by `apiFetch` when the backend returns a non-2xx response.
+ * Callers that need to branch on status (e.g. 404 vs 500) can `instanceof`
+ * check and read `.status`. Pure network failures (DNS, offline, abort)
+ * still throw a plain `TypeError` from `fetch`, NOT an `ApiError` — use
+ * `err instanceof ApiError` to distinguish "backend responded with error"
+ * from "couldn't reach backend."
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/**
  * Aktif Firebase Auth kullanıcısından ID token alır.
  * 3 Firebase projesinden hangisinde giriş yapılmışsa onun token'ını döner.
  */
@@ -59,7 +87,13 @@ export async function apiFetch<T = any>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || `API Error: ${response.status}`);
+    // Banned users' Firebase session stays valid client-side, but the backend
+    // rejects every call with 403 + "Account banned." Force a hard logout so
+    // no banned user lingers in the authed UI.
+    if (response.status === 403 && data?.message === 'Account banned.' && bannedHandler) {
+      bannedHandler();
+    }
+    throw new ApiError(data.message || `API Error: ${response.status}`, response.status);
   }
 
   return data;

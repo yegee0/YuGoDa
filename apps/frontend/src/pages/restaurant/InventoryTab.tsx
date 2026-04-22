@@ -4,6 +4,7 @@ import {
   Edit3, X, Loader2, CheckCircle, AlertCircle, Zap, Leaf,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import type { Bag } from '@/types';
 import { StatCard, TL } from './StorePanel';
 import { api } from '@/lib/api';
@@ -44,6 +45,7 @@ export default function InventoryTab({
   showAddPackage,
   setShowAddPackage,
 }: InventoryTabProps) {
+  const { t } = useTranslation();
   const { user } = useStore();
 
   const [editingBag, setEditingBag] = useState<Bag | null>(null);
@@ -110,8 +112,8 @@ export default function InventoryTab({
         {inventory.length === 0 ? (
           <div className="bg-white rounded-2xl py-16 text-center border-2 border-dashed border-[#E8E0D5]">
             <Store className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="font-bold text-[#8FA396] text-sm">No active listings</p>
-            <p className="text-xs text-[#B0BDB7] mt-1">Create your first surprise bag to get started</p>
+            <p className="font-bold text-[#8FA396] text-sm">{t('rest_inv_empty_title')}</p>
+            <p className="text-xs text-[#B0BDB7] mt-1">{t('rest_inv_empty_body')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -134,7 +136,7 @@ export default function InventoryTab({
                     )}
                     {bag.available === 0 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white font-black text-xs bg-black/60 px-3 py-1 rounded-full">Sold Out</span>
+                        <span className="text-white font-black text-xs bg-black/60 px-3 py-1 rounded-full">{t('rest_inv_sold_out')}</span>
                       </div>
                     )}
                   </div>
@@ -188,14 +190,14 @@ export default function InventoryTab({
               className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative z-10 p-6"
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-black text-[#1B1B1B] text-lg">Edit Package</h3>
+                <h3 className="font-black text-[#1B1B1B] text-lg">{t('rest_inv_edit_package')}</h3>
                 <button onClick={() => setEditingBag(null)} className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center">
                   <X className="w-4 h-4 text-[#8FA396]" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className={labelCls}>Category</label>
+                  <label className={labelCls}>{t('rest_inv_label_category')}</label>
                   <select value={editingBag.category || ''} onChange={e => setEditingBag({ ...editingBag, category: e.target.value })} className={selectCls}>
                     {['Bakery','Vegan','Groceries','Hot Meals','Cafe','Halal','Gluten-Free','Desserts'].map(c => <option key={c}>{c}</option>)}
                   </select>
@@ -206,16 +208,16 @@ export default function InventoryTab({
                     <input type="number" value={editingBag.price ?? 0} onChange={e => setEditingBag({ ...editingBag, price: parseFloat(e.target.value) })} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Available</label>
+                    <label className={labelCls}>{t('rest_inv_label_available')}</label>
                     <input type="number" value={editingBag.available ?? 0} onChange={e => setEditingBag({ ...editingBag, available: parseInt(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Pickup Time</label>
+                  <label className={labelCls}>{t('rest_inv_label_pickup_time')}</label>
                   <input type="text" value={editingBag.pickupTime || ''} onChange={e => setEditingBag({ ...editingBag, pickupTime: e.target.value })} className={inputCls} placeholder="18:00 - 19:00" />
                 </div>
                 <div>
-                  <label className={labelCls}>Package Image URL <span className="normal-case font-normal text-gray-300">(optional)</span></label>
+                  <label className={labelCls}>{t('rest_inv_label_image_url')} <span className="normal-case font-normal text-gray-300">{t('rest_inv_label_optional')}</span></label>
                   <input
                     type="url"
                     placeholder="https://example.com/image.jpg"
@@ -232,8 +234,8 @@ export default function InventoryTab({
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setEditingBag(null)} className="flex-1 py-3 bg-[#F5F0E8] text-gray-600 rounded-xl font-bold">Cancel</button>
-                <button onClick={handleUpdatePackage} className="flex-1 py-3 bg-[#1B5E52] text-white rounded-xl font-bold hover:bg-[#164d43] transition-colors">Save Changes</button>
+                <button onClick={() => setEditingBag(null)} className="flex-1 py-3 bg-[#F5F0E8] text-gray-600 rounded-xl font-bold">{t('rest_inv_cancel')}</button>
+                <button onClick={handleUpdatePackage} className="flex-1 py-3 bg-[#1B5E52] text-white rounded-xl font-bold hover:bg-[#164d43] transition-colors">{t('rest_action_save_changes')}</button>
               </div>
             </motion.div>
           </div>
@@ -251,7 +253,7 @@ export default function InventoryTab({
               className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative z-10 p-6"
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 className="font-black text-[#1B1B1B] text-lg">Create Package</h3>
+                <h3 className="font-black text-[#1B1B1B] text-lg">{t('rest_inv_create_package')}</h3>
                 <button onClick={() => { setShowAddPackage(false); setAddPackageStatus('idle'); setAddPackageError(''); }}
                   className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center">
                   <X className="w-4 h-4 text-[#8FA396]" />
@@ -271,15 +273,15 @@ export default function InventoryTab({
 
               <div className="space-y-4">
                 <div>
-                  <label className={labelCls}>Package Name</label>
+                  <label className={labelCls}>{t('rest_inv_label_name')}</label>
                   <input type="text" placeholder="e.g. Today's Surprise Bag" value={newPackage.name} onChange={e => setNewPackage({ ...newPackage, name: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Description</label>
-                  <textarea placeholder="What's inside? (optional)" value={newPackage.description} onChange={e => setNewPackage({ ...newPackage, description: e.target.value })} rows={2} className={`${inputCls} resize-none`} />
+                  <label className={labelCls}>{t('rest_inv_label_description')}</label>
+                  <textarea placeholder={t('rest_inv_description_placeholder')} value={newPackage.description} onChange={e => setNewPackage({ ...newPackage, description: e.target.value })} rows={2} className={`${inputCls} resize-none`} />
                 </div>
                 <div>
-                  <label className={labelCls}>Category</label>
+                  <label className={labelCls}>{t('rest_inv_label_category')}</label>
                   <select value={newPackage.category} onChange={e => setNewPackage({ ...newPackage, category: e.target.value })} className={selectCls}>
                     {['Bakery','Vegan','Groceries','Hot Meals','Cafe','Halal','Gluten-Free','Desserts'].map(c => <option key={c}>{c}</option>)}
                   </select>
@@ -294,12 +296,12 @@ export default function InventoryTab({
                     <input type="number" min={0} max={100} value={newPackage.discount} onChange={e => setNewPackage({ ...newPackage, discount: parseInt(e.target.value) || 0 })} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Available</label>
+                    <label className={labelCls}>{t('rest_inv_label_available')}</label>
                     <input type="number" value={newPackage.available} onChange={e => setNewPackage({ ...newPackage, available: parseInt(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Pickup Time</label>
+                  <label className={labelCls}>{t('rest_inv_label_pickup_time')}</label>
                   <div className="flex items-center gap-2">
                     <input type="time" value={parsePickup(newPackage.pickupTime).start}
                       onChange={e => setNewPackage({ ...newPackage, pickupTime: formatPickup(e.target.value, parsePickup(newPackage.pickupTime).end) })}
@@ -311,7 +313,7 @@ export default function InventoryTab({
                   </div>
                 </div>
                 <div>
-                  <label className={labelCls}>Package Image URL <span className="normal-case font-normal text-gray-300">(optional)</span></label>
+                  <label className={labelCls}>{t('rest_inv_label_image_url')} <span className="normal-case font-normal text-gray-300">{t('rest_inv_label_optional')}</span></label>
                   <input
                     type="url"
                     placeholder="https://example.com/image.jpg"

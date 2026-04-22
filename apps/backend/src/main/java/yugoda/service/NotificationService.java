@@ -44,4 +44,14 @@ public class NotificationService {
         notif.setMessage(message);
         return notificationRepository.save(notif);
     }
+
+    @Transactional
+    public int markAllRead(String userId) {
+        List<Notification> unread = notificationRepository.findByUserIdAndRead(userId, 0);
+        for (Notification n : unread) {
+            n.setRead(1);
+        }
+        notificationRepository.saveAll(unread);
+        return unread.size();
+    }
 }

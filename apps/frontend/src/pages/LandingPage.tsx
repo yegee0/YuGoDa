@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import bagImage from '../assets/bag.png';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { api } from '@/lib/api';
+import { COLORS, LANDING_STATS } from '@/lib/constants';
+import type { Review } from '@/types';
 import {
   Menu, X, Leaf, ArrowRight, ChevronDown, Star,
   ShoppingBag, Users, TrendingUp, Heart,
@@ -99,13 +103,33 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 // ── main component ─────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [turkishReviews, setTurkishReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
+  }, []);
+
+  // Fetch reviews once on mount, filter to Turkish-language comments, show top 4.
+  // Heuristic: presence of at least one Turkish-specific letter in the comment.
+  useEffect(() => {
+    let cancelled = false;
+    const TURKISH_CHAR = /[ıİğĞşŞçÇüÜöÖ]/;
+    api.get<{ success: boolean; reviews: Review[] }>('/reviews')
+      .then(res => {
+        if (cancelled || !res?.reviews) return;
+        const filtered = res.reviews
+          .filter(r => r.comment && TURKISH_CHAR.test(r.comment))
+          .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+          .slice(0, 4);
+        setTurkishReviews(filtered);
+      })
+      .catch(() => { /* silent — section hides when empty */ });
+    return () => { cancelled = true; };
   }, []);
 
   const scrollTo = (id: string) => {
@@ -128,11 +152,11 @@ export default function LandingPage() {
         <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: C.lime }}>
-              <Leaf className="w-5 h-5" style={{ color: C.teal }} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.logoBg }}>
+              <Leaf className="w-5 h-5" style={{ color: COLORS.logoIcon }} />
             </div>
             <span style={{ ...bebas, fontSize: '1.5rem', color: '#fff', letterSpacing: '0.05em' }}>
-              Yu<span style={{ color: C.coral }}>Go</span>Da
+              Yu<span style={{ color: COLORS.logoAccent }}>Go</span>Da
             </span>
           </button>
 
@@ -278,11 +302,13 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
             className="relative flex items-center justify-center px-8 md:px-0"
           >
-            <div
-              className="relative w-52 h-64 md:w-64 md:h-80 rounded-3xl flex items-center justify-center shadow-2xl"
-              style={{ backgroundColor: C.lime }}
-            >
-              <ShoppingBag className="w-24 h-24 md:w-32 md:h-32" style={{ color: C.teal, opacity: 0.9 }} />
+            <div className="relative w-52 h-64 md:w-64 md:h-80 flex items-center justify-center">
+              <img
+                src={bagImage}
+                alt="YuGoDa surprise bag"
+                className="w-full h-full object-contain"
+                style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.35))' }}
+              />
               <div
                 className="absolute -top-3 -right-3 md:-top-4 md:-right-4 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-lg"
                 style={{ backgroundColor: C.coral, color: '#fff' }}
@@ -337,18 +363,15 @@ export default function LandingPage() {
 
       {/* ════════════════════════════════════ STATS BAR */}
       <section style={{ backgroundColor: C.tealDark }} className="py-14">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { value: 47,    suffix: '',    label: 'Bags rescued' },
-            { value: 9,     suffix: '+',  label: 'Partner stores' },
-            { value: 70,    suffix: '%',  label: 'Avg. discount' },
-            { value: 83,    suffix: ' kg', label: 'CO₂ avoided' },
-          ].map(({ value, suffix, label }) => (
-            <div key={label}>
-              <p className="text-white" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 3.5rem)' }}>
+        <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
+          {LANDING_STATS.map(({ value, suffix, labelKey }) => (
+            <div key={labelKey} className="min-w-0">
+              <p className="text-white" style={{ ...bebas, fontSize: 'clamp(1.75rem, 6vw, 3.5rem)', lineHeight: 1 }}>
                 <Counter to={value} suffix={suffix} />
               </p>
-              <p className="text-white/60 text-xs font-extrabold uppercase tracking-widest mt-1">{label}</p>
+              <p className="text-white/60 text-[10px] sm:text-xs font-extrabold uppercase tracking-widest mt-1.5">
+                {t(labelKey)}
+              </p>
             </div>
           ))}
         </div>
@@ -532,36 +555,36 @@ export default function LandingPage() {
       </div>
 
       {/* ════════════════════════════════════ HOW IT WORKS */}
-      <section id="how-it-works" className="py-24" style={{ backgroundColor: C.cream }}>
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-sm font-extrabold uppercase tracking-widest mb-3" style={{ color: C.coral }}>
-              Simple &amp; fast
+      <section id="how-it-works" className="py-16 md:py-24" style={{ backgroundColor: C.cream }}>
+        <div className="max-w-5xl mx-auto px-5 sm:px-6">
+          <div className="text-center mb-10 md:mb-16">
+            <p className="text-xs sm:text-sm font-extrabold uppercase tracking-widest mb-3" style={{ color: C.coral }}>
+              {t('landing_how_eyebrow')}
             </p>
-            <h2 style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: C.teal }}>
-              HOW IT WORKS
+            <h2 style={{ ...bebas, fontSize: 'clamp(2.25rem, 6vw, 4rem)', color: C.teal, lineHeight: 1 }}>
+              {t('landing_how_title')}
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
             {[
               {
                 step: '01',
-                icon: <ShoppingBag className="w-8 h-8" />,
-                title: 'Browse stores',
-                desc: 'Discover local restaurants, bakeries and stores offering surprise bags near you.',
+                icon: <ShoppingBag className="w-7 h-7 md:w-8 md:h-8" />,
+                title: t('landing_how_step1_title'),
+                desc: t('landing_how_step1_desc'),
               },
               {
                 step: '02',
-                icon: <Heart className="w-8 h-8" />,
-                title: 'Reserve your bag',
-                desc: 'Pick a bag, pay in the app, and get a confirmation with your pickup window.',
+                icon: <Heart className="w-7 h-7 md:w-8 md:h-8" />,
+                title: t('landing_how_step2_title'),
+                desc: t('landing_how_step2_desc'),
               },
               {
                 step: '03',
-                icon: <Leaf className="w-8 h-8" />,
-                title: 'Pick up & enjoy',
-                desc: 'Show your order, collect your surprise bag, and feel great about saving food.',
+                icon: <Leaf className="w-7 h-7 md:w-8 md:h-8" />,
+                title: t('landing_how_step3_title'),
+                desc: t('landing_how_step3_desc'),
               },
             ].map(({ step, icon, title, desc }, i) => (
               <motion.div
@@ -570,22 +593,22 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.12 }}
-                className="relative p-8 rounded-3xl overflow-hidden"
+                className="relative p-6 md:p-8 rounded-3xl overflow-hidden"
                 style={{ backgroundColor: '#fff', boxShadow: '0 4px 30px rgba(27,94,82,0.08)' }}
               >
                 <span
-                  className="absolute -top-4 -right-2 font-extrabold select-none pointer-events-none"
-                  style={{ ...bebas, fontSize: '6rem', color: 'rgba(27,94,82,0.06)', lineHeight: 1 }}
+                  className="absolute -top-3 -right-1 md:-top-4 md:-right-2 font-extrabold select-none pointer-events-none"
+                  style={{ ...bebas, fontSize: 'clamp(4.5rem, 14vw, 6rem)', color: 'rgba(27,94,82,0.06)', lineHeight: 1 }}
                 >
                   {step}
                 </span>
                 <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center mb-4 md:mb-5"
                   style={{ backgroundColor: C.teal, color: C.lime }}
                 >
                   {icon}
                 </div>
-                <h3 className="font-extrabold text-lg mb-2" style={{ color: C.teal }}>{title}</h3>
+                <h3 className="font-extrabold text-base md:text-lg mb-2" style={{ color: C.teal }}>{title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
               </motion.div>
             ))}
@@ -692,6 +715,61 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* ════════════════════════════════════ CUSTOMER REVIEWS (Turkish only) */}
+      {turkishReviews.length > 0 && (
+        <section className="py-20" style={{ backgroundColor: C.teal }}>
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-10">
+              <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.lime }}>
+                {t('landing_reviews_eyebrow')}
+              </p>
+              <h2 className="text-white leading-none" style={{ ...bebas, fontSize: 'clamp(2.25rem, 5vw, 3.5rem)' }}>
+                {t('landing_reviews_heading')}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {turkishReviews.map(r => {
+                const firstName = (r.userName || 'A').trim().split(/\s+/)[0];
+                const initial = firstName.charAt(0).toUpperCase();
+                return (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4 }}
+                    className="p-5 rounded-2xl flex flex-col h-full"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.12)' }}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shrink-0"
+                        style={{ backgroundColor: C.lime, color: C.teal }}
+                      >
+                        {initial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white font-extrabold text-sm truncate">{firstName}</p>
+                        <div className="flex gap-0.5 mt-0.5">
+                          {Array.from({ length: Math.min(Math.max(r.rating ?? 0, 0), 5) }).map((_, i) => (
+                            <Star key={i} className="w-3 h-3 fill-current" style={{ color: C.lime }} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {r.comment && (
+                      <p className="text-white/85 text-sm font-extrabold leading-relaxed line-clamp-5">
+                        "{r.comment}"
+                      </p>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ════════════════════════════════════ IMPACT */}
       <section id="impact" className="py-24" style={{ backgroundColor: C.tealDark }}>
@@ -861,25 +939,24 @@ export default function LandingPage() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: C.lime }}>
-                <Leaf className="w-5 h-5" style={{ color: C.teal }} />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.logoBg }}>
+                <Leaf className="w-5 h-5" style={{ color: COLORS.logoIcon }} />
               </div>
               <span style={{ ...bebas, fontSize: '1.5rem', color: '#fff', letterSpacing: '0.05em' }}>
-                Yu<span style={{ color: C.coral }}>Go</span>Da
+                Yu<span style={{ color: COLORS.logoAccent }}>Go</span>Da
               </span>
             </div>
-            <p className="text-white/50 text-xs leading-relaxed font-extrabold mb-5">
+            <p className="text-white/50 text-xs leading-relaxed font-extrabold">
               Fight food waste. Save money.<br />Save the planet.
             </p>
-            <p className="text-white/30 text-xs font-bold">Coming soon on social media.</p>
           </div>
 
           {/* Link columns */}
           {[
-            { heading: 'Product',  links: ['How it works', 'Browse bags', 'For businesses'] },
-            { heading: 'Company',  links: ['About us'] },
-            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Admin'] },
-          ].map(({ heading, links }) => (
+            { heading: 'Product',  links: ['How it works', 'For businesses'], ctaBelow: true },
+            { heading: 'Company',  links: ['About us'],                        ctaBelow: false },
+            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Admin'], ctaBelow: false },
+          ].map(({ heading, links, ctaBelow }) => (
             <div key={heading}>
               <h4 className="text-xs font-extrabold uppercase tracking-widest mb-4" style={{ color: C.lime }}>
                 {heading}
@@ -890,7 +967,6 @@ export default function LandingPage() {
                     <button
                       onClick={() => {
                         if (link === 'Admin') navigate('/admin-auth');
-                        else if (link === 'Browse bags') navigate('/discover');
                         else if (link === 'For businesses') scrollTo('for-businesses');
                         else if (link === 'About us') navigate('/about');
                         else if (link === 'Privacy policy') navigate('/privacy');
@@ -904,6 +980,23 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+
+              {ctaBelow && (
+                <div className="mt-5">
+                  <p className="text-[0.65rem] font-extrabold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    {t('landing_footer_cta_label')}
+                  </p>
+                  <button
+                    onClick={() => navigate('/discover')}
+                    className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-extrabold shadow-lg hover:shadow-xl transition-all active:scale-95"
+                    style={{ backgroundColor: C.coral, color: '#fff' }}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    {t('landing_footer_cta_button')}
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

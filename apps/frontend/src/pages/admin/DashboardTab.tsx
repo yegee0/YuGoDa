@@ -2,19 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
 } from 'recharts';
-import type { Transaction, ChartDataPoint } from '@/types';
-
-interface AdminUser {
-  uid: string;
-  email: string;
-  displayName: string;
-  role: string;
-  createdAt?: string;
-}
+import type { AdminUser, Transaction, ChartDataPoint } from '@/types';
+import { formatDate } from '@/lib/formatters';
 
 export interface DashboardTabProps {
   users: AdminUser[];
@@ -31,6 +25,7 @@ export default function DashboardTab({
   tooltipStyle,
   itemStyle,
 }: DashboardTabProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -45,7 +40,7 @@ export default function DashboardTab({
               </div>
             </div>
             <div>
-              <p className="text-xs text-[#8FA396] font-medium mb-1">Total Revenue</p>
+              <p className="text-xs text-[#8FA396] font-medium mb-1">{t('admin_dashboard_total_revenue')}</p>
               <h3 className="text-2xl font-black text-[#1B1B1B]">${transactions.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString()}</h3>
             </div>
           </div>
@@ -53,8 +48,8 @@ export default function DashboardTab({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
-          <h3 className="font-bold text-[#1B1B1B] mb-1">Revenue (Last 7 Days)</h3>
-          <p className="text-xs text-[#8FA396] mb-4">Daily revenue overview</p>
+          <h3 className="font-bold text-[#1B1B1B] mb-1">{t('admin_dashboard_revenue_title')}</h3>
+          <p className="text-xs text-[#8FA396] mb-4">{t('admin_dashboard_revenue_subtitle')}</p>
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
@@ -74,8 +69,8 @@ export default function DashboardTab({
           </div>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
-          <h3 className="font-bold text-[#1B1B1B] mb-1">Orders per Day</h3>
-          <p className="text-xs text-[#8FA396] mb-4">Weekly order volume</p>
+          <h3 className="font-bold text-[#1B1B1B] mb-1">{t('admin_dashboard_orders_title')}</h3>
+          <p className="text-xs text-[#8FA396] mb-4">{t('admin_dashboard_orders_subtitle')}</p>
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueData}>
@@ -93,17 +88,17 @@ export default function DashboardTab({
       {/* Recent Users */}
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E8E0D5] flex items-center justify-between">
-          <h3 className="font-bold text-[#1B1B1B]">Recent Customers</h3>
-          <button onClick={() => navigate('/admin/customers')} className="text-xs text-[#1B5E52] font-bold hover:underline">View All</button>
+          <h3 className="font-bold text-[#1B1B1B]">{t('admin_dashboard_recent_customers')}</h3>
+          <button onClick={() => navigate('/admin/customers')} className="text-xs text-[#1B5E52] font-bold hover:underline">{t('admin_dashboard_view_all')}</button>
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-left min-w-[500px]">
           <thead>
             <tr className="text-xs font-bold text-[#8FA396] uppercase tracking-wider border-b border-[#E8E0D5]">
-              <th className="px-6 py-3">Customer</th>
-              <th className="px-6 py-3">Role</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3">Joined</th>
+              <th className="px-6 py-3">{t('admin_col_customer')}</th>
+              <th className="px-6 py-3">{t('admin_col_role')}</th>
+              <th className="px-6 py-3">{t('admin_col_status')}</th>
+              <th className="px-6 py-3">{t('admin_col_joined')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F5F0E8]">
@@ -115,7 +110,7 @@ export default function DashboardTab({
                       {u.displayName?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[#1B1B1B]">{u.displayName || 'Unknown'}</p>
+                      <p className="text-sm font-semibold text-[#1B1B1B]">{u.displayName || t('admin_customers_unknown')}</p>
                       <p className="text-xs text-[#8FA396]">{u.email}</p>
                     </div>
                   </div>
@@ -129,11 +124,11 @@ export default function DashboardTab({
                 </td>
                 <td className="px-6 py-3">
                   <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Active
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> {t('admin_status_active')}
                   </span>
                 </td>
                 <td className="px-6 py-3 text-xs text-[#8FA396]">
-                  {(u.createdAt as unknown as { toDate?: () => Date })?.toDate?.().toLocaleDateString() || '—'}
+                  {u.createdAt ? formatDate(u.createdAt) : '—'}
                 </td>
               </tr>
             ))}

@@ -87,6 +87,39 @@ public class UserController extends BaseController {
         return ResponseEntity.ok(Map.of("success", true, "users", users));
     }
 
+    // POST /{id}/suspend (admin)
+    @PostMapping("/{id}/suspend")
+    public ResponseEntity<Map<String, Object>> suspendUser(HttpServletRequest request, @PathVariable String id) {
+        return setStatus(request, id, "suspended");
+    }
+
+    // POST /{id}/ban (admin)
+    @PostMapping("/{id}/ban")
+    public ResponseEntity<Map<String, Object>> banUser(HttpServletRequest request, @PathVariable String id) {
+        return setStatus(request, id, "banned");
+    }
+
+    // POST /{id}/reinstate (admin)
+    @PostMapping("/{id}/reinstate")
+    public ResponseEntity<Map<String, Object>> reinstateUser(HttpServletRequest request, @PathVariable String id) {
+        return setStatus(request, id, "active");
+    }
+
+    private ResponseEntity<Map<String, Object>> setStatus(HttpServletRequest request, String id, String status) {
+        UserPrincipal actor = getUser(request);
+        if (!requireAuth(actor)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
+        if (!hasRole(actor, "admin")) return forbidden("Admin role required.");
+        if (actor.getUid().equals(id)) return badRequest("Admins cannot change their own account status.");
+        try {
+            User updated = userService.setAccountStatus(id, status);
+            return ResponseEntity.ok(Map.of("success", true, "user", enrichUser(updated)));
+        } catch (NoSuchElementException e) {
+            return notFound(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        }
+    }
+
     private Map<String, Object> enrichUser(User user) {
         return enricher.enrichUser(user);
     }

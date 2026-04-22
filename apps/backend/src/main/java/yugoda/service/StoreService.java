@@ -118,14 +118,16 @@ public class StoreService {
         store.setIsApproved(approved ? 1 : 0);
         storeRepository.save(store);
 
-        // Notify owner
+        // Notify owner of the approval decision.
         Notification notif = new Notification();
         notif.setId(UUID.randomUUID().toString());
         notif.setUserId(storeId);
-        notif.setTitle("Mağaza Durumu");
+        notif.setTitle("Store Status");
         notif.setMessage(approved
-            ? "Mağazanız onaylandı! Artık ürün listeleyebilirsiniz."
-            : "Mağaza başvurunuz reddedildi. Detaylar için destek ile iletişime geçin.");
+            ? "Your store has been approved! You can now list products."
+            : "Your store application was rejected. Please contact support for details.");
+        notif.setTitleKey("notif_store_status_title");
+        notif.setMessageKey(approved ? "notif_store_approved" : "notif_store_rejected");
         notificationRepository.save(notif);
 
         return newStatus;

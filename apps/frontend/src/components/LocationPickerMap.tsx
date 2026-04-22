@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import {
+    APIProvider,
+    Map,
+    useMap,
+    useMapsLibrary,
+} from '@vis.gl/react-google-maps';
 import { MapPin, Loader2, LocateFixed, X, Home, Briefcase, Heart, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { useStore } from '@/app/store/useStore';
-
-const TILE_URL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png';
-const TILE_ATTR =
-    '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> ' +
-    '&copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ' +
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+import { reverseGeocodeNominatim, nominatimDisplayName } from '@/lib/geocoding';
 
 const ISTANBUL = { lat: 41.0082, lng: 28.9784 };
 
@@ -46,16 +45,135 @@ interface Props {
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
-export default function LocationPickerMap({ initialLocation, initialName, onConfirm, onClose, mode = 'customer' }: Props) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<L.Map | null>(null);
+// ── Minimalist pastel style (matches GoogleMapsView.tsx) ─────────────────────
+const MAP_STYLE = [
+    { elementType: 'geometry', stylers: [{ color: '#f5f5f0' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#7a7a7a' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f0' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ede8df' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9e4f0' }] },
+];
+
+/**
+ * Inner map content. Handles pan detection + SDK-native reverse geocoding.
+ * Must be rendered inside an `<APIProvider>`.
+ */
+interface MapContentProps {
+    initialLocation: { lat: number; lng: number };
+    onDraggingChange: (dragging: boolean) => void;
+    onCoordsChange: (coords: { lat: number; lng: number }) => void;
+}
+
+function MapContent({ initialLocation, onDraggingChange, onCoordsChange }: MapContentProps) {
+    const map = useMap();
+    const hasFlownRef = useRef(false);
+
+    // Fly to `initialLocation` when it changes (e.g., user confirms a search suggestion).
+    useEffect(() => {
+        if (!map) return;
+        if (hasFlownRef.current) {
+            map.panTo(initialLocation);
+        }
+        hasFlownRef.current = true;
+    }, [map, initialLocation]);
+
+    // Wire drag-start / drag-end for pin lift animation + coord emission.
+    useEffect(() => {
+        if (!map) return;
+        const dragStartListener = map.addListener('dragstart', () => onDraggingChange(true));
+        const dragEndListener = map.addListener('dragend', () => {
+            onDraggingChange(false);
+            const center = map.getCenter();
+            if (center) onCoordsChange({ lat: center.lat(), lng: center.lng() });
+        });
+        const idleListener = map.addListener('idle', () => {
+            // Emit coords after any camera change (zoom, programmatic pan, etc.).
+            const center = map.getCenter();
+            if (center) onCoordsChange({ lat: center.lat(), lng: center.lng() });
+        });
+        return () => {
+            dragStartListener.remove();
+            dragEndListener.remove();
+            idleListener.remove();
+        };
+    }, [map, onDraggingChange, onCoordsChange]);
+
+    return (
+        <Map
+            defaultCenter={initialLocation}
+            defaultZoom={15}
+            gestureHandling="greedy"
+            disableDefaultUI
+            zoomControl
+            styles={MAP_STYLE}
+            className="w-full h-full"
+        />
+    );
+}
+
+/**
+ * Hook: SDK-native reverse geocoding via Google Geocoding API. Returns a function
+ * that resolves to `{ label, apartmentHint }`, falling back to Nominatim + coords.
+ */
+function useReverseGeocoder() {
+    const geocodingLib = useMapsLibrary('geocoding');
+    const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+
+    useEffect(() => {
+        if (geocodingLib && !geocoderRef.current) {
+            geocoderRef.current = new geocodingLib.Geocoder();
+        }
+    }, [geocodingLib]);
+
+    return useCallback(async (lat: number, lng: number): Promise<{ label: string; apartmentHint: string }> => {
+        const fallbackLabel = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+        // Prefer Google Geocoding when the library is loaded.
+        if (geocoderRef.current) {
+            try {
+                const response = await geocoderRef.current.geocode({
+                    location: { lat, lng },
+                    language: 'tr',
+                });
+                const result = response.results[0];
+                if (result) {
+                    const get = (type: string) =>
+                        result.address_components.find(c => c.types.includes(type))?.long_name ?? '';
+                    const label =
+                        get('sublocality_level_1') ||
+                        get('neighborhood') ||
+                        get('sublocality') ||
+                        get('locality') ||
+                        fallbackLabel;
+                    const apartmentHint = [get('route'), get('street_number')].filter(Boolean).join(' ');
+                    return { label, apartmentHint };
+                }
+            } catch {
+                // fall through to Nominatim below
+            }
+        }
+
+        // Fallback: Nominatim (no API key, no structured street fields available).
+        const nom = await reverseGeocodeNominatim(lat, lng);
+        return { label: nominatimDisplayName(nom, fallbackLabel), apartmentHint: '' };
+    }, []);
+}
+
+interface PickerBodyProps extends Props {}
+
+function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = 'customer' }: PickerBodyProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [address, setAddress] = useState(initialName || '');
     const [geocoding, setGeocoding] = useState(false);
     const [pendingCoords, setPendingCoords] = useState(initialLocation || ISTANBUL);
     const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Stores the last parsed street address from reverse geocoding for form pre-fill
     const geocodedApartmentRef = useRef('');
+
+    const map = useMap();
+    const reverseGeocode = useReverseGeocoder();
 
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -67,106 +185,34 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
 
     const { userProfile, setUserProfile } = useStore();
 
-    const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-        setGeocoding(true);
-        geocodedApartmentRef.current = '';
-        try {
-            if (GOOGLE_MAPS_API_KEY) {
-                // Single Google Geocoding call — used for both the address label and form pre-fill
-                const res = await fetch(
-                    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=tr`
-                );
-                const data = await res.json();
-                const results: Array<{ address_components: Array<{ long_name: string; types: string[] }> }> =
-                    data.results ?? [];
-
-                if (results.length > 0) {
-                    const components = results[0].address_components;
-                    const get = (type: string) =>
-                        components.find(c => c.types.includes(type))?.long_name ?? '';
-
-                    // Label shown in the bottom card and the sheet subtitle
-                    const name =
-                        get('sublocality_level_1') ||
-                        get('neighborhood') ||
-                        get('sublocality') ||
-                        get('locality') ||
-                        `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                    setAddress(name);
-
-                    // Apartment pre-fill: route first, then building number (Turkish convention)
-                    const route = get('route');
-                    const streetNumber = get('street_number');
-                    geocodedApartmentRef.current = [route, streetNumber].filter(Boolean).join(' ');
-                } else {
-                    setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-                }
-            } else {
-                // Fallback: Nominatim (free, no key required) — no structured fields available
-                const res = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-                    { headers: { 'Accept-Language': 'tr,en' } }
-                );
-                const data = await res.json();
-                const name =
-                    data.address?.neighbourhood ||
-                    data.address?.suburb ||
-                    data.address?.quarter ||
-                    data.address?.district ||
-                    data.address?.city ||
-                    data.address?.town ||
-                    data.display_name?.split(',')[0] ||
-                    `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-                setAddress(name);
-            }
-        } catch {
-            setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        } finally {
+    const handleCoordsChange = useCallback((coords: { lat: number; lng: number }) => {
+        setPendingCoords(coords);
+        if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+        geocodeTimer.current = setTimeout(async () => {
+            setGeocoding(true);
+            const { label, apartmentHint } = await reverseGeocode(coords.lat, coords.lng);
+            setAddress(label);
+            geocodedApartmentRef.current = apartmentHint;
             setGeocoding(false);
-        }
-    }, []);
+        }, 400);
+    }, [reverseGeocode]);
 
+    // Initial reverse geocode on mount if no name provided.
     useEffect(() => {
-        if (!containerRef.current || mapRef.current) return;
-        const start = initialLocation || ISTANBUL;
-        const map = L.map(containerRef.current, {
-            center: [start.lat, start.lng],
-            zoom: 15,
-            zoomControl: false,
-            attributionControl: false,
-        });
-        L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 20 }).addTo(map);
-        L.control.zoom({ position: 'bottomleft' }).addTo(map);
-        map.on('movestart', () => setIsDragging(true));
-        map.on('moveend', () => {
-            setIsDragging(false);
-            const center = map.getCenter();
-            const coords = { lat: center.lat, lng: center.lng };
-            setPendingCoords(coords);
-            clearTimeout(geocodeTimer.current);
-            geocodeTimer.current = setTimeout(() => reverseGeocode(coords.lat, coords.lng), 400);
-        });
-        mapRef.current = map;
-        if (!initialName) reverseGeocode(start.lat, start.lng);
+        if (!initialName) {
+            const start = initialLocation || ISTANBUL;
+            handleCoordsChange(start);
+        }
         return () => {
-            clearTimeout(geocodeTimer.current);
-            map.remove();
-            mapRef.current = null;
+            if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
-        if (mapRef.current && initialLocation) {
-            mapRef.current.flyTo([initialLocation.lat, initialLocation.lng], 15, { duration: 1 });
-            if (initialName) setAddress(initialName);
-        }
-    }, [initialLocation, initialName]);
-
     const flyToMyLocation = () => {
-        if (!navigator.geolocation || !mapRef.current) return;
+        if (!navigator.geolocation || !map) return;
         navigator.geolocation.getCurrentPosition(pos => {
-            mapRef.current!.flyTo([pos.coords.latitude, pos.coords.longitude], 15, { duration: 1 });
+            map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         });
     };
 
@@ -189,17 +235,11 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                 deliveryNote: form.deliveryNote,
                 tag: form.tag,
             };
-
             const updatedAddresses = [...(userProfile?.addresses || []), newAddress];
-
-            // Persist to backend — PUT /users/me with the full addresses array
             await api.put('/users/me', { addresses: updatedAddresses });
-
-            // Update local state only after the backend confirms
             if (userProfile) {
                 setUserProfile({ ...userProfile, addresses: updatedAddresses });
             }
-
             toast.success('Address saved!');
             setShowForm(false);
             onConfirm(pendingCoords, address);
@@ -231,9 +271,15 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
             </button>
 
             {/* Map */}
-            <div ref={containerRef} className="flex-1 w-full" />
+            <div className="flex-1 w-full relative">
+                <MapContent
+                    initialLocation={initialLocation || ISTANBUL}
+                    onDraggingChange={setIsDragging}
+                    onCoordsChange={handleCoordsChange}
+                />
+            </div>
 
-            {/* Center pin */}
+            {/* Center pin overlay */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[1000]" style={{ bottom: 40 }}>
                 <div className={`flex flex-col items-center transition-transform duration-200 ${isDragging ? '-translate-y-4' : 'translate-y-0'}`}>
                     <div className={`w-3 h-1.5 bg-black/20 rounded-full mt-1 transition-all duration-200 ${isDragging ? 'scale-75 opacity-0' : 'scale-100 opacity-100'}`} style={{ marginTop: 2 }} />
@@ -294,7 +340,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
             <AnimatePresence>
                 {showForm && (
                     <>
-                        {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -302,8 +347,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                             className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm"
                             onClick={() => setShowForm(false)}
                         />
-
-                        {/* Sheet */}
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
@@ -311,7 +354,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
                             className="absolute bottom-0 left-0 right-0 z-[2100] bg-white rounded-t-3xl shadow-2xl max-h-[90%] flex flex-col"
                         >
-                            {/* Handle + header */}
                             <div className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-[#E8E0D5]">
                                 <div className="w-10 h-1 bg-[#E8E0D5] rounded-full mx-auto mb-4" />
                                 <div className="flex items-center justify-between">
@@ -325,10 +367,8 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                 </div>
                             </div>
 
-                            {/* Scrollable form body */}
                             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
-                                {/* Row 1: Apartman + Daire */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Apartment</label>
@@ -352,7 +392,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                     </div>
                                 </div>
 
-                                {/* Row 2: Kat + Şirket */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Floor</label>
@@ -376,11 +415,9 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                     </div>
                                 </div>
 
-                                {/* Phone with country code */}
                                 <div>
                                     <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Phone Number <span className="text-red-400">*</span></label>
                                     <div className="flex gap-2">
-                                        {/* Country code selector */}
                                         <div className="relative">
                                             <button
                                                 type="button"
@@ -425,7 +462,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                     </div>
                                 </div>
 
-                                {/* Delivery note */}
                                 <div>
                                     <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Delivery Note</label>
                                     <textarea
@@ -437,7 +473,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                     />
                                 </div>
 
-                                {/* Address tag */}
                                 <div>
                                     <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-2 block">Address Label</label>
                                     <div className="flex gap-2 flex-wrap">
@@ -460,7 +495,6 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                                 </div>
                             </div>
 
-                            {/* Submit button */}
                             <div className="flex-shrink-0 px-5 py-4 border-t border-[#E8E0D5]">
                                 <button
                                     onClick={handleSaveAndContinue}
@@ -479,5 +513,28 @@ export default function LocationPickerMap({ initialLocation, initialName, onConf
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function LocationPickerMap(props: Props) {
+    // Gate render on API key; surface the same config error other map surfaces show.
+    if (!GOOGLE_MAPS_API_KEY) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#f5f5f0] gap-6 p-8">
+                <div className="text-6xl">🗺️</div>
+                <div className="text-center max-w-md">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Google Maps API Key Required</h3>
+                    <p className="text-gray-500 text-sm mb-4">
+                        Set <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">VITE_GOOGLE_MAPS_API_KEY</code> in your <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">.env.local</code> and restart the dev server.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['geocoding']}>
+            <PickerBody {...props} />
+        </APIProvider>
     );
 }

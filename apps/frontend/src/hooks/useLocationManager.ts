@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Bag, MapSuggestion } from '@/types';
+import {
+  reverseGeocodeNominatim,
+  searchGeocodeNominatim,
+  nominatimDisplayName,
+} from '@/lib/geocoding';
 
 interface Coords {
   lat: number;
@@ -52,16 +57,10 @@ export function useLocationManager() {
       async (position) => {
         const { latitude: lat, longitude: lng } = position.coords;
         setUserLocation({ lat, lng });
-        // Reverse geocode with Nominatim (free, no API key)
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-          const data = await res.json();
-          const name = data.address?.city || data.address?.town || data.address?.village || data.display_name?.split(',')[0] || 'Current Location';
-          setLocationName(name);
-          localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name }));
-        } catch {
-          setLocationName('Current Location');
-        }
+        const data = await reverseGeocodeNominatim(lat, lng);
+        const name = nominatimDisplayName(data, 'Current Location');
+        setLocationName(name);
+        localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name }));
         setLocationLoading(false);
         setShowSetLocation(false);
       },
@@ -92,23 +91,17 @@ export function useLocationManager() {
         }
       });
 
-      // Nominatim geocoding (Places API equivalent, free)
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
-          { headers: { 'Accept-Language': 'tr,en' } }
-        );
-        const data = await res.json();
-        data.forEach((item: { display_name?: string; type?: string; lat: string; lon: string }) => {
-          const name = item.display_name?.split(',').slice(0, 2).join(', ') || item.display_name || '';
-          results.push({
-            type: 'place',
-            label: name,
-            sublabel: item.type || 'Location',
-            coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) }
-          });
+      // Forward geocoding via Nominatim (free, no API key).
+      const places = await searchGeocodeNominatim(query, 5);
+      places.forEach((item) => {
+        const name = item.display_name?.split(',').slice(0, 2).join(', ') || item.display_name || '';
+        results.push({
+          type: 'place',
+          label: name,
+          sublabel: item.type || 'Location',
+          coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
         });
-      } catch { }
+      });
 
       setMapSuggestions(results.slice(0, 8));
       setShowMapSuggestions(results.length > 0);

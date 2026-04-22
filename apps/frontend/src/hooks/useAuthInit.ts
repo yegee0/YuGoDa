@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { authCustomer, authPartner, authAdmin, getCustomerFcmToken, listenForegroundMessages } from '@/lib/firebase';
+import { authCustomer, authPartner, authAdmin, getCustomerFcmToken, listenForegroundMessages, signOutAllProjects } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
+import { api, ApiError, setBannedHandler } from '@/lib/api';
 
 export function useAuthInit() {
   const { i18n } = useTranslation();
@@ -16,6 +16,21 @@ export function useAuthInit() {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
   }, [isRTL, i18n.language]);
+
+  // Register the banned-account handler once. Triggers on backend 403 +
+  // "Account banned." — force a hard sign-out across all 3 Firebase projects
+  // and route to /banned so the user can't linger in an authed shell.
+  useEffect(() => {
+    setBannedHandler(() => {
+      void signOutAllProjects();
+      setUser(null);
+      setUserProfile(null);
+      if (window.location.pathname !== '/banned') {
+        window.location.assign('/banned');
+      }
+    });
+    return () => { setBannedHandler(null); };
+  }, [setUser, setUserProfile]);
 
   // Auth state listeners
   useEffect(() => {
@@ -47,11 +62,24 @@ export function useAuthInit() {
         try {
           const data = await api.get('/users/me');
           if (data.user) {
+            // Admin portal is gated: if the Firebase admin session belongs to a
+            // DB row whose role isn't admin (e.g. a customer who authed via
+            // /admin-auth), reject the session so the admin UI shell never
+            // renders. Backend authorization is already safe (JwtAuthFilter
+            // reads role from the DB); this closes the UX gap by sending
+            // them to the same explainer used for confirmed-unseeded admins.
+            if (role === 'admin' && data.user.role !== 'admin') {
+              await authAdmin.signOut();
+              if (window.location.pathname !== '/admin/not-provisioned') {
+                window.location.assign('/admin/not-provisioned');
+              }
+              return;
+            }
             setUserProfile({
               ...data.user,
-              // Always trust the Firebase auth project as the source of truth for role.
-              // e.g. signing in via authAdmin always yields role='admin' regardless of
-              // what the backend DB may have stored.
+              // Trust the Firebase auth project as the source of truth for role
+              // on customer/partner portals. For admin we've already validated
+              // DB agreement above.
               role: role,
               favorites: data.user.favorites || [],
               addresses: data.user.addresses || [],
@@ -69,12 +97,37 @@ export function useAuthInit() {
               if (fcmToken) api.put('/users/me', { fcmToken }).catch(() => {});
             }).catch(() => {});
           }
-        } catch {
-          // User not found in DB — auto-register so role is stored correctly
+        } catch (err: unknown) {
+          // Admin portal is closed-registration: we never auto-register an
+          // admin. A 404 means the account isn't provisioned in the DB (fail
+          // closed, route to explainer). A non-404/network error means we
+          // couldn't verify (uncertain — show retry, don't fail closed).
+          if (role === 'admin') {
+            const is404 = err instanceof ApiError && err.status === 404;
+            await authAdmin.signOut();
+            const target = is404 ? '/admin/not-provisioned' : '/admin/not-provisioned?reason=retry';
+            if (window.location.pathname + window.location.search !== target) {
+              window.location.assign(target);
+            }
+            return;
+          }
+          // Customer/restaurant: if 404, auto-register; other errors, continue
+          // with the default profile set earlier so the app doesn't hard-fail
+          // on a transient backend hiccup.
+          if (!(err instanceof ApiError && err.status === 404)) {
+            return;
+          }
           try {
             const storeName = currentUser.displayName || currentUser.email?.split('@')[0] || 'My Restaurant';
+            // Google OAuth yields a combined displayName like "Ahmet Yılmaz"; split on
+            // first whitespace so firstName/lastName land in the DB on first login,
+            // otherwise both stay empty until the user manually edits their profile.
+            const [firstName = '', ...rest] = (currentUser.displayName || '').trim().split(/\s+/).filter(Boolean);
+            const lastName = rest.join(' ');
             await api.post('/users/register', {
               displayName: currentUser.displayName || currentUser.email || 'User',
+              firstName,
+              lastName,
               email: currentUser.email,
               role: role,
               // Pass businessName for restaurant users so a store profile is auto-created

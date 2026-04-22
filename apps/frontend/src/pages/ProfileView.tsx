@@ -11,7 +11,7 @@ import {
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
-import type { Address, Order, CartItem, StoreProfile } from '@/types';
+import type { Address, Order, CartItem, StoreProfile, UserProfile } from '@/types';
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
@@ -61,15 +61,19 @@ export default function ProfileView() {
     if (!userProfile) return;
     setSaving(true);
     try {
-      const data = await api.put('/users/me', formData);
-      setUserProfile({ ...userProfile, ...(data.user || formData) });
+      // Email is read-only (Firebase is source of truth); omit from PUT body.
+      const { email: _emailOmitted, ...payload } = formData;
+      const data = await api.put<{ success: boolean; user: UserProfile }>('/users/me', payload);
+      // Use the backend's enriched response directly instead of merging with client formData —
+      // prevents drift when the server normalizes/derives fields.
+      if (data?.user) {
+        setUserProfile(data.user);
+      }
       setIsEditing(false);
-      toast.success('Profile updated!');
+      toast.success(t('profile_save_success'));
     } catch {
-      // save locally anyway
-      setUserProfile({ ...userProfile, ...formData });
-      setIsEditing(false);
-      toast.success('Profile updated!');
+      toast.error(t('profile_save_failed'));
+      // Do NOT flip isEditing off and do NOT mutate userProfile — let the user retry with their edits intact.
     } finally {
       setSaving(false);
     }

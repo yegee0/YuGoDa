@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authPartner } from '@/lib/firebase';
+import { authPartner, signOutOtherProjects } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
@@ -124,11 +124,11 @@ export default function RestaurantAuth() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(p => ({ ...p, [field]: e.target.value }));
 
+  // Redirect only if already logged in as the SAME role (restaurant).
+  // A different-role session does NOT redirect; the user can sign in to switch.
   useEffect(() => {
-    if (userProfile && !loading && !error) {
-      if (userProfile.role === 'admin')           navigate('/admin',      { replace: true });
-      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
-      else                                        navigate('/discover',   { replace: true });
+    if (userProfile?.role === 'restaurant' && !loading && !error) {
+      navigate('/restaurant', { replace: true });
     }
   }, [userProfile, navigate, loading, error]);
 
@@ -138,6 +138,9 @@ export default function RestaurantAuth() {
     setMsg('');
     setLoading(true);
     try {
+      // Purge any other-role Firebase sessions first so the incoming principal
+      // is unambiguous and `useAuthInit` never holds two live roles at once.
+      await signOutOtherProjects('restaurant');
       if (tab === 'signin') {
         await signInWithEmailAndPassword(authPartner, form.email, form.password);
       } else {

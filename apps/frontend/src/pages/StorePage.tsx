@@ -11,7 +11,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import type { Bag, StoreProfile, OperatingHours, Review } from '@/types';
 import { TL } from '@/lib/formatters';
-import { DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
+import { COLORS, DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
 
 function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefined): boolean {
   if (!operatingHours || !Array.isArray(operatingHours)) return true;
@@ -62,7 +62,7 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
             </span>
           )}
           {bag.available > 0 && bag.available <= 2 && (
-            <span className="flex items-center gap-1 bg-[#ad3115] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">
+            <span className="flex items-center gap-1 bg-eco-secondary text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">
               <Zap className="w-2.5 h-2.5" /> {t('Only {{count}} left', { count: bag.available })}
             </span>
           )}
@@ -186,7 +186,7 @@ export default function StorePage() {
         <ShoppingBag className="w-16 h-16 mb-4" style={{ color: 'rgba(255,255,255,0.45)' }} />
         <h2 className="text-xl font-black text-white">{t('Store not found')}</h2>
         <p className="font-medium mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>This store may no longer be available.</p>
-        <button onClick={() => navigate('/discover')} className="mt-6 px-6 py-3 text-white rounded-full font-black" style={{ backgroundColor: '#ad3115' }}>
+        <button onClick={() => navigate('/discover')} className="mt-6 px-6 py-3 text-white rounded-full font-black" style={{ backgroundColor: COLORS.accentWarm }}>
           {t('Back to Discover')}
         </button>
       </div>
@@ -244,12 +244,12 @@ export default function StorePage() {
                     </span>
                   )}
                   <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                    isOpen ? 'bg-[#748f2b]/20 text-[#5a7a1a]' : 'bg-[#ad3115]/10 text-[#ad3115]'
+                    isOpen ? 'bg-[#748f2b]/20 text-[#5a7a1a]' : 'bg-eco-secondary/10 text-eco-secondary'
                   }`}>
                     {isOpen ? t('Open now') : t('Closed')}
                   </span>
                   {store.rating > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-black text-[#ad3115]">
+                    <span className="flex items-center gap-1 text-xs font-black text-eco-secondary">
                       <Star className="w-3 h-3 fill-current" />
                       {store.rating.toFixed(1)}
                     </span>
@@ -258,9 +258,9 @@ export default function StorePage() {
               </div>
             </div>
 
-            {store.description && (
-              <p className="text-sm text-[#8FA396] font-medium leading-relaxed mb-4">{store.description}</p>
-            )}
+            <p className="text-sm text-[#8FA396] font-medium leading-relaxed mb-4">
+              {store.description || <span className="italic text-[#B0BDB7]">{t('store_no_description')}</span>}
+            </p>
 
             <div className="flex flex-wrap gap-2">
               {store.address && (
@@ -379,7 +379,7 @@ export default function StorePage() {
             ) : (
               <>
                 <h2 className="text-base font-black text-[#1B1B1B] mb-4 flex items-center gap-2">
-                  <Star className="w-4 h-4 fill-[#ad3115] text-[#ad3115]" />
+                  <Star className="w-4 h-4 fill-eco-secondary text-eco-secondary" />
                   {t('Reviews')}
                   <span className="text-xs font-black text-[#8FA396] bg-[#F5F0E8] px-2 py-0.5 rounded-full">{reviews.length}</span>
                 </h2>
@@ -392,7 +392,7 @@ export default function StorePage() {
                         </span>
                         <div className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map(s => (
-                            <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'fill-[#ad3115] text-[#ad3115]' : 'text-[#E8E0D5]'}`} />
+                            <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'fill-eco-secondary text-eco-secondary' : 'text-[#E8E0D5]'}`} />
                           ))}
                         </div>
                       </div>
@@ -415,15 +415,15 @@ export default function StorePage() {
         {/* ── Info tab ── */}
         {storeTab === 'info' && (
           <div className="p-6 space-y-3">
-            {store.address && (
-              <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-[#E8E0D5]">
-                <MapPin className="w-4 h-4 text-[#1B5E52] mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-black text-[#8FA396] uppercase tracking-wide mb-0.5">Address</p>
-                  <p className="text-sm text-[#1B1B1B] font-medium">{store.address}</p>
-                </div>
+            <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-[#E8E0D5]">
+              <MapPin className="w-4 h-4 text-[#1B5E52] mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-black text-[#8FA396] uppercase tracking-wide mb-0.5">Address</p>
+                {store.address
+                  ? <p className="text-sm text-[#1B1B1B] font-medium">{store.address}</p>
+                  : <p className="text-sm italic text-[#B0BDB7] font-medium">{t('store_no_address_set')}</p>}
               </div>
-            )}
+            </div>
             {store.phone && (
               <div className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-[#E8E0D5]">
                 <Tag className="w-4 h-4 text-[#1B5E52] mt-0.5 flex-shrink-0" />
@@ -437,7 +437,7 @@ export default function StorePage() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-black text-[#8FA396] uppercase tracking-wide">Opening Hours</p>
                 <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
-                  isOpen ? 'bg-[#748f2b]/20 text-[#5a7a1a]' : 'bg-[#ad3115]/10 text-[#ad3115]'
+                  isOpen ? 'bg-[#748f2b]/20 text-[#5a7a1a]' : 'bg-eco-secondary/10 text-eco-secondary'
                 }`}>{isOpen ? t('Open now') : t('Closed')}</span>
               </div>
               {store.operatingHours && store.operatingHours.length > 0 ? (

@@ -3,13 +3,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Store, Package, Truck, BarChart3, Plus,
   Star, UserCircle, Headset, CheckCircle, Edit3, Loader2,
+  Hourglass, AlertTriangle,
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Order, Bag, Driver, Review, StoreProfile, OperatingHours, ChartDataPoint, OrderStatus } from '@/types';
 import { DAY_NAMES_SHORT, ORDER_POLL_INTERVAL } from '@/lib/constants';
+import { StatusScreen } from '@/components/shared';
 
 import DashboardTab from './DashboardTab';
 import OrdersTab from './OrdersTab';
@@ -28,6 +31,7 @@ export { STATUS_CONFIG as STATUS_CFG } from '@/lib/constants';
 // ── Main component ────────────────────────────────────────────
 
 export default function StorePanel() {
+  const { t } = useTranslation();
   const { user } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -111,7 +115,7 @@ export default function StorePanel() {
       await api.put(`/orders/${orderId}/status`, { status, ...trackingInfo });
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...trackingInfo } : o));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update order status.';
+      const message = err instanceof Error ? err.message : t('rest_toast_status_update_failed');
       toast.error(message);
       throw err;
     }
@@ -124,10 +128,10 @@ export default function StorePanel() {
       await api.put(`/stores/${user.uid}`, { ...editedProfile, operatingHours: schedule });
       setStoreProfile({ ...editedProfile, operatingHours: schedule });
       setIsEditingProfile(false);
-      toast.success('Profile saved successfully.');
+      toast.success(t('rest_toast_profile_saved'));
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save profile. Please try again.');
+      toast.error(t('rest_toast_profile_save_failed'));
     } finally {
       setIsSavingProfile(false);
     }
@@ -146,22 +150,41 @@ export default function StorePanel() {
   const avgRating = reviews.length > 0 ? (reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1) : '—';
 
   // ── Page header config ──
-  const PAGE_TITLES: Record<string, { title: string; sub: string; icon: React.ReactNode }> = {
-    dashboard: { title: 'Dashboard',       sub: 'Overview of your business performance',     icon: <BarChart3 className="w-5 h-5" /> },
-    orders:    { title: 'Orders',          sub: 'Manage incoming and active orders',           icon: <Package className="w-5 h-5" /> },
-    inventory: { title: 'Inventory',       sub: 'Manage your daily bags and availability',     icon: <Store className="w-5 h-5" /> },
-    drivers:   { title: 'Drivers',         sub: 'Track and communicate with your fleet',       icon: <Truck className="w-5 h-5" /> },
-    reviews:   { title: 'Reviews',         sub: 'Customer ratings and feedback',               icon: <Star className="w-5 h-5" /> },
-    profile:   { title: 'Store Profile',   sub: 'Update your store info and schedule',         icon: <UserCircle className="w-5 h-5" /> },
-    support:   { title: 'Support',         sub: 'Contact the admin team for help',             icon: <Headset className="w-5 h-5" /> },
+  const PAGE_TITLES: Record<string, { titleKey: string; subKey: string; icon: React.ReactNode }> = {
+    dashboard: { titleKey: 'rest_page_dashboard_title', subKey: 'rest_page_dashboard_sub', icon: <BarChart3 className="w-5 h-5" /> },
+    orders:    { titleKey: 'rest_page_orders_title',    subKey: 'rest_page_orders_sub',    icon: <Package className="w-5 h-5" /> },
+    inventory: { titleKey: 'rest_page_inventory_title', subKey: 'rest_page_inventory_sub', icon: <Store className="w-5 h-5" /> },
+    drivers:   { titleKey: 'rest_page_drivers_title',   subKey: 'rest_page_drivers_sub',   icon: <Truck className="w-5 h-5" /> },
+    reviews:   { titleKey: 'rest_page_reviews_title',   subKey: 'rest_page_reviews_sub',   icon: <Star className="w-5 h-5" /> },
+    profile:   { titleKey: 'rest_page_profile_title',   subKey: 'rest_page_profile_sub',   icon: <UserCircle className="w-5 h-5" /> },
+    support:   { titleKey: 'rest_page_support_title',   subKey: 'rest_page_support_sub',   icon: <Headset className="w-5 h-5" /> },
   };
-  const page = PAGE_TITLES[activeTab] || PAGE_TITLES['dashboard'];
+  const pageCfg = PAGE_TITLES[activeTab] || PAGE_TITLES['dashboard'];
+  const page = { title: t(pageCfg.titleKey), sub: t(pageCfg.subKey), icon: pageCfg.icon };
 
   // ── Loading ──
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center" style={{ backgroundColor: '#1b5e52' }}>
         <Loader2 className="w-8 h-8 text-[#748f2b] animate-spin" />
+      </div>
+    );
+  }
+
+  // ── Under-review / rejected gate ──
+  // Keep the `support` tab reachable so owners can message admins while they wait.
+  const storeStatus = storeProfile?.status;
+  if ((storeStatus === 'pending' || storeStatus === 'rejected') && activeTab !== 'support') {
+    const isRejected = storeStatus === 'rejected';
+    return (
+      <div className="h-full flex items-center justify-center bg-white">
+        <StatusScreen
+          tone={isRejected ? 'danger' : 'warning'}
+          icon={isRejected ? <AlertTriangle className="w-10 h-10" /> : <Hourglass className="w-10 h-10" />}
+          title={t(isRejected ? 'store_rejected_title' : 'store_review_title')}
+          description={t(isRejected ? 'store_rejected_body' : 'store_review_body')}
+          action={{ label: t('store_review_contact'), onClick: () => navigate('/restaurant/support') }}
+        />
       </div>
     );
   }
@@ -189,7 +212,7 @@ export default function StorePanel() {
             onClick={() => setShowAddPackage(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-[#1B5E52] text-white rounded-xl text-sm font-bold hover:bg-[#164d43] transition-colors shadow-sm shadow-[#1B5E52]/20"
           >
-            <Plus className="w-4 h-4" /> Create Package
+            <Plus className="w-4 h-4" /> {t('rest_action_create_package')}
           </button>
         )}
         {activeTab === 'profile' && (
@@ -204,9 +227,9 @@ export default function StorePanel() {
           >
             {isEditingProfile
               ? isSavingProfile
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                : <><CheckCircle className="w-4 h-4" /> Save Changes</>
-              : <><Edit3 className="w-4 h-4" /> Edit Profile</>
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('rest_action_saving')}</>
+                : <><CheckCircle className="w-4 h-4" /> {t('rest_action_save_changes')}</>
+              : <><Edit3 className="w-4 h-4" /> {t('rest_action_edit_profile')}</>
             }
           </button>
         )}

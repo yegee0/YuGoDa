@@ -11,4 +11,5 @@ public class UserPrincipal {
     private String role;
     private String displayName;
     private boolean exists;
+    private String accountStatus;
 }

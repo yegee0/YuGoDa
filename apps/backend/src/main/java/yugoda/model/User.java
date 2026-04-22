@@ -26,6 +26,9 @@ public class User {
     @Column(nullable = false)
     private String role = "customer";
 
+    @Column(nullable = false)
+    private String accountStatus = "active";
+
     @Column(columnDefinition = "TEXT DEFAULT '[]'")
     private String favorites = "[]";
 

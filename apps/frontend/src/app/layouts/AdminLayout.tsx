@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarItem, SidebarSection } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import AdminPresenceToggle from '@/components/AdminPresenceToggle';
+import { useAdminPresenceHeartbeat } from '@/hooks/useAdminPresenceHeartbeat';
 import { LayoutDashboard, Users, Store, DollarSign, MessageSquare, MessageCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -10,6 +12,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const currentView = location.pathname.split('/')[2] || 'dashboard';
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const { state: presenceState, setState: setPresenceState } = useAdminPresenceHeartbeat(true);
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -81,6 +85,9 @@ export default function AdminLayout() {
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header onMenuOpen={() => setMobileNavOpen(true)} />
+        <div className="absolute top-3 right-4 z-50 pointer-events-auto">
+          <AdminPresenceToggle state={presenceState} onChange={(next) => { void setPresenceState(next); }} />
+        </div>
         <main className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
             <motion.div

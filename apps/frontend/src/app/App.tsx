@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthInit } from '@/hooks/useAuthInit';
+import { useNotificationPoll } from '@/hooks/useNotificationPoll';
 import AppRoutes from '@/app/routes/AppRoutes';
 
 export default function App() {
@@ -22,5 +23,6 @@ export default function App() {
 
 function AppContent() {
   useAuthInit();
+  useNotificationPoll();
   return <AppRoutes />;
 }

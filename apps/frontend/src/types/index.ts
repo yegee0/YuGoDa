@@ -1,6 +1,9 @@
 /** Shared domain types for the YuGoDa frontend */
 
 // ── Auth & Users ─────────────────────────────────────────
+export type UserRole = 'customer' | 'restaurant' | 'admin' | 'driver';
+export type AccountStatus = 'active' | 'suspended' | 'banned';
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -8,7 +11,8 @@ export interface UserProfile {
   firstName?: string;
   lastName?: string;
   photoURL?: string;
-  role: 'customer' | 'restaurant' | 'admin' | 'driver';
+  role: UserRole;
+  accountStatus?: AccountStatus;
   favorites: string[];
   walletBalance: number;
   countryCode?: string;
@@ -16,6 +20,21 @@ export interface UserProfile {
   addresses: Address[];
   notificationsEnabled: boolean;
   preferredLanguage: string;
+}
+
+/**
+ * Shape returned by admin `/users` endpoint. Minimal projection of UserProfile —
+ * intentionally lighter than UserProfile so admin list rendering doesn't assume
+ * fields the backend doesn't return.
+ */
+export interface AdminUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole | string;
+  accountStatus?: AccountStatus;
+  createdAt?: string;
+  mobileNumber?: string;
 }
 
 export interface Address {
@@ -209,12 +228,36 @@ export interface SupportMessage {
   createdAt?: string;
 }
 
+// ── Support Tickets ──────────────────────────────────────
+// Priority values MUST match the union in `lib/constants.ts`. Backend clamps
+// invalid priorities to "Medium"; status is one of the four literals below.
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+
+export interface Ticket {
+  id: string;
+  userId: string;
+  category: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  subject: string;
+  description: string;
+  orderRef: string | null;
+  status: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Notifications ────────────────────────────────────────
 export interface Notification {
   id: string;
   userId?: string;
   title: string;
   message: string;
+  /** i18n key set by the backend; when present, render via t() — fall back to `title` if absent. */
+  titleKey?: string;
+  /** i18n key set by the backend; when present, render via t() — fall back to `message` if absent. */
+  messageKey?: string;
+  /** If present, clicking the notification should deep-link to this order. */
+  orderId?: string;
   read: boolean;
   createdAt?: string;
 }
@@ -263,4 +306,45 @@ export interface ChatRecommendation {
   dietaryType?: string;
   distance?: string;
   rating?: number;
+}
+
+// ── Live Chat ────────────────────────────────────────────
+// Customer ↔ admin real-time support conversations. Backend contract locked
+// under tasks #56/#57/#75 — these shapes mirror the REST responses from
+// `/api/live-chat/conversations` and `/api/live-chat/conversations/{id}/messages`.
+export type ChatConversationStatus = 'queued' | 'active' | 'archived' | 'customer_deleted';
+export type AdminResolution = 'solved' | 'still_investigating' | null;
+
+export interface ChatConversation {
+  id: string;
+  customerId: string;
+  adminId: string | null;
+  status: ChatConversationStatus;
+  adminResolution: AdminResolution;
+  createdAt: string;
+  assignedAt: string | null;
+  endedAt: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderRole: 'customer' | 'admin';
+  senderUid: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ChatAvailability {
+  availableAdmins: number;
+}
+
+export type AdminPresenceState = 'available' | 'away' | 'offline';
+
+export interface AdminPresence {
+  adminUid: string;
+  state: AdminPresenceState;
+  lastHeartbeatAt: string;
+  currentConversationId: string | null;
+  lastAssignedAt: string | null;
 }

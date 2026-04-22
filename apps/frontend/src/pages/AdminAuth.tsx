@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { authAdmin } from '@/lib/firebase';
+import { authAdmin, signOutOtherProjects } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
 
 // ── palette ────────────────────────────────────────────────────
@@ -110,12 +110,11 @@ export default function AdminAuth() {
     return () => clearInterval(t);
   }, []);
 
-  // redirect if already authenticated
+  // Redirect only if already logged in as the SAME role (admin).
+  // A different-role session does NOT redirect; the user can sign in to switch.
   useEffect(() => {
-    if (userProfile && !loading && !error) {
-      if (userProfile.role === 'admin')           navigate('/admin',      { replace: true });
-      else if (userProfile.role === 'restaurant') navigate('/restaurant', { replace: true });
-      else                                        navigate('/discover',   { replace: true });
+    if (userProfile?.role === 'admin' && !loading && !error) {
+      navigate('/admin', { replace: true });
     }
   }, [userProfile, navigate, loading, error]);
 
@@ -125,6 +124,9 @@ export default function AdminAuth() {
     setMsg('');
     setLoading(true);
     try {
+      // Purge any other-role Firebase sessions first so the incoming principal
+      // is unambiguous and `useAuthInit` never holds two live roles at once.
+      await signOutOtherProjects('admin');
       await signInWithEmailAndPassword(authAdmin, email, password);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';

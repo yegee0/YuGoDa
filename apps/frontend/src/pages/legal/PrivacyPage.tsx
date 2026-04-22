@@ -1,61 +1,52 @@
 import React from 'react';
+import { Info, Database, Cpu, Share2, UserCheck, Shield, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Card } from '@/components/shared';
 import LegalLayout from './LegalLayout';
 
+interface Section {
+  icon: React.ReactNode;
+  titleKey: string;
+  bodyKey: string;
+}
+
+const SECTIONS: Section[] = [
+  { icon: <Database  className="w-5 h-5" />, titleKey: 'legal_privacy_collect_title',  bodyKey: 'legal_privacy_collect_body' },
+  { icon: <Cpu       className="w-5 h-5" />, titleKey: 'legal_privacy_use_title',      bodyKey: 'legal_privacy_use_body' },
+  { icon: <Share2    className="w-5 h-5" />, titleKey: 'legal_privacy_share_title',    bodyKey: 'legal_privacy_share_body' },
+  { icon: <UserCheck className="w-5 h-5" />, titleKey: 'legal_privacy_rights_title',   bodyKey: 'legal_privacy_rights_body' },
+  { icon: <Shield    className="w-5 h-5" />, titleKey: 'legal_privacy_security_title', bodyKey: 'legal_privacy_security_body' },
+  { icon: <Mail      className="w-5 h-5" />, titleKey: 'legal_privacy_contact_title',  bodyKey: 'legal_privacy_contact_body' },
+];
+
 export default function PrivacyPage() {
+  const { t } = useTranslation();
   return (
-    <LegalLayout title="Privacy Policy">
-      <p><em>Last updated: April 2026</em></p>
-
-      <h2>1. Information We Collect</h2>
-      <p>We collect the following types of information when you use YuGoDa:</p>
-      <ul>
-        <li><strong>Account information:</strong> Name, email address, phone number, and password when you create an account.</li>
-        <li><strong>Order information:</strong> Details about your purchases, delivery addresses, and payment methods.</li>
-        <li><strong>Location data:</strong> Your approximate location to show nearby stores and enable delivery services.</li>
-        <li><strong>Usage data:</strong> How you interact with our platform, including pages visited, features used, and search queries.</li>
-      </ul>
-
-      <h2>2. How We Use Your Information</h2>
-      <p>We use the information we collect to:</p>
-      <ul>
-        <li>Process and fulfill your orders</li>
-        <li>Personalize your experience and show relevant food options</li>
-        <li>Communicate with you about orders, promotions, and updates</li>
-        <li>Improve our platform and develop new features</li>
-        <li>Ensure the security and integrity of our services</li>
-      </ul>
-
-      <h2>3. Information Sharing</h2>
-      <p>
-        We share your information only as necessary to provide our services. This includes sharing delivery details
-        with partner stores to fulfill your orders. We do not sell your personal information to third parties.
-      </p>
-
-      <h2>4. Cookies</h2>
-      <p>
-        We use cookies and similar technologies to remember your preferences, keep you signed in, and understand
-        how you use our platform. You can manage cookie settings in your browser.
-      </p>
-
-      <h2>5. Data Security</h2>
-      <p>
-        We implement industry-standard security measures to protect your personal information, including encryption
-        of sensitive data and secure payment processing through our payment partners.
-      </p>
-
-      <h2>6. Your Rights</h2>
-      <p>You have the right to:</p>
-      <ul>
-        <li>Access and download your personal data</li>
-        <li>Correct inaccurate information</li>
-        <li>Request deletion of your account and data</li>
-        <li>Opt out of marketing communications</li>
-      </ul>
-
-      <h2>7. Contact Us</h2>
-      <p>
-        For privacy-related inquiries, contact us at <strong>privacy@yugoda.com</strong>.
-      </p>
+    <LegalLayout title={t('legal_privacy_heading')}>
+      <div className="space-y-4 not-prose">
+        <div className="flex items-start gap-3 px-1 pb-1">
+          <Info className="w-4 h-4 text-[#8FA396] flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-[#8FA396] italic m-0">
+            {t('legal_privacy_last_updated')}: 2026-04
+          </p>
+        </div>
+        <Card>
+          <p className="text-sm text-[#5C6B63] leading-relaxed m-0">{t('legal_privacy_intro')}</p>
+        </Card>
+        {SECTIONS.map(({ icon, titleKey, bodyKey }) => (
+          <div key={titleKey}>
+            <Card>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-[#1B5E52]/10 text-[#1B5E52] flex items-center justify-center flex-shrink-0">
+                  {icon}
+                </div>
+                <h2 className="text-lg font-black text-[#1B1B1B] m-0">{t(titleKey)}</h2>
+              </div>
+              <p className="text-sm text-[#5C6B63] leading-relaxed m-0">{t(bodyKey)}</p>
+            </Card>
+          </div>
+        ))}
+      </div>
     </LegalLayout>
   );
 }

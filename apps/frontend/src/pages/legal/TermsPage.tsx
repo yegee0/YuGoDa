@@ -1,69 +1,52 @@
 import React from 'react';
+import { Info, UserCog, ShoppingCart, Store, ShieldAlert, RefreshCw, Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Card } from '@/components/shared';
 import LegalLayout from './LegalLayout';
 
+interface Section {
+  icon: React.ReactNode;
+  titleKey: string;
+  bodyKey: string;
+}
+
+const SECTIONS: Section[] = [
+  { icon: <UserCog      className="w-5 h-5" />, titleKey: 'legal_terms_account_title',   bodyKey: 'legal_terms_account_body' },
+  { icon: <ShoppingCart className="w-5 h-5" />, titleKey: 'legal_terms_orders_title',    bodyKey: 'legal_terms_orders_body' },
+  { icon: <Store        className="w-5 h-5" />, titleKey: 'legal_terms_partner_title',   bodyKey: 'legal_terms_partner_body' },
+  { icon: <ShieldAlert  className="w-5 h-5" />, titleKey: 'legal_terms_liability_title', bodyKey: 'legal_terms_liability_body' },
+  { icon: <RefreshCw    className="w-5 h-5" />, titleKey: 'legal_terms_changes_title',   bodyKey: 'legal_terms_changes_body' },
+  { icon: <Mail         className="w-5 h-5" />, titleKey: 'legal_terms_contact_title',   bodyKey: 'legal_terms_contact_body' },
+];
+
 export default function TermsPage() {
+  const { t } = useTranslation();
   return (
-    <LegalLayout title="Terms of Service">
-      <p><em>Last updated: April 2026</em></p>
-
-      <h2>1. Acceptance of Terms</h2>
-      <p>
-        By accessing or using YuGoDa, you agree to be bound by these Terms of Service. If you do not agree to
-        these terms, please do not use our platform.
-      </p>
-
-      <h2>2. Account Registration</h2>
-      <p>
-        To use certain features, you must create an account with accurate and complete information.
-        You are responsible for maintaining the confidentiality of your account credentials and for all
-        activities that occur under your account.
-      </p>
-
-      <h2>3. Orders and Payments</h2>
-      <ul>
-        <li>All orders are subject to availability and store confirmation.</li>
-        <li>Prices are displayed in Turkish Lira (TL) and include applicable taxes.</li>
-        <li>Payment is processed securely through our payment infrastructure.</li>
-        <li>Surprise bags contain a random selection of items and the exact contents cannot be guaranteed.</li>
-      </ul>
-
-      <h2>4. Cancellations and Refunds</h2>
-      <p>
-        Orders may be cancelled before the store confirms them. Once confirmed, cancellations are subject to
-        the store's policy. If there is an issue with your order, contact our support team within 2 hours of pickup.
-      </p>
-
-      <h2>5. User Conduct</h2>
-      <p>You agree not to:</p>
-      <ul>
-        <li>Use the platform for any unlawful purpose</li>
-        <li>Interfere with or disrupt the platform's operation</li>
-        <li>Create multiple accounts to abuse promotions</li>
-        <li>Submit false reviews or misleading information</li>
-      </ul>
-
-      <h2>6. Partner Store Terms</h2>
-      <p>
-        Partner stores are independent businesses responsible for the quality and safety of the food they sell
-        through YuGoDa. YuGoDa facilitates the marketplace but does not prepare or package the food.
-      </p>
-
-      <h2>7. Limitation of Liability</h2>
-      <p>
-        YuGoDa provides the platform "as is" and is not liable for any indirect, incidental, or consequential
-        damages arising from the use of our services.
-      </p>
-
-      <h2>8. Changes to Terms</h2>
-      <p>
-        We may update these terms from time to time. Continued use of the platform after changes constitutes
-        acceptance of the updated terms.
-      </p>
-
-      <h2>9. Contact</h2>
-      <p>
-        For questions about these terms, contact us at <strong>legal@yugoda.com</strong>.
-      </p>
+    <LegalLayout title={t('legal_terms_heading')}>
+      <div className="space-y-4 not-prose">
+        <div className="flex items-start gap-3 px-1 pb-1">
+          <Info className="w-4 h-4 text-[#8FA396] flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-[#8FA396] italic m-0">
+            {t('legal_terms_last_updated')}: 2026-04
+          </p>
+        </div>
+        <Card>
+          <p className="text-sm text-[#5C6B63] leading-relaxed m-0">{t('legal_terms_intro')}</p>
+        </Card>
+        {SECTIONS.map(({ icon, titleKey, bodyKey }) => (
+          <div key={titleKey}>
+            <Card>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-[#1B5E52]/10 text-[#1B5E52] flex items-center justify-center flex-shrink-0">
+                  {icon}
+                </div>
+                <h2 className="text-lg font-black text-[#1B1B1B] m-0">{t(titleKey)}</h2>
+              </div>
+              <p className="text-sm text-[#5C6B63] leading-relaxed m-0">{t(bodyKey)}</p>
+            </Card>
+          </div>
+        ))}
+      </div>
     </LegalLayout>
   );
 }

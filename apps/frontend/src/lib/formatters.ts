@@ -9,3 +9,11 @@ export function formatDate(date: string | Date): string {
     day: 'numeric',
   });
 }
+
+// ── Time (HH:MM) ──────────────────────────────────────────────
+export function formatTime(date: string | Date): string {
+  return new Date(date).toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

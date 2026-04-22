@@ -53,11 +53,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
             UserPrincipal principal = verifyToken(token);
             if (principal != null) {
+                if ("banned".equals(principal.getAccountStatus())) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"success\":false,\"message\":\"Account banned.\"}");
+                    return;
+                }
+                if ("suspended".equals(principal.getAccountStatus()) && isMutatingMethod(request.getMethod())) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"success\":false,\"message\":\"Account suspended; read-only access.\"}");
+                    return;
+                }
                 request.setAttribute(USER_ATTR, principal);
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isMutatingMethod(String method) {
+        return "POST".equalsIgnoreCase(method)
+                || "PUT".equalsIgnoreCase(method)
+                || "PATCH".equalsIgnoreCase(method)
+                || "DELETE".equalsIgnoreCase(method);
     }
 
     private UserPrincipal verifyToken(String token) {
@@ -71,7 +92,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String role = dbUser != null ? dbUser.getRole() : "customer";
                 String displayName = dbUser != null ? dbUser.getDisplayName() : decoded.getName();
                 String resolvedEmail = email != null ? email : (dbUser != null ? dbUser.getEmail() : null);
-                return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null);
+                String accountStatus = dbUser != null && dbUser.getAccountStatus() != null
+                        ? dbUser.getAccountStatus() : "active";
+                return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null, accountStatus);
             } catch (Exception e) {
                 log.debug("[Auth] Firebase Admin verification failed, trying JWT decode: {}", e.getMessage());
             }
@@ -109,8 +132,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String role = dbUser != null ? dbUser.getRole() : "customer";
             String displayName = dbUser != null ? dbUser.getDisplayName() : null;
             String resolvedEmail = email != null ? email : (dbUser != null ? dbUser.getEmail() : null);
+            String accountStatus = dbUser != null && dbUser.getAccountStatus() != null
+                    ? dbUser.getAccountStatus() : "active";
 
-            return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null);
+            return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null, accountStatus);
         } catch (Exception e) {
             return null;
         }

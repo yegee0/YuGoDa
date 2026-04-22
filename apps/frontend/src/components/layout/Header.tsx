@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Languages, Bell, LogOut, User as UserIcon, Heart, Menu } from 'lucide-react';
 import { useStore } from '@/app/store/useStore';
-import { authCustomer, authPartner, authAdmin } from '@/lib/firebase';
+import { signOutAllProjects } from '@/lib/firebase';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { formatTime } from '@/lib/formatters';
+import { COLORS } from '@/lib/constants';
+import type { Notification } from '@/types';
 
 // ── colour tokens used only in this file ──────────────────────────
 const H = {
@@ -25,7 +29,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuOpen }: HeaderProps) {
   const { t, i18n } = useTranslation();
-  const { user, userProfile, setUserProfile, setUser, notifications } = useStore();
+  const { user, userProfile, setUserProfile, setUser, notifications, setNotifications } = useStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -48,7 +52,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => {
-    await Promise.all([authCustomer.signOut(), authPartner.signOut(), authAdmin.signOut()]);
+    await signOutAllProjects();
     setUser(null);
     setUserProfile(null);
     setShowProfileMenu(false);
@@ -56,6 +60,28 @@ export default function Header({ onMenuOpen }: HeaderProps) {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotificationClick = async (n: Notification) => {
+    setShowNotifications(false);
+    if (!n.read) {
+      setNotifications(notifications.map(x => x.id === n.id ? { ...x, read: true } : x));
+      api.put(`/notifications/${n.id}/read`, {}).catch(() => {
+        // Revert optimistic update if the server rejects.
+        setNotifications(notifications);
+      });
+    }
+    navigate(n.orderId ? `/orders#${n.orderId}` : '/orders');
+  };
+
+  const handleMarkAllRead = async () => {
+    const prev = notifications;
+    setNotifications(prev.map(n => ({ ...n, read: true })));
+    try {
+      await api.put('/notifications/mark-all-read', {});
+    } catch {
+      setNotifications(prev);
+    }
+  };
 
   // ── icon button helper ─────────────────────────────────────────
   const IconBtn = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
@@ -141,7 +167,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
           <IconBtn onClick={() => setShowNotifications(!showNotifications)} className="relative">
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#ad3115] rounded-full border-2" style={{ borderColor: H.bg }} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-eco-secondary rounded-full border-2" style={{ borderColor: H.bg }} />
             )}
           </IconBtn>
 
@@ -159,32 +185,46 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                   className="p-4 flex justify-between items-center"
                   style={{ borderBottom: `1px solid ${H.dropBorder}` }}
                 >
-                  <span className="font-black text-sm" style={{ color: '#1B1B1B' }}>Notifications</span>
-                  <button className="text-xs font-bold" style={{ color: '#1b5e52' }}>Mark all read</button>
+                  <span className="font-black text-sm" style={{ color: '#1B1B1B' }}>{t('Notifications')}</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs font-bold hover:underline"
+                      style={{ color: '#1b5e52' }}
+                    >
+                      {t('notif_mark_all_read')}
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-sm font-medium" style={{ color: H.muted }}>
-                      No notifications yet
+                    <div className="p-8 text-center text-sm font-medium" style={{ color: '#8FA396' }}>
+                      {t('No notifications yet')}
                     </div>
                   ) : (
                     notifications.map(n => (
-                      <div
+                      <button
                         key={n.id}
-                        className="p-4 transition-colors"
+                        type="button"
+                        onClick={() => handleNotificationClick(n)}
+                        className="w-full text-left p-4 transition-colors block"
                         style={{
                           borderBottom: `1px solid ${H.dropBorder}`,
                           backgroundColor: !n.read ? 'rgba(27,94,82,0.1)' : 'transparent',
                         }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = !n.read ? 'rgba(27,94,82,0.1)' : 'transparent'; }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = !n.read ? 'rgba(27,94,82,0.1)' : 'transparent'; }}
                       >
-                        <p className="text-sm font-black" style={{ color: '#1B1B1B' }}>{n.title}</p>
-                        <p className="text-xs mt-1" style={{ color: '#5C6B63' }}>{n.message}</p>
-                        <p className="text-[10px] mt-1.5" style={{ color: '#8FA396' }}>
-                          {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleTimeString() : 'Just now'}
+                        <p className="text-sm font-black" style={{ color: '#1B1B1B' }}>
+                          {n.titleKey ? t(n.titleKey) : n.title}
                         </p>
-                      </div>
+                        <p className="text-xs mt-1" style={{ color: '#5C6B63' }}>
+                          {n.messageKey ? t(n.messageKey) : n.message}
+                        </p>
+                        <p className="text-[10px] mt-1.5" style={{ color: '#8FA396' }}>
+                          {n.createdAt ? formatTime(n.createdAt) : t('Just now')}
+                        </p>
+                      </button>
                     ))
                   )}
                 </div>
@@ -203,7 +243,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
           >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0"
-              style={{ backgroundColor: '#ad3115', color: '#fff', boxShadow: '0 2px 8px rgba(173,49,21,0.4)' }}
+              style={{ backgroundColor: COLORS.accentWarm, color: '#fff', boxShadow: '0 2px 8px rgba(173,49,21,0.4)' }}
             >
               {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0).toUpperCase() || 'A'}
             </div>

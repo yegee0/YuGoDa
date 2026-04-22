@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-eco-primary: #1B5E52;
-  --color-eco-secondary: #ad3115;
+  --color-eco-primary: #1B5E52;     /* == COLORS.forest      in src/lib/constants.ts */
+  --color-eco-secondary: #ad3115;   /* == COLORS.accentWarm  in src/lib/constants.ts */
   --color-eco-lime: #748f2b;
   --color-eco-bg: var(--bg-color);
   --color-eco-surface: var(--surface-color);
@@ -103,11 +103,11 @@ body {
 }
 
 .eco-button-coral {
-  @apply bg-[#ad3115] text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] hover:shadow-lg flex items-center justify-center gap-2;
+  @apply bg-eco-secondary text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] hover:shadow-lg flex items-center justify-center gap-2;
 }
 
 .eco-button-secondary {
-  @apply bg-[#ad3115] text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] flex items-center justify-center gap-2;
+  @apply bg-eco-secondary text-white rounded-full px-6 py-3 font-bold transition-all active:scale-95 hover:bg-[#d45c41] flex items-center justify-center gap-2;
 }
 
 .eco-button-outline {

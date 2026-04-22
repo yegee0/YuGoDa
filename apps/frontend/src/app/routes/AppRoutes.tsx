@@ -7,6 +7,8 @@ import LandingPage from '@/pages/LandingPage';
 import Auth from '@/pages/CustomerAuth';
 import RestaurantAuth from '@/pages/RestaurantAuth';
 import AdminAuth from '@/pages/AdminAuth';
+import AdminNotProvisioned from '@/pages/AdminNotProvisioned';
+import BannedScreen from '@/pages/BannedScreen';
 import CustomerApp from '@/pages/CustomerApp';
 import StorePage from '@/pages/StorePage';
 import CheckoutPage from '@/pages/CheckoutPage';
@@ -42,6 +44,8 @@ export default function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/business-auth" element={<RestaurantAuth />} />
       <Route path="/admin-auth" element={<AdminAuth />} />
+      <Route path="/admin/not-provisioned" element={<AdminNotProvisioned />} />
+      <Route path="/banned" element={<BannedScreen />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />

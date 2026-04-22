@@ -50,6 +50,38 @@ export const authPartner = getAuth(partnerApp);
 export const authAdmin = getAuth(adminApp);
 
 /**
+ * Role-to-Firebase-auth map. The three Firebase projects are the authoritative
+ * session stores for each role; the helpers below derive from this single map.
+ */
+const AUTH_BY_ROLE = {
+  customer:   authCustomer,
+  restaurant: authPartner,
+  admin:      authAdmin,
+} as const;
+
+export type AuthRole = keyof typeof AUTH_BY_ROLE;
+
+/**
+ * Signs the user out of ALL three Firebase project sessions in parallel.
+ * Used by the shared header logout control.
+ */
+export async function signOutAllProjects(): Promise<void> {
+  await Promise.all(Object.values(AUTH_BY_ROLE).map(a => a.signOut()));
+}
+
+/**
+ * Signs the user out of every Firebase project OTHER than `target`.
+ * Called at the start of each sign-in flow so the incoming role is the only
+ * live principal after authentication completes. Errors propagate — callers
+ * should `await` this and abort the sign-in if it throws, per the plan's
+ * "no cross-role token window" requirement.
+ */
+export async function signOutOtherProjects(target: AuthRole): Promise<void> {
+  const others = (Object.keys(AUTH_BY_ROLE) as AuthRole[]).filter(r => r !== target);
+  await Promise.all(others.map(r => AUTH_BY_ROLE[r].signOut()));
+}
+
+/**
  * Requests an FCM push token for the current customer session.
  * Returns null if the VAPID key is not configured or push permission is denied.
  *

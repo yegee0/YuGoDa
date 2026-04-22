@@ -4,6 +4,7 @@ import {
   Package, Star, ShoppingBag, DollarSign, ArrowUpRight,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
@@ -31,6 +32,7 @@ export default function DashboardTab({
   avgRating,
   commissionRate,
 }: DashboardTabProps) {
+  const { t } = useTranslation();
   const { isDarkMode } = useStore();
   const navigate = useNavigate();
 
@@ -46,10 +48,10 @@ export default function DashboardTab({
     <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Today's Net Revenue" value={TL(todaySales)}    icon={<DollarSign className="w-5 h-5" />}  color="bg-emerald-50 text-emerald-600" sub={`After ${commissionRate ?? 15}% commission`} />
-        <StatCard label="Active Orders"     value={activeOrders}       icon={<Package className="w-5 h-5" />}     color="bg-blue-50 text-blue-600"           sub="Pending + preparing" />
-        <StatCard label="Total Orders"      value={orders.length}      icon={<ShoppingBag className="w-5 h-5" />} color="bg-purple-50 text-purple-600"     sub="All time" />
-        <StatCard label="Avg Rating"        value={avgRating}          icon={<Star className="w-5 h-5" />}        color="bg-amber-50 text-amber-500"         sub={`${reviews.length} reviews`} />
+        <StatCard label={t('rest_dashboard_net_revenue')} value={TL(todaySales)}    icon={<DollarSign className="w-5 h-5" />}  color="bg-emerald-50 text-emerald-600" sub={t('rest_dashboard_net_revenue_sub', { rate: commissionRate ?? 15 })} />
+        <StatCard label={t('rest_dashboard_active_orders')} value={activeOrders}    icon={<Package className="w-5 h-5" />}     color="bg-blue-50 text-blue-600"           sub={t('rest_dashboard_active_orders_sub')} />
+        <StatCard label={t('rest_dashboard_total_orders')}  value={orders.length}   icon={<ShoppingBag className="w-5 h-5" />} color="bg-purple-50 text-purple-600"     sub={t('rest_dashboard_total_orders_sub')} />
+        <StatCard label={t('rest_dashboard_avg_rating')}    value={avgRating}       icon={<Star className="w-5 h-5" />}        color="bg-amber-50 text-amber-500"         sub={t('rest_dashboard_avg_rating_sub', { count: reviews.length })} />
       </div>
 
       {/* Charts */}
@@ -57,11 +59,11 @@ export default function DashboardTab({
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-bold text-[#1B1B1B] text-sm">Weekly Revenue</h3>
-              <p className="text-xs text-[#8FA396] mt-0.5">Daily revenue this week</p>
+              <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_dashboard_weekly_revenue')}</h3>
+              <p className="text-xs text-[#8FA396] mt-0.5">{t('rest_dashboard_weekly_revenue_sub')}</p>
             </div>
             <div className="flex items-center gap-1 text-xs font-bold text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-full">
-              <ArrowUpRight className="w-3 h-3" /> Live
+              <ArrowUpRight className="w-3 h-3" /> {t('rest_dashboard_live')}
             </div>
           </div>
           <div className="h-48">
@@ -85,8 +87,8 @@ export default function DashboardTab({
 
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
           <div className="mb-5">
-            <h3 className="font-bold text-[#1B1B1B] text-sm">Order Volume</h3>
-            <p className="text-xs text-[#8FA396] mt-0.5">Daily orders this week</p>
+            <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_dashboard_order_volume')}</h3>
+            <p className="text-xs text-[#8FA396] mt-0.5">{t('rest_dashboard_order_volume_sub')}</p>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -105,15 +107,15 @@ export default function DashboardTab({
       {/* Recent Orders */}
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E8E0D5] flex items-center justify-between">
-          <h3 className="font-bold text-[#1B1B1B] text-sm">Recent Orders</h3>
+          <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_dashboard_recent_orders')}</h3>
           <button onClick={() => navigate('/restaurant/orders')} className="text-xs font-bold text-[#1B5E52] hover:underline flex items-center gap-1">
-            View all <ArrowUpRight className="w-3 h-3" />
+            {t('rest_dashboard_view_all')} <ArrowUpRight className="w-3 h-3" />
           </button>
         </div>
         {orders.length === 0 ? (
           <div className="py-12 text-center">
             <Package className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-[#8FA396] font-bold">No orders yet</p>
+            <p className="text-sm text-[#8FA396] font-bold">{t('rest_dashboard_no_orders')}</p>
           </div>
         ) : (
           <div className="divide-y divide-[#E8E0D5]">

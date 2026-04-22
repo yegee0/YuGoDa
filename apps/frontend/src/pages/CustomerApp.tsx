@@ -83,17 +83,17 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
         <div className="absolute top-3 right-3 flex flex-col gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); toggleFavorite(bag.id); }}
-            className={`p-2 rounded-full backdrop-blur-md transition-all ${isFavorite ? 'bg-[#ad3115] text-white' : 'bg-white/90 text-[#8FA396] hover:bg-white'}`}
+            className={`p-2 rounded-full backdrop-blur-md transition-all ${isFavorite ? 'bg-eco-secondary text-white' : 'bg-white/90 text-[#8FA396] hover:bg-white'}`}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
           </button>
           <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-black text-[#1B5E52] flex items-center gap-1 shadow-sm">
-            <Star className="w-3 h-3 fill-current text-[#ad3115]" /> {bag.rating || 4.5}
+            <Star className="w-3 h-3 fill-current text-eco-secondary" /> {bag.rating || 4.5}
           </div>
         </div>
 
         {bag.isLastChance && (
-          <div className="absolute bottom-3 left-3 bg-[#ad3115] text-white px-3 py-1 rounded-full text-xs font-black flex items-center gap-1 animate-pulse shadow-lg">
+          <div className="absolute bottom-3 left-3 bg-eco-secondary text-white px-3 py-1 rounded-full text-xs font-black flex items-center gap-1 animate-pulse shadow-lg">
             <Clock className="w-3 h-3" /> {countdown}
           </div>
         )}
@@ -136,7 +136,7 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
 
         <div className="mt-auto pt-3 border-t border-[#E8E0D5] flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#8FA396]">
-            <Clock className="w-3.5 h-3.5 text-[#ad3115]" />
+            <Clock className="w-3.5 h-3.5 text-eco-secondary" />
             <span>{t('Pickup')}: {bag.pickupTime}</span>
           </div>
           <button
@@ -322,17 +322,17 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#1b5e52' }}>
       {/* Top Header / Filter Bar */}
       <div className={`border-b px-4 md:px-8 py-3 md:py-4 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 ${activeTab === 'browse' ? 'hidden' : ''}`} style={{ backgroundColor: '#1b5e52', borderColor: 'rgba(0,0,0,0.12)' }}>
-        <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 max-w-2xl">
+        <div className="flex items-center gap-2 md:gap-3 w-full md:flex-1 md:w-auto min-w-0 md:max-w-2xl">
           {/* Search with Autocomplete */}
-          <div className="relative flex-1" ref={searchRef}>
+          <div className="relative flex-1 min-w-0" ref={searchRef}>
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8FA396]" />
             <input
               type="text"
-              placeholder={t('Search for restaurants, meals, or categories...')}
+              placeholder={t('Search for food...')}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); }}
               onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
-              className="w-full bg-[#F5F0E8] border border-[#E8E0D5] rounded-full py-2 md:py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:border-[#1B5E52] focus:ring-2 focus:ring-[#1B5E52]/10 transition-all text-[#1B1B1B] font-medium placeholder:text-[#B0BDB7]"
+              className="w-full bg-[#F5F0E8] border border-[#E8E0D5] rounded-full py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:border-[#1B5E52] focus:ring-2 focus:ring-[#1B5E52]/10 transition-all text-[#1B1B1B] font-medium placeholder:text-[#B0BDB7]"
             />
             {searchQuery && (
               <button onClick={() => { setSearchQuery(''); setShowSuggestions(false); }} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#B0BDB7] hover:text-[#8FA396]">
@@ -355,8 +355,8 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F5F0E8] transition-colors text-left"
                       onClick={() => { setSearchQuery(s.label); setShowSuggestions(false); }}
                     >
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1B5E52]/10' : 'bg-[#ad3115]/10'}`}>
-                        {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1B5E52]" /> : <Search className="w-4 h-4 text-[#ad3115]" />}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1B5E52]/10' : 'bg-eco-secondary/10'}`}>
+                        {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1B5E52]" /> : <Search className="w-4 h-4 text-eco-secondary" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-[#1B1B1B] truncate">{s.label}</p>
@@ -371,12 +371,13 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
           </div>
           <button
             onClick={() => setIsFilterOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 md:py-2.5 rounded-full text-sm font-bold text-white transition-all shrink-0 border border-white/30 hover:bg-white/15"
+            aria-label={t('Filters')}
+            className="flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-full text-sm font-bold text-white transition-all shrink-0 border border-white/30 hover:bg-white/15"
           >
             <Filter className="w-4 h-4" />
-            {t('Filters')}
+            <span className="hidden md:inline">{t('Filters')}</span>
             {(filters.dietary.length > 0 || filters.merchantType.length > 0) && (
-              <span className="w-2 h-2 bg-[#ad3115] rounded-full" />
+              <span className="w-2 h-2 bg-eco-secondary rounded-full" />
             )}
           </button>
         </div>
@@ -389,7 +390,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
             <button onClick={() => setActiveTab('browse')} className={`p-2 rounded-full transition-all ${activeTab === 'browse' ? 'bg-white text-[#1b5e52] shadow-sm' : 'text-white/70'}`}>
               <MapIcon className="w-4 h-4" />
             </button>
-            <button onClick={() => setActiveTab('favorites')} className={`p-2 rounded-full transition-all ${activeTab === 'favorites' ? 'bg-white text-[#ad3115] shadow-sm' : 'text-white/70'}`}>
+            <button onClick={() => setActiveTab('favorites')} className={`p-2 rounded-full transition-all ${activeTab === 'favorites' ? 'bg-white text-eco-secondary shadow-sm' : 'text-white/70'}`}>
               <Heart className="w-4 h-4" />
             </button>
           </div>
@@ -400,7 +401,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
           >
             <ShoppingBag className="w-5 h-5" />
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#ad3115] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-eco-secondary text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
                 {cart.reduce((acc, i) => acc + i.quantity, 0)}
               </span>
             )}
@@ -423,7 +424,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
               </span>
             ))}
             {filters.merchantType.map(m => (
-              <span key={m} className="flex items-center gap-1 px-3 py-1 bg-[#ad3115]/10 text-[#ad3115] text-xs font-black rounded-full">
+              <span key={m} className="flex items-center gap-1 px-3 py-1 bg-eco-secondary/10 text-eco-secondary text-xs font-black rounded-full">
                 {m} <X className="w-3 h-3 cursor-pointer" onClick={() => useStore.getState().setFilters({ merchantType: filters.merchantType.filter(i => i !== m) })} />
               </span>
             ))}
@@ -549,8 +550,8 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                           }
                         }}
                       >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1B5E52]/10' : 'bg-[#ad3115]/10'}`}>
-                          {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1B5E52]" /> : <MapPin className="w-4 h-4 text-[#ad3115]" />}
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.type === 'restaurant' ? 'bg-[#1B5E52]/10' : 'bg-eco-secondary/10'}`}>
+                          {s.type === 'restaurant' ? <Store className="w-4 h-4 text-[#1B5E52]" /> : <MapPin className="w-4 h-4 text-eco-secondary" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-black text-[#1B1B1B] truncate">{s.label}</p>
@@ -753,7 +754,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                         <button
                           key={star}
                           onClick={() => setReviewRating(star)}
-                          className={`p-2 transition-all ${reviewRating >= star ? 'text-[#ad3115]' : 'text-[#C5BDB5]'}`}
+                          className={`p-2 transition-all ${reviewRating >= star ? 'text-eco-secondary' : 'text-[#C5BDB5]'}`}
                         >
                           <Star className={`w-10 h-10 ${reviewRating >= star ? 'fill-current' : ''}`} />
                         </button>

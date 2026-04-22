@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '@/app/store/useStore';
-import { MessageCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
-import type { Transaction, StoreProfile, Dispute, ChartDataPoint } from '@/types';
+import type { AdminUser, Transaction, StoreProfile, Dispute, ChartDataPoint } from '@/types';
 import { DAY_NAMES_SHORT } from '@/lib/constants';
 
 import DashboardTab from './DashboardTab';
@@ -12,17 +12,11 @@ import CustomersTab from './CustomersTab';
 import StoresTab from './StoresTab';
 import TransactionsTab from './TransactionsTab';
 import SupportTab from './SupportTab';
+import LiveChatAdminTab from './LiveChatAdminTab';
 import SettingsTab from './SettingsTab';
 
-interface AdminUser {
-  uid: string;
-  email: string;
-  displayName: string;
-  role: string;
-  createdAt?: string;
-}
-
 export default function AdminPanel() {
+  const { t } = useTranslation();
   const location = useLocation();
   const activeTab = location.pathname.split('/')[2] || 'dashboard';
   const { isDarkMode } = useStore();
@@ -83,17 +77,18 @@ export default function AdminPanel() {
     }
   };
 
-  const pageTitles: Record<string, { title: string; subtitle: string }> = {
-    'dashboard': { title: 'Admin Dashboard', subtitle: 'Platform overview and key metrics.' },
-    'customers': { title: 'Customers', subtitle: 'Manage registered users and roles.' },
-    'stores': { title: 'Partner Stores', subtitle: 'Approve or manage business partners.' },
-    'transactions': { title: 'Transactions', subtitle: 'Global financial tracking and revenue.' },
-    'support': { title: 'Support Queue', subtitle: 'Handle incoming support requests.' },
-    'live-chat': { title: 'Live Chat', subtitle: 'Manage real-time customer communications.' },
-    'settings': { title: 'Platform Settings', subtitle: 'Configure globals like platform fees.' },
+  const PAGE_KEYS: Record<string, { titleKey: string; subtitleKey: string }> = {
+    'dashboard':    { titleKey: 'admin_page_dashboard_title',    subtitleKey: 'admin_page_dashboard_subtitle' },
+    'customers':    { titleKey: 'admin_page_customers_title',    subtitleKey: 'admin_page_customers_subtitle' },
+    'stores':       { titleKey: 'admin_page_stores_title',       subtitleKey: 'admin_page_stores_subtitle' },
+    'transactions': { titleKey: 'admin_page_transactions_title', subtitleKey: 'admin_page_transactions_subtitle' },
+    'support':      { titleKey: 'admin_page_support_title',      subtitleKey: 'admin_page_support_subtitle' },
+    'live-chat':    { titleKey: 'admin_page_live_chat_title',    subtitleKey: 'admin_page_live_chat_subtitle' },
+    'settings':     { titleKey: 'admin_page_settings_title',     subtitleKey: 'admin_page_settings_subtitle' },
   };
 
-  const headerInfo = pageTitles[activeTab] || { title: 'Admin Panel', subtitle: 'Manage your platform.' };
+  const page = PAGE_KEYS[activeTab] || { titleKey: 'admin_page_fallback_title', subtitleKey: 'admin_page_fallback_subtitle' };
+  const headerInfo = { title: t(page.titleKey), subtitle: t(page.subtitleKey) };
 
   const revenueData: ChartDataPoint[] = DAY_NAMES_SHORT.map((day, i) => {
     const dayTxs = transactions.filter(tx => {
@@ -131,7 +126,10 @@ export default function AdminPanel() {
           )}
 
           {activeTab === 'customers' && (
-            <CustomersTab users={users} />
+            <CustomersTab
+              users={users}
+              onUpdateUser={(uid, patch) => setUsers(prev => prev.map(u => u.uid === uid ? { ...u, ...patch } : u))}
+            />
           )}
 
           {activeTab === 'stores' && (
@@ -154,21 +152,7 @@ export default function AdminPanel() {
             />
           )}
 
-          {/* Live Chat - inline placeholder */}
-          {activeTab === 'live-chat' && (
-            <motion.div key="live-chat" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-[600px] flex flex-col space-y-4">
-              <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm flex-1 flex flex-col">
-                <h3 className="font-bold text-[#1B1B1B] mb-1">Live Chat Dashboard</h3>
-                <p className="text-sm text-[#8FA396] mb-6">Manage incoming chat requests from customers.</p>
-                <div className="flex-1 rounded-xl bg-[#F5F0E8] flex items-center justify-center border border-[#E8E0D5] border-dashed">
-                     <div className="text-center">
-                         <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                         <p className="font-bold text-[#8FA396]">No active chats in queue</p>
-                     </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          {activeTab === 'live-chat' && <LiveChatAdminTab />}
 
           {activeTab === 'settings' && (
             <SettingsTab
