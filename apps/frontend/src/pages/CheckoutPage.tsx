@@ -206,15 +206,22 @@ export default function CheckoutPage() {
                     <button
                       key={id}
                       onClick={() => setDeliveryOption(id as 'delivery' | 'takeaway')}
-                      className={`p-5 rounded-2xl border-2 text-left transition-all ${
+                      className={`relative p-5 rounded-2xl border-2 text-left transition-all ${
                         deliveryOption === id
-                          ? 'border-[#1B5E52] bg-[#1B5E52]/5'
-                          : 'border-[#E8E0D5] bg-white'
+                          ? 'border-[#1B5E52] bg-[#ffffff]'
+                          : 'border-[#748f2b] bg-[#748f2b]'
                       }`}
                     >
-                      <Icon className={`w-6 h-6 mb-3 ${deliveryOption === id ? 'text-[#1B5E52]' : 'text-[#8FA396]'}`} />
-                      <p className="font-bold text-[#1B1B1B]">{label}</p>
-                      <p className={`text-xs mt-0.5 font-medium ${deliveryOption === id ? 'text-[#1B5E52]' : 'text-[#8FA396]'}`}>{sub}</p>
+                      <div className={`absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        deliveryOption === id
+                          ? 'border-[#1B5E52] bg-[#1B5E52]'
+                          : 'border-white/50 bg-transparent'
+                      }`}>
+                        {deliveryOption === id && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <Icon className={`w-6 h-6 mb-3 ${deliveryOption === id ? 'text-[#1B5E52]' : 'text-white'}`} />
+                      <p className={`font-bold ${deliveryOption === id ? 'text-[#1B1B1B]' : 'text-white'}`}>{label}</p>
+                      <p className={`text-xs mt-0.5 font-medium ${deliveryOption === id ? 'text-[#8FA396]' : 'text-white/70'}`}>{sub}</p>
                     </button>
                   ))}
                 </div>
@@ -227,8 +234,8 @@ export default function CheckoutPage() {
                       onClick={() => setTip(amount)}
                       className={`py-3 rounded-xl font-bold text-sm transition-all border-2 ${
                         tip === amount
-                          ? 'bg-[#1B5E52] border-[#1B5E52] text-white'
-                          : 'bg-white border-[#E8E0D5] text-gray-700'
+                          ? 'bg-[#ffffff] border-[#1B5E52] text-[#1B1B1B]'
+                          : 'bg-[#748f2b] border-[#748f2b] text-white'
                       }`}
                     >
                       {amount === 0 ? t('None') : `₺${amount}`}
@@ -253,24 +260,26 @@ export default function CheckoutPage() {
                       onClick={() => setPaymentMethod(id as 'card' | 'cash' | 'wallet')}
                       className={`w-full p-4 rounded-2xl border-2 flex items-center gap-4 transition-all ${
                         paymentMethod === id
-                          ? 'border-[#1B5E52] bg-[#1B5E52]/5'
-                          : 'border-[#E8E0D5] bg-white'
+                          ? 'border-[#1B5E52] bg-[#ffffff]'
+                          : 'border-[#748f2b] bg-[#748f2b]'
                       }`}
                     >
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        paymentMethod === id ? 'bg-[#1B5E52] text-white' : 'bg-[#F5F0E8] text-[#8FA396]'
+                        paymentMethod === id ? 'bg-[#1B5E52] text-white' : 'bg-[#5a7a1a] text-white'
                       }`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="text-left flex-1">
-                        <p className="font-bold text-[#1B1B1B] text-sm">{label}</p>
-                        <p className="text-xs text-[#8FA396] mt-0.5">{sub}</p>
+                        <p className={`font-bold text-sm ${paymentMethod === id ? 'text-[#1B1B1B]' : 'text-white'}`}>{label}</p>
+                        <p className={`text-xs mt-0.5 ${paymentMethod === id ? 'text-[#8FA396]' : 'text-white/70'}`}>{sub}</p>
                       </div>
-                      {paymentMethod === id && (
-                        <div className="w-5 h-5 rounded-full bg-[#1B5E52] flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-white" />
-                        </div>
-                      )}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        paymentMethod === id
+                          ? 'border-[#1B5E52] bg-[#1B5E52]'
+                          : 'border-white/50 bg-transparent'
+                      }`}>
+                        {paymentMethod === id && <Check className="w-3 h-3 text-white" />}
+                      </div>
                     </button>
                   ))}
                 </div>

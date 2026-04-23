@@ -4,8 +4,10 @@ import { Sidebar, SidebarItem, SidebarSection } from '@/components/layout/Sideba
 import Header from '@/components/layout/Header';
 import { Store, BarChart3, Package, Truck, Star, UserCircle, Headset } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 export default function RestaurantLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const currentView = location.pathname.split('/')[2] || 'dashboard';
@@ -17,60 +19,60 @@ export default function RestaurantLayout() {
   };
 
   return (
-    <div className="min-h-screen app-leaf-bg flex font-sans transition-colors duration-300">
+    <div className="h-screen overflow-hidden app-leaf-bg flex font-sans transition-colors duration-300">
       <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)}>
         {(isSidebarCollapsed) => (
           <>
-            <SidebarSection label="Overview" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_overview')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<BarChart3 className="w-5 h-5 shrink-0" />}
-              label="Dashboard"
+              label={t('nav_dashboard')}
               active={currentView === 'dashboard'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/dashboard')}
             />
 
-            <SidebarSection label="Operations" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_operations')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<Package className="w-5 h-5 shrink-0" />}
-              label="Orders"
+              label={t('nav_orders')}
               active={currentView === 'orders'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/orders')}
             />
             <SidebarItem
               icon={<Store className="w-5 h-5 shrink-0" />}
-              label="Inventory"
+              label={t('nav_inventory')}
               active={currentView === 'inventory'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/inventory')}
             />
             <SidebarItem
               icon={<Truck className="w-5 h-5 shrink-0" />}
-              label="Drivers"
+              label={t('nav_drivers')}
               active={currentView === 'drivers'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/drivers')}
             />
 
-            <SidebarSection label="Engagement" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_engagement')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<Star className="w-5 h-5 shrink-0" />}
-              label="Reviews"
+              label={t('nav_reviews')}
               active={currentView === 'reviews'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/reviews')}
             />
             <SidebarItem
               icon={<Headset className="w-5 h-5 shrink-0" />}
-              label="Support"
+              label={t('nav_support')}
               active={currentView === 'support'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/support')}
             />
             <SidebarItem
               icon={<UserCircle className="w-5 h-5 shrink-0" />}
-              label="Store Profile"
+              label={t('nav_store_profile')}
               active={currentView === 'profile'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/restaurant/profile')}

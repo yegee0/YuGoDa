@@ -67,8 +67,8 @@ services:
       # always visible to Docker Compose without any .env.local changes.
       # Mac/Linux users: export USERPROFILE=$HOME before running docker compose,
       # then set GCLOUD_SUBPATH=.config/gcloud in their shell as well.
-      #- ${USERPROFILE}/AppData/Roaming/gcloud:/tmp/gcloud:ro # For Windows
-      - ${GCLOUD_CONFIG_DIR:-${HOME}/.config/gcloud}:/tmp/gcloud:ro # For Mac
+      - ${USERPROFILE}/AppData/Roaming/gcloud:/tmp/gcloud:ro # For Windows
+     # - ${GCLOUD_CONFIG_DIR:-${HOME}/.config/gcloud}:/tmp/gcloud:ro # For Mac
     depends_on:
       postgres:
         condition: service_healthy

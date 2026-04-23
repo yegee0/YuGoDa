@@ -1,5 +1,6 @@
 package yugoda.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Bag;
 import yugoda.model.Store;
 import yugoda.repository.BagRepository;
@@ -23,6 +24,7 @@ public class BagController extends BaseController {
     private final BagRepository bagRepository;
     private final StoreRepository storeRepository;
     private final EntityEnricher enricher;
+    private final ObjectMapper objectMapper;
 
     // GET /
     @GetMapping
@@ -52,6 +54,11 @@ public class BagController extends BaseController {
             Store store = storeCache.get(rid);
             map.put("storeLogo",       store != null ? store.getLogo()       : null);
             map.put("storeCoverImage", store != null ? store.getCoverImage() : null);
+            List<?> dietaryTags = List.of();
+            if (store != null && store.getDietaryTags() != null) {
+                try { dietaryTags = objectMapper.readValue(store.getDietaryTags(), List.class); } catch (Exception ignored) {}
+            }
+            map.put("dietaryTags", dietaryTags);
             return map;
         }).toList();
         return ResponseEntity.ok(Map.of("success", true, "bags", enriched));

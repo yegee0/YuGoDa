@@ -26,7 +26,12 @@ public class UserController extends BaseController {
         UserPrincipal user = getUser(request);
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
         try {
-            User registered = userService.register(user.getUid(), user.getEmail(), body);
+            // Inject the JWT-derived role as a trusted hint so the service can
+            // allow the full role (admin / restaurant) when the issuer grants it.
+            // Clients cannot forge this: it comes from the verified/decoded JWT.
+            Map<String, Object> enrichedBody = new java.util.HashMap<>(body);
+            enrichedBody.put("_principalRole", user.getRole());
+            User registered = userService.register(user.getUid(), user.getEmail(), enrichedBody);
             return ResponseEntity.status(201).body(Map.of("success", true, "user", registered));
         } catch (Exception e) {
             return serverError("Kayıt sırasında bir hata oluştu.");
@@ -65,13 +70,16 @@ public class UserController extends BaseController {
                                                                @RequestBody Map<String, Object> body) {
         UserPrincipal user = getUser(request);
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
-        String bagId = (String) body.get("bagId");
-        if (bagId == null) return badRequest("bagId gereklidir.");
+        Object rawBagId = body.get("bagId");
+        if (rawBagId == null) return badRequest("bagId gereklidir.");
+        String bagId = rawBagId.toString();
         try {
             List<String> favorites = userService.toggleFavorite(user.getUid(), bagId);
             return ResponseEntity.ok(Map.of("success", true, "favorites", favorites));
         } catch (NoSuchElementException e) {
             return notFound("Kullanıcı bulunamadı.");
+        } catch (Exception e) {
+            return serverError("Favori güncellenemedi.");
         }
     }
 

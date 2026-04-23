@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import {
   User, Mail, Phone, Globe, MapPin, Camera, Save,
   Trash2, CheckCircle2, Wallet, Plus, Home, Briefcase,
@@ -28,8 +29,13 @@ const TAG_LABEL: Record<string, string> = {
 
 export default function ProfileView() {
   const { t, i18n } = useTranslation();
-  const { userProfile, setUserProfile, orders, setOrders } = useStore();
-  const [tab, setTab] = useState<Tab>('profile');
+  const { userProfile, setUserProfile, orders, setOrders, isAuthReady } = useStore();
+  const [searchParams] = useSearchParams();
+  const initialTab = (['profile', 'addresses', 'orders', 'settings'] as Tab[])
+    .includes(searchParams.get('tab') as Tab)
+    ? (searchParams.get('tab') as Tab)
+    : 'profile';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -96,7 +102,7 @@ export default function ProfileView() {
     const updated = userProfile.addresses.filter((_, i) => i !== index);
     setUserProfile({ ...userProfile, addresses: updated });
     try { api.put('/users/me', { addresses: updated }).catch(() => {}); } catch {}
-    toast.success('Address removed');
+    toast.success(t('profile_address_removed'));
   };
 
   const openEditAddress = (index: number) => {
@@ -111,7 +117,7 @@ export default function ProfileView() {
     );
     setUserProfile({ ...userProfile, addresses: updated });
     try { api.put('/users/me', { addresses: updated }).catch(() => {}); } catch {}
-    toast.success('Address updated!');
+    toast.success(t('profile_address_updated'));
     setEditingAddrIndex(null);
     setEditingAddr(null);
   };
@@ -122,7 +128,7 @@ export default function ProfileView() {
     setUserProfile({ ...userProfile, walletBalance: newBalance });
     api.put('/users/me', { walletBalance: newBalance }).catch(() => {});
     setShowWalletModal(false);
-    toast.success(`₺${topUpAmount} added to wallet`);
+    toast.success(t('profile_wallet_topup_success', { amount: topUpAmount }));
   };
 
   const handleNotificationToggle = () => {
@@ -142,14 +148,14 @@ export default function ProfileView() {
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
-    if (tab !== 'orders') return;
+    if (tab !== 'orders' || !isAuthReady) return;
     setOrdersLoading(true);
     api.get('/orders').then((data: { orders?: Order[] }) => {
       setOrders(data.orders || []);
     }).catch(() => {
-      toast.error('Failed to load orders');
+      toast.error(t('profile_orders_load_failed'));
     }).finally(() => setOrdersLoading(false));
-  }, [tab, setOrders]);
+  }, [tab, isAuthReady, setOrders]);
 
   // Fetch store locations for any 'delivering' orders so we can compute Haversine ETA.
   useEffect(() => {
@@ -235,9 +241,9 @@ export default function ProfileView() {
       setExpandedOrderId(null);
       setInlineRating(5);
       setInlineComment('');
-      toast.success('Review submitted!');
+      toast.success(t('Review submitted'));
     } catch {
-      toast.error('Failed to submit review');
+      toast.error(t('profile_review_submit_failed'));
     } finally {
       setInlineSubmitting(false);
     }
@@ -295,17 +301,17 @@ export default function ProfileView() {
 
         {/* ── Tabs ── */}
         <div className="flex gap-1 bg-white rounded-2xl p-1 shadow-sm border border-[#E8E0D5] overflow-x-auto">
-          {(['profile', 'addresses', 'orders', 'settings'] as Tab[]).map(t => (
+          {(['profile', 'addresses', 'orders', 'settings'] as Tab[]).map(tabKey => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
               className={`flex-1 min-w-0 py-2.5 rounded-xl text-xs md:text-sm font-black capitalize transition-all whitespace-nowrap ${
-                tab === t
+                tab === tabKey
                   ? 'bg-[#1B5E52] text-white shadow-sm'
                   : 'text-[#8FA396] hover:text-[#5C6B63]'
               }`}
             >
-              {t === 'profile' ? 'Profile' : t === 'addresses' ? 'Addresses' : t === 'orders' ? 'Orders' : 'Settings'}
+              {tabKey === 'profile' ? t('profile_tab_profile') : tabKey === 'addresses' ? t('profile_tab_addresses') : tabKey === 'orders' ? t('profile_tab_orders') : t('profile_tab_settings')}
             </button>
           ))}
         </div>
@@ -323,7 +329,7 @@ export default function ProfileView() {
             {tab === 'profile' && (
               <div className="bg-white rounded-3xl p-6 shadow-sm space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-[#1B1B1B]">Personal Information</h3>
+                  <h3 className="font-bold text-[#1B1B1B]">{t('profile_personal_info')}</h3>
                   <button
                     onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
                     disabled={saving}
@@ -333,15 +339,15 @@ export default function ProfileView() {
                         : 'bg-[#F5F0E8] text-[#5C6B63]'
                     }`}
                   >
-                    {isEditing ? <><Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save'}</> : <><User className="w-4 h-4" /> Edit</>}
+                    {isEditing ? <><Save className="w-4 h-4" /> {saving ? t('profile_saving') : t('profile_save')}</> : <><User className="w-4 h-4" /> {t('profile_edit')}</>}
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { label: 'First Name',    key: 'firstName',   icon: User,  type: 'text',  placeholder: 'John' },
-                    { label: 'Last Name',     key: 'lastName',    icon: User,  type: 'text',  placeholder: 'Doe' },
-                    { label: 'Display Name',  key: 'displayName', icon: User,  type: 'text',  placeholder: 'johndoe' },
+                    { label: t('profile_first_name'),   key: 'firstName',   icon: User,  type: 'text',  placeholder: 'John' },
+                    { label: t('profile_last_name'),    key: 'lastName',    icon: User,  type: 'text',  placeholder: 'Doe' },
+                    { label: t('profile_display_name'), key: 'displayName', icon: User,  type: 'text',  placeholder: 'johndoe' },
                   ].map(({ label, key, icon: Icon, type, placeholder }) => (
                     <div key={key}>
                       <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{label}</label>
@@ -360,7 +366,7 @@ export default function ProfileView() {
                   ))}
 
                   <div>
-                    <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Email</label>
+                    <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('profile_email')}</label>
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B0BDB7]" />
                       <input
@@ -373,7 +379,7 @@ export default function ProfileView() {
 
                 {/* Phone */}
                 <div>
-                  <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Phone</label>
+                  <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('profile_phone')}</label>
                   <div className="flex gap-2">
                     <select
                       disabled={!isEditing}
@@ -407,14 +413,14 @@ export default function ProfileView() {
                 {(!userProfile?.addresses || userProfile.addresses.length === 0) ? (
                   <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
                     <MapPin className="w-10 h-10 text-[#B0BDB7] mx-auto mb-3" />
-                    <p className="font-bold text-[#8FA396] text-sm">No saved addresses yet</p>
-                    <p className="text-xs text-[#B0BDB7] mt-1">Confirm a location on the map to save one</p>
+                    <p className="font-bold text-[#8FA396] text-sm">{t('profile_no_addresses')}</p>
+                    <p className="text-xs text-[#B0BDB7] mt-1">{t('profile_add_address_hint')}</p>
                   </div>
                 ) : (
                   userProfile.addresses.map((addr: Address, i: number) => {
                     const tag = addr.tag || 'other';
-                    const label = addr.addressLabel || addr.label || 'Saved Address';
-                    const details = [addr.apartment, addr.floor && `Floor ${addr.floor}`, addr.unit && `Unit ${addr.unit}`]
+                    const label = addr.addressLabel || addr.label || t('profile_saved_address');
+                    const details = [addr.apartment, addr.floor && `${t('profile_floor_prefix')} ${addr.floor}`, addr.unit && `${t('profile_unit_prefix')} ${addr.unit}`]
                       .filter(Boolean).join(' · ');
                     const isEditingThis = editingAddrIndex === i;
                     return (
@@ -439,7 +445,7 @@ export default function ProfileView() {
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="font-bold text-[#1B1B1B] text-sm">{label}</span>
                               <span className="text-[10px] font-bold uppercase tracking-wide text-[#8FA396] bg-[#F5F0E8] px-2 py-0.5 rounded-full">
-                                {TAG_LABEL[tag] || tag}
+                                {t(`profile_tag_${tag}`)}
                               </span>
                             </div>
                             {details && <p className="text-xs text-[#8FA396]">{details}</p>}
@@ -468,7 +474,7 @@ export default function ProfileView() {
                               }`}
                             >
                               <Pencil className="w-3 h-3" />
-                              {isEditingThis ? 'Cancel' : 'Change'}
+                              {isEditingThis ? t('Cancel') : t('profile_addr_change')}
                             </button>
                             <button
                               onClick={() => handleDeleteAddress(i)}
@@ -492,12 +498,12 @@ export default function ProfileView() {
                               <div className="p-4 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                   {[
-                                    { key: 'addressLabel', label: 'Address Label', placeholder: 'Neighbourhood' },
-                                    { key: 'apartment',    label: 'Apartment',     placeholder: 'Building name' },
-                                    { key: 'unit',         label: 'Unit',          placeholder: 'No' },
-                                    { key: 'floor',        label: 'Floor',         placeholder: 'Floor no' },
-                                    { key: 'company',      label: 'Company',       placeholder: 'Optional' },
-                                    { key: 'phone',        label: 'Phone',         placeholder: '+90 5XX…' },
+                                    { key: 'addressLabel', label: t('profile_addr_label_field'), placeholder: t('profile_addr_neighbourhood_ph') },
+                                    { key: 'apartment',    label: t('profile_addr_apartment'),   placeholder: t('profile_addr_building_ph') },
+                                    { key: 'unit',         label: t('profile_addr_unit'),        placeholder: t('profile_addr_no_ph') },
+                                    { key: 'floor',        label: t('profile_addr_floor'),       placeholder: t('profile_addr_floor_ph') },
+                                    { key: 'company',      label: t('profile_addr_company'),     placeholder: t('profile_addr_optional_ph') },
+                                    { key: 'phone',        label: t('profile_addr_phone'),       placeholder: '+90 5XX…' },
                                   ].map(({ key, label, placeholder }) => (
                                     <div key={key}>
                                       <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{label}</label>
@@ -512,30 +518,30 @@ export default function ProfileView() {
                                   ))}
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">Delivery Note</label>
+                                  <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{t('profile_delivery_note')}</label>
                                   <textarea
                                     rows={2}
                                     value={editingAddr.deliveryNote || ''}
                                     onChange={e => setEditingAddr(a => a ? { ...a, deliveryNote: e.target.value } : a)}
-                                    placeholder="Door code, directions…"
+                                    placeholder={t('profile_delivery_note_ph')}
                                     className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors resize-none"
                                   />
                                 </div>
                                 {/* Tag selector */}
                                 <div className="flex gap-2">
-                                  {(['home','work','partner','other'] as const).map(t => (
+                                  {(['home','work','partner','other'] as const).map(tagType => (
                                     <button
-                                      key={t}
+                                      key={tagType}
                                       type="button"
-                                      onClick={() => setEditingAddr(a => a ? { ...a, tag: t } : a)}
+                                      onClick={() => setEditingAddr(a => a ? { ...a, tag: tagType } : a)}
                                       className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition-all ${
-                                        editingAddr.tag === t
+                                        editingAddr.tag === tagType
                                           ? 'bg-[#1B5E52] border-[#1B5E52] text-white'
                                           : 'bg-[#F5F0E8] border-[#E8E0D5] text-[#8FA396]'
                                       }`}
                                     >
-                                      {TAG_ICON[t]}
-                                      {TAG_LABEL[t]}
+                                      {TAG_ICON[tagType]}
+                                      {t(`profile_tag_${tagType}`)}
                                     </button>
                                   ))}
                                 </div>
@@ -543,7 +549,7 @@ export default function ProfileView() {
                                   onClick={handleSaveEditedAddress}
                                   className="w-full py-2.5 bg-[#1B5E52] text-white rounded-xl text-sm font-bold hover:bg-[#164d43] transition-colors"
                                 >
-                                  Save Changes
+                                  {t('profile_addr_save')}
                                 </button>
                               </div>
                             </motion.div>
@@ -572,14 +578,14 @@ export default function ProfileView() {
                 ) : (
                   orders.map((order: Order, i: number) => {
                     const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-                      pending:    { label: 'Pending',    color: 'text-amber-500 bg-amber-50',       icon: <Clock className="w-3.5 h-3.5" /> },
-                      confirmed:  { label: 'Confirmed',  color: 'text-blue-500 bg-blue-50',         icon: <Package className="w-3.5 h-3.5" /> },
-                      preparing:  { label: 'Preparing',  color: 'text-indigo-500 bg-indigo-50',     icon: <Loader2 className="w-3.5 h-3.5" /> },
-                      ready:      { label: 'Ready',      color: 'text-[#1B5E52] bg-[#1B5E52]/10',  icon: <Package className="w-3.5 h-3.5" /> },
-                      picked_up:  { label: 'Picked Up',  color: 'text-violet-500 bg-violet-50',     icon: <Package className="w-3.5 h-3.5" /> },
-                      delivering: { label: 'Delivering', color: 'text-cyan-500 bg-cyan-50',         icon: <Truck className="w-3.5 h-3.5" /> },
-                      delivered:  { label: 'Delivered',  color: 'text-emerald-600 bg-emerald-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
-                      cancelled:  { label: 'Cancelled',  color: 'text-red-500 bg-red-50',           icon: <XCircle className="w-3.5 h-3.5" /> },
+                      pending:    { label: t('order_status_pending'),    color: 'text-amber-500 bg-amber-50',       icon: <Clock className="w-3.5 h-3.5" /> },
+                      confirmed:  { label: t('order_status_confirmed'),  color: 'text-blue-500 bg-blue-50',         icon: <Package className="w-3.5 h-3.5" /> },
+                      preparing:  { label: t('order_status_preparing'),  color: 'text-indigo-500 bg-indigo-50',     icon: <Loader2 className="w-3.5 h-3.5" /> },
+                      ready:      { label: t('order_status_ready'),      color: 'text-[#1B5E52] bg-[#1B5E52]/10',  icon: <Package className="w-3.5 h-3.5" /> },
+                      picked_up:  { label: t('order_status_picked_up'),  color: 'text-violet-500 bg-violet-50',     icon: <Package className="w-3.5 h-3.5" /> },
+                      delivering: { label: t('order_status_delivering'), color: 'text-cyan-500 bg-cyan-50',         icon: <Truck className="w-3.5 h-3.5" /> },
+                      delivered:  { label: t('order_status_delivered'),  color: 'text-emerald-600 bg-emerald-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
+                      cancelled:  { label: t('order_status_cancelled'),  color: 'text-red-500 bg-red-50',           icon: <XCircle className="w-3.5 h-3.5" /> },
                     };
                     const sc = statusConfig[order.status] || statusConfig['pending'];
                     const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -626,7 +632,7 @@ export default function ProfileView() {
                                 return (
                                   <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-600">
                                     <Truck className="w-3 h-3" />
-                                    {arrival ? `~${arrival}` : 'On the way'}
+                                    {arrival ? `~${arrival}` : t('profile_on_the_way')}
                                   </span>
                                 );
                               })()}
@@ -679,9 +685,9 @@ export default function ProfileView() {
                                 {/* Delivery Code */}
                                 {order.status === 'delivering' && order.deliveryCode && (
                                   <div className="px-4 py-3 bg-amber-50 rounded-xl border border-amber-200/60">
-                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Delivery Code</p>
+                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">{t('profile_delivery_code')}</p>
                                     <p className="text-2xl font-black text-amber-700 tracking-[0.4em]">{order.deliveryCode}</p>
-                                    <p className="text-xs text-amber-600/80 mt-1">Give this code to the courier to confirm your delivery.</p>
+                                    <p className="text-xs text-amber-600/80 mt-1">{t('profile_delivery_code_hint')}</p>
                                   </div>
                                 )}
 
@@ -689,7 +695,7 @@ export default function ProfileView() {
                                 {(order.estimatedPickupTime || order.trackingNotes) && (
                                   <div className="flex flex-wrap gap-3 text-xs text-[#8FA396] px-3 py-2 bg-[#F5F0E8] rounded-xl">
                                     {order.estimatedPickupTime && (
-                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pickup: {order.estimatedPickupTime}</span>
+                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {t('profile_pickup_prefix')} {order.estimatedPickupTime}</span>
                                     )}
                                     {order.trackingNotes && <span>{order.trackingNotes}</span>}
                                   </div>
@@ -698,7 +704,7 @@ export default function ProfileView() {
                                 {/* Inline review form for delivered & unreviewed orders */}
                                 {order.status === 'delivered' && !reviewedOrderIds.has(order.id) && (
                                   <div className="pt-2 border-t border-[#E8E0D5]">
-                                    <p className="text-xs font-bold text-[#8FA396] mb-3">Rate your experience</p>
+                                    <p className="text-xs font-bold text-[#8FA396] mb-3">{t('profile_rate_experience')}</p>
                                     <div className="flex gap-1 mb-3">
                                       {[1, 2, 3, 4, 5].map(s => (
                                         <button
@@ -716,7 +722,7 @@ export default function ProfileView() {
                                       value={inlineComment}
                                       onChange={e => setInlineComment(e.target.value)}
                                       onClick={e => e.stopPropagation()}
-                                      placeholder="Share your thoughts (optional)…"
+                                      placeholder={t('profile_review_ph')}
                                       className="w-full px-3 py-2 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors resize-none mb-2"
                                     />
                                     <button
@@ -724,7 +730,7 @@ export default function ProfileView() {
                                       disabled={inlineSubmitting}
                                       className="w-full py-2.5 bg-[#1B5E52] text-white rounded-xl text-xs font-bold hover:bg-[#164d43] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                      {inlineSubmitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Submitting…</> : 'Submit Review'}
+                                      {inlineSubmitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('profile_submitting')}</> : t('Submit Review')}
                                     </button>
                                   </div>
                                 )}
@@ -745,7 +751,7 @@ export default function ProfileView() {
 
                 {/* Language */}
                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest px-5 pt-5 pb-2">Language</p>
+                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest px-5 pt-5 pb-2">{t('profile_lang_section')}</p>
                   {[
                     { code: 'en', name: 'English', flag: '🇬🇧' },
                     { code: 'tr', name: 'Türkçe',  flag: '🇹🇷' },
@@ -775,8 +781,8 @@ export default function ProfileView() {
                       <Bell className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-[#1B1B1B]">Notifications</p>
-                      <p className="text-xs text-[#8FA396]">{userProfile?.notificationsEnabled ? 'Enabled' : 'Disabled'}</p>
+                      <p className="font-bold text-sm text-[#1B1B1B]">{t('Notifications')}</p>
+                      <p className="text-xs text-[#8FA396]">{userProfile?.notificationsEnabled ? t('profile_notif_enabled') : t('profile_notif_disabled')}</p>
                     </div>
                   </div>
                   <button
@@ -793,14 +799,14 @@ export default function ProfileView() {
 
                 {/* Account info */}
                 <div className="bg-white rounded-2xl px-5 py-4 shadow-sm space-y-3">
-                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">Account</p>
+                  <p className="text-xs font-bold text-[#8FA396] uppercase tracking-widest">{t('profile_account_section')}</p>
                   <div className="flex items-center gap-3 text-sm text-[#8FA396]">
                     <Globe className="w-4 h-4 flex-shrink-0" />
-                    <span>Member since {new Date().getFullYear()}</span>
+                    <span>{t('profile_member_since', { year: new Date().getFullYear() })}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-[#8FA396]">
                     <User className="w-4 h-4 flex-shrink-0" />
-                    <span className="capitalize">{userProfile?.role || 'customer'} account</span>
+                    <span className="capitalize">{t('profile_account_role', { role: userProfile?.role || 'customer' })}</span>
                   </div>
                 </div>
               </div>
@@ -823,8 +829,8 @@ export default function ProfileView() {
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="font-black text-[#1B1B1B] text-lg">Top Up Wallet</h3>
-                  <p className="text-xs text-[#8FA396] mt-0.5">Current: <span className="font-bold text-[#1B5E52]">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span></p>
+                  <h3 className="font-black text-[#1B1B1B] text-lg">{t('profile_wallet_topup_title')}</h3>
+                  <p className="text-xs text-[#8FA396] mt-0.5">{t('profile_wallet_current')} <span className="font-bold text-[#1B5E52]">₺{(userProfile?.walletBalance || 0).toFixed(2)}</span></p>
                 </div>
                 <button onClick={() => setShowWalletModal(false)} className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center">
                   <X className="w-4 h-4 text-[#8FA396]" />
@@ -848,7 +854,7 @@ export default function ProfileView() {
               </div>
 
               <div className="mb-5">
-                <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Custom amount</label>
+                <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('profile_wallet_custom')}</label>
                 <input
                   type="number" min={1}
                   value={topUpAmount}
@@ -861,7 +867,7 @@ export default function ProfileView() {
                 onClick={handleTopUp}
                 className="w-full py-3.5 bg-[#1B5E52] text-white rounded-2xl font-bold hover:bg-[#164d43] transition-colors"
               >
-                Add ₺{topUpAmount}
+                {t('profile_wallet_add', { amount: topUpAmount })}
               </button>
             </motion.div>
           </div>

@@ -37,7 +37,9 @@ export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 
         (bag.category || '').toLowerCase().includes(q) ||
         (bag.description || '').toLowerCase().includes(q);
       const matchesPrice = bag.price >= filters.priceRange[0] && bag.price <= filters.priceRange[1];
-      const matchesFavorites = activeTab !== 'favorites' || favorites.includes(bag.id);
+      const matchesFavorites = activeTab !== 'favorites' ||
+        favorites.includes(bag.id) ||
+        (bag.restaurantId != null && favorites.includes(bag.restaurantId));
       const matchesDietary = filters.dietary.length === 0 || filters.dietary.includes(bag.dietaryType);
       const matchesMerchant = filters.merchantType.length === 0 || filters.merchantType.includes(bag.merchantType);
       return matchesSearch && matchesPrice && matchesFavorites && matchesDietary && matchesMerchant;

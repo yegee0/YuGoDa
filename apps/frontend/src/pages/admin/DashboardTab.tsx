@@ -50,7 +50,7 @@ export default function DashboardTab({
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
           <h3 className="font-bold text-[#1B1B1B] mb-1">{t('admin_dashboard_revenue_title')}</h3>
           <p className="text-xs text-[#8FA396] mb-4">{t('admin_dashboard_revenue_subtitle')}</p>
-          <div className="h-52">
+          <div className="h-52 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
                 <defs>
@@ -71,7 +71,7 @@ export default function DashboardTab({
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
           <h3 className="font-bold text-[#1B1B1B] mb-1">{t('admin_dashboard_orders_title')}</h3>
           <p className="text-xs text-[#8FA396] mb-4">{t('admin_dashboard_orders_subtitle')}</p>
-          <div className="h-52">
+          <div className="h-52 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />

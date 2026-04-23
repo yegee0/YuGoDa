@@ -17,7 +17,7 @@ export default function AdminNotProvisioned() {
           icon={<AlertCircle className="w-10 h-10" />}
           title={t('admin_auth_error_title')}
           description={t('admin_auth_error_body')}
-          action={{ label: t('admin_auth_retry'), onClick: () => window.location.assign('/admin-auth') }}
+          action={{ label: t('admin_auth_retry'), onClick: () => window.location.assign('/admin') }}
         />
       </div>
     );

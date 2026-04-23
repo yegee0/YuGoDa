@@ -182,6 +182,17 @@ select.bg-white {
   background-color: #ffffff;
 }
 
+/* All form inputs (input, textarea, select) that carry .bg-white stay
+ * white in BOTH light and dark mode — the app theme should never bleed
+ * into typing areas.  color-scheme:light ensures the browser's native
+ * control chrome (e.g. the select dropdown list) also renders in light
+ * mode so dark-mode-inherited white text does not become invisible. */
+input.bg-white,
+textarea.bg-white,
+select.bg-white {
+  color-scheme: light;
+}
+
 /* Borders on lime surfaces: standard light gray is invisible → darken */
 .border-\[\#E8E0D5\] { border-color: rgba(0,0,0,0.14); }
 .divide-\[\#E8E0D5\] > * + * { border-color: rgba(0,0,0,0.14); }

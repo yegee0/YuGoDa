@@ -29,7 +29,7 @@ public class User {
     @Column(nullable = false)
     private String accountStatus = "active";
 
-    @Column(columnDefinition = "TEXT DEFAULT '[]'")
+    @Column(columnDefinition = "TEXT")
     private String favorites = "[]";
 
     @Column(columnDefinition = "TEXT")
@@ -40,7 +40,7 @@ public class User {
     private String countryCode;
     private String mobileNumber;
 
-    @Column(columnDefinition = "TEXT DEFAULT '[]'")
+    @Column(columnDefinition = "TEXT")
     private String addresses = "[]";
 
     private Integer notificationsEnabled = 1;

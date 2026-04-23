@@ -277,7 +277,7 @@ export default function SupportTab({ disputes, onUpdateDisputeStatus }: SupportT
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSendAdminMessage()}
                   placeholder={t('admin_support_chat_placeholder')}
-                  className="flex-1 bg-[#F5F0E8] border border-[#E8E0D5] rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1B5E52]/20"
+                  className="flex-1 bg-white border border-[#E8E0D5] rounded-xl px-4 py-2.5 text-sm text-[#1B1B1B] placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#1B5E52]/20"
                 />
                 <button
                   onClick={handleSendAdminMessage}

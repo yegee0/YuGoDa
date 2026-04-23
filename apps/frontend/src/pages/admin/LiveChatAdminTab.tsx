@@ -202,7 +202,7 @@ export default function LiveChatAdminTab() {
                         void handleSend();
                       }
                     }}
-                    className="w-full bg-[#F5F0E8] dark:bg-[#0F2A1C] border border-[#E8E0D5] dark:border-white/15 rounded-full py-2 pl-4 pr-10 text-xs outline-none focus:border-[#1B5E52] text-[#1B1B1B] dark:text-white font-medium"
+                    className="w-full bg-white border border-[#E8E0D5] rounded-full py-2 pl-4 pr-10 text-xs outline-none focus:border-[#1B5E52] text-[#1B1B1B] placeholder:text-gray-400 font-medium"
                   />
                   <button
                     onClick={handleSend}

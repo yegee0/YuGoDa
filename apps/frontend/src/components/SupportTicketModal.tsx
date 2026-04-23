@@ -103,7 +103,7 @@ export default function SupportTicketModal({ isOpen, onClose }: Props) {
     };
 
     const inputCls =
-        'w-full bg-gray-50 dark:bg-white/5 border-2 border-transparent focus:border-[#1B5E52] rounded-2xl px-4 py-3 text-sm outline-none transition-all text-[#1B1B1B] dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/40';
+        'w-full bg-white border-2 border-[#E8E0D5] focus:border-[#1B5E52] rounded-2xl px-4 py-3 text-sm outline-none transition-all text-[#1B1B1B] placeholder:text-gray-400';
     const labelCls =
         'text-xs font-bold text-gray-500 dark:text-white/60 uppercase tracking-wider mb-1.5 block';
 

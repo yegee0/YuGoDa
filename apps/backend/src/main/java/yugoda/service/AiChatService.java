@@ -73,6 +73,34 @@ public class AiChatService {
         return new ChatResult(reply, recommendations);
     }
 
+    /**
+     * Single conversational turn. `history` is the prior exchange (role/content pairs)
+     * so the model has context. The system prompt + live bag context is always prepended.
+     */
+    public ChatResult chatMessage(String userId, String userMessage, List<Map<String, String>> history) {
+        String context = buildUserContext(userId, null, null);
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system",
+                "content", systemPromptText + "\n\n--- LIVE CONTEXT ---\n" + context));
+
+        if (history != null) {
+            // Keep last 10 turns to stay within context window
+            int start = Math.max(0, history.size() - 10);
+            messages.addAll(history.subList(start, history.size()));
+        }
+        messages.add(Map.of("role", "user", "content", userMessage));
+
+        String reply = callOllama(messages);
+
+        List<Map<String, Object>> recommendations = aiTools.getAvailableBags(null).stream()
+                .limit(3)
+                .map(this::bagToMap)
+                .collect(Collectors.toList());
+
+        return new ChatResult(reply, recommendations);
+    }
+
     // ── Ollama HTTP call ─────────────────────────────────────────
 
     @SuppressWarnings("unchecked")

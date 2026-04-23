@@ -10,10 +10,14 @@ import type { Notification } from '@/types';
  * touching callers.
  */
 export function useNotificationPoll() {
-  const { user, setNotifications } = useStore();
+  const { user, isAuthReady, setNotifications } = useStore();
 
   useEffect(() => {
-    if (!user) return;
+    // Wait for all three Firebase auth listeners to confirm their state before
+    // polling. `user` alone is set immediately after onAuthStateChanged fires
+    // for the signed-in portal, but `.currentUser` on the other two instances
+    // may still be null for a brief window — isAuthReady closes that gap.
+    if (!user || !isAuthReady) return;
 
     let cancelled = false;
 
@@ -35,5 +39,5 @@ export function useNotificationPoll() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [user, setNotifications]);
+  }, [user, isAuthReady, setNotifications]);
 }

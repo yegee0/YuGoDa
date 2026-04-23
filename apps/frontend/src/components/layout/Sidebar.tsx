@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Leaf, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '@/lib/constants';
 
 // ── Inline brand icons (safe — no dependency on lucide brand pack) ──
@@ -38,6 +39,7 @@ export function SidebarSection({ label, collapsed }: { label: string; collapsed:
 export function SidebarItem({
   icon,
   label,
+  sublabel,
   active,
   collapsed,
   onClick,
@@ -45,6 +47,7 @@ export function SidebarItem({
 }: {
   icon: React.ReactNode;
   label: string;
+  sublabel?: string;
   active: boolean;
   collapsed: boolean;
   onClick: () => void;
@@ -82,7 +85,12 @@ export function SidebarItem({
         {icon}
       </span>
       {!collapsed && (
-        <span className="tracking-tight flex-1 text-left truncate">{label}</span>
+        <span className="flex-1 text-left min-w-0">
+          <span className="block tracking-tight truncate">{label}</span>
+          {sublabel && (
+            <span className="block text-[10px] font-medium leading-none mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>{sublabel}</span>
+          )}
+        </span>
       )}
       {!collapsed && badge ? (
         <span className="w-5 h-5 text-white text-[10px] font-black rounded-full flex items-center justify-center shrink-0"
@@ -96,6 +104,7 @@ export function SidebarItem({
 
 // ── About Us ──────────────────────────────────────────────────────
 function SidebarAboutUs({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
   return (
     <div
       className={`shrink-0 ${collapsed ? 'p-3' : 'p-4'}`}
@@ -104,7 +113,7 @@ function SidebarAboutUs({ collapsed }: { collapsed: boolean }) {
       {!collapsed && (
         <>
           <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            About YuGoDa
+            {t('sidebar_about_title')}
           </p>
           <div className="flex items-center gap-2.5 mb-3.5">
             <div
@@ -115,7 +124,7 @@ function SidebarAboutUs({ collapsed }: { collapsed: boolean }) {
             </div>
             <div>
               <p className="text-sm font-black leading-none text-white">5,000+</p>
-              <p className="text-[10px] leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>meals rescued</p>
+              <p className="text-[10px] leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>{t('sidebar_meals_rescued')}</p>
             </div>
           </div>
         </>
@@ -178,7 +187,7 @@ export function Sidebar({
       <aside
         className={`
           flex flex-col z-50 transition-all duration-300 shrink-0
-          fixed inset-y-0 left-0 md:relative md:translate-x-0
+          fixed inset-y-0 left-0 md:relative md:translate-x-0 md:h-full
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${isSidebarCollapsed ? 'w-[72px]' : 'w-64'}
         `}

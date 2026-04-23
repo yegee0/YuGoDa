@@ -29,27 +29,27 @@ export default function CustomerLayout() {
   };
 
   return (
-    <div className="min-h-screen app-leaf-bg flex transition-colors duration-300">
+    <div className="h-screen overflow-hidden app-leaf-bg flex transition-colors duration-300">
       <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)}>
         {(isSidebarCollapsed) => (
           <>
             <SidebarItem
               icon={<LayoutDashboard className="w-5 h-5" />}
-              label="Discover"
+              label={t('Discover')}
               active={currentView === 'discover'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/discover')}
             />
             <SidebarItem
               icon={<MapIcon className="w-5 h-5" />}
-              label="Browse Map"
+              label={t('Browse Map')}
               active={currentView === 'browse'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/browse')}
             />
             <SidebarItem
               icon={<Heart className="w-5 h-5" />}
-              label="Favorites"
+              label={t('Favorites')}
               active={currentView === 'favorites'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/favorites')}
@@ -58,14 +58,14 @@ export default function CustomerLayout() {
             <div className="pt-4 mt-4" style={{ borderTop: '1px solid rgba(255,180,80,0.13)' }}>
               <SidebarItem
                 icon={<HelpCircle className="w-5 h-5" />}
-                label="Help Center"
+                label={t('Help Center')}
                 active={false}
                 collapsed={isSidebarCollapsed}
                 onClick={() => { setShowHelpCenter(true); setMobileNavOpen(false); }}
               />
               <SidebarItem
                 icon={<MessageCircle className="w-5 h-5" />}
-                label="Live Chat"
+                label={t('Live Chat')}
                 active={false}
                 collapsed={isSidebarCollapsed}
                 onClick={() => { setShowLiveChat(true); setMobileNavOpen(false); }}
@@ -118,13 +118,13 @@ export default function CustomerLayout() {
               </div>
               <div className="p-5 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                  <h4 className="font-black text-[#1B1B1B] sticky top-0 bg-white py-2 text-sm">{t('Common Topics')}</h4>
+                  <h4 className="font-black text-[#1B1B1B] sticky top-0 bg-white py-2 text-sm">{t('help_common_topics')}</h4>
                   <div className="space-y-2">
                     {[
-                      { q: 'How do surprise bags work?', a: 'Restaurants pack surplus food into "Surprise Bags" at a fraction of the cost. You reserve it, pick it up, and enjoy!' },
-                      { q: 'Where is my order?', a: 'You can track your order in real-time on the Discover tab after confirming your payment.' },
-                      { q: 'Payment methods in Turkey?', a: 'We support all major credit/debit cards via Iyzico, as well as YuGoPay wallet balance.' },
-                      { q: 'Refund policy?', a: 'If a bag is unavailable or quality is poor, contact us within 2 hours of pickup.' }
+                      { q: t('help_faq_1_q'), a: t('help_faq_1_a') },
+                      { q: t('help_faq_2_q'), a: t('help_faq_2_a') },
+                      { q: t('help_faq_3_q'), a: t('help_faq_3_a') },
+                      { q: t('help_faq_4_q'), a: t('help_faq_4_a') },
                     ].map((faq, i) => (
                       <details key={i} className="group bg-[#F5F0E8] rounded-2xl p-4 cursor-pointer">
                         <summary className="font-bold text-sm list-none flex justify-between items-center text-[#1B1B1B]">
@@ -137,11 +137,11 @@ export default function CustomerLayout() {
                 </div>
                 <div className="space-y-6">
                   <div className="p-5 md:p-6 bg-[#1B5E52]/6 rounded-2xl border border-[#1B5E52]/12">
-                    <h4 className="font-black text-[#1B5E52] mb-2 text-sm">{t('Need more help?')}</h4>
-                    <p className="text-sm text-[#8FA396] mb-4 font-medium">{t('Our support team is available 24/7.')}</p>
+                    <h4 className="font-black text-[#1B5E52] mb-2 text-sm">{t('help_need_more_help')}</h4>
+                    <p className="text-sm text-[#8FA396] mb-4 font-medium">{t('help_support_24_7')}</p>
                     <div className="space-y-2">
-                      <button onClick={() => { setShowHelpCenter(false); setShowTicketModal(true); }} className="w-full py-2.5 bg-[#1B5E52] text-white rounded-full text-xs font-black hover:bg-[#164d43] transition-colors">{t('Open a Ticket')}</button>
-                      <button onClick={() => { setShowHelpCenter(false); setShowLiveChat(true); }} className="w-full py-2.5 border-2 border-[#1B5E52] text-[#1B5E52] rounded-full text-xs font-black hover:bg-[#1B5E52]/6 transition-colors">{t('Chat with Us')}</button>
+                      <button onClick={() => { setShowHelpCenter(false); setShowTicketModal(true); }} className="w-full py-2.5 bg-[#1B5E52] text-white rounded-full text-xs font-black hover:bg-[#164d43] transition-colors">{t('help_open_ticket')}</button>
+                      <button onClick={() => { setShowHelpCenter(false); setShowLiveChat(true); }} className="w-full py-2.5 border-2 border-[#1B5E52] text-[#1B5E52] rounded-full text-xs font-black hover:bg-[#1B5E52]/6 transition-colors">{t('help_chat_with_us')}</button>
                     </div>
                   </div>
                 </div>

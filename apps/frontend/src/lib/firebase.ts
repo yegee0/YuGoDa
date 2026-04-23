@@ -131,7 +131,14 @@ export function listenForegroundMessages(): void {
       const title = payload.notification?.title ?? 'YuGoDa';
       const body  = payload.notification?.body  ?? '';
       if (Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/favicon.ico' });
+        const orderId = payload.data?.orderId;
+        const url = orderId ? `/profile?tab=orders&orderId=${orderId}` : '/profile?tab=orders';
+        const notif = new Notification(title, { body, icon: '/favicon.ico' });
+        notif.onclick = () => {
+          window.focus();
+          window.location.href = url;
+          notif.close();
+        };
       }
     });
   } catch (err) {

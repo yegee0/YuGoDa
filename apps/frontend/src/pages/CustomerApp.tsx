@@ -39,6 +39,7 @@ import { useLocationManager } from '@/hooks/useLocationManager';
 import FilterPanel from '@/components/FilterPanel';
 import CartDrawer from '@/components/CartDrawer';
 import AiRecommendations from '@/components/AiRecommendations';
+import AiChatWidget from '@/components/AiChatWidget';
 import { api } from '@/lib/api';
 import type { Bag, MapSuggestion, CartItem } from '@/types';
 
@@ -81,12 +82,13 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
         )}
 
         <div className="absolute top-3 right-3 flex flex-col gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleFavorite(bag.id); }}
+          <motion.button
+            whileTap={{ scale: 0.8 }}
+            onClick={(e) => { e.stopPropagation(); void toggleFavorite(bag.id); }}
             className={`p-2 rounded-full backdrop-blur-md transition-all ${isFavorite ? 'bg-eco-secondary text-white' : 'bg-white/90 text-[#8FA396] hover:bg-white'}`}
           >
             <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
+          </motion.button>
           <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-black text-[#1B5E52] flex items-center gap-1 shadow-sm">
             <Star className="w-3 h-3 fill-current text-eco-secondary" /> {bag.rating || 4.5}
           </div>
@@ -119,19 +121,26 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
             <p className="text-[10px] text-[#B0BDB7] line-through">₺{bag.originalPrice?.toFixed(2)}</p>
           </div>
         </div>
-        <p className="text-xs text-[#8FA396] font-medium mb-2">{bag.category} • {bag.distance || '0.5 miles'}</p>
+        <p className="text-xs text-[#8FA396] font-medium mb-2">{bag.category} • {bag.distance || t('disc_default_distance')}</p>
 
         <div className="flex flex-wrap gap-1 mb-4">
-          {bag.dietaryType && (
-            <span className="px-2 py-0.5 bg-[#748f2b]/20 text-[#5a7a1a] text-[10px] font-black rounded-full flex items-center gap-1">
-              <Leaf className="w-2 h-2" /> {bag.dietaryType}
-            </span>
-          )}
           {bag.merchantType && (
             <span className="px-2 py-0.5 bg-[#1B5E52]/10 text-[#1B5E52] text-[10px] font-black rounded-full flex items-center gap-1">
               <Store className="w-2 h-2" /> {bag.merchantType}
             </span>
           )}
+          {bag.dietaryTags && bag.dietaryTags.length > 0
+            ? bag.dietaryTags.map(tag => (
+                <span key={tag} className="px-2 py-0.5 bg-[#748f2b]/20 text-[#5a7a1a] text-[10px] font-black rounded-full flex items-center gap-1">
+                  <Leaf className="w-2 h-2" /> {tag}
+                </span>
+              ))
+            : bag.dietaryType && (
+                <span className="px-2 py-0.5 bg-[#748f2b]/20 text-[#5a7a1a] text-[10px] font-black rounded-full flex items-center gap-1">
+                  <Leaf className="w-2 h-2" /> {bag.dietaryType}
+                </span>
+              )
+          }
         </div>
 
         <div className="mt-auto pt-3 border-t border-[#E8E0D5] flex items-center justify-between">
@@ -218,7 +227,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     categories.forEach((c: string) => {
       if (!seen.has(c)) {
         seen.add(c);
-        suggestions.push({ type: 'category', label: c, sublabel: 'Category' });
+        suggestions.push({ type: 'category', label: c, sublabel: c });
       }
     });
     setSearchSuggestions(suggestions.slice(0, 6));
@@ -360,7 +369,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-[#1B1B1B] truncate">{s.label}</p>
-                        <p className="text-[11px] text-[#8FA396] font-medium">{s.sublabel}</p>
+                        <p className="text-[11px] text-[#8FA396] font-medium">{s.type === 'category' ? t('disc_search_category') : s.sublabel}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-[#C5BDB5] shrink-0" />
                     </button>
@@ -457,7 +466,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
               {/* Restaurant result cards */}
               {matchingRestaurants.length > 0 && (
                 <div className="mb-6">
-                  <p className="text-xs font-black uppercase tracking-widest mb-3 px-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Restaurants</p>
+                  <p className="text-xs font-black uppercase tracking-widest mb-3 px-1" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('disc_restaurants_label')}</p>
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {matchingRestaurants.map(r => (
                       <Link
@@ -589,6 +598,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
         onProceedToCheckout={() => { setIsCartOpen(false); navigate('/checkout'); }}
       />
 
+      {/* AI Chat — hidden on map/browse tab */}
+      {activeTab !== 'browse' && <AiChatWidget />}
+
       {/* Checkout Flow Overlay */}
       <AnimatePresence>
         {selectedBag && checkoutStep !== 'reserve' && (
@@ -688,7 +700,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                       </div>
                       <div className="flex items-center justify-between text-sm py-2 border-t border-[#E8E0D5]">
                         <span className="text-[#8FA396] font-medium">{t('Estimated Arrival')}</span>
-                        <span className="font-black text-[#1B1B1B]">12 mins</span>
+                        <span className="font-black text-[#1B1B1B]">{t('disc_12_mins')}</span>
                       </div>
                     </div>
 

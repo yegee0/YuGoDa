@@ -2,18 +2,16 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarItem, SidebarSection } from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import AdminPresenceToggle from '@/components/AdminPresenceToggle';
-import { useAdminPresenceHeartbeat } from '@/hooks/useAdminPresenceHeartbeat';
 import { LayoutDashboard, Users, Store, DollarSign, MessageSquare, MessageCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminLayout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const currentView = location.pathname.split('/')[2] || 'dashboard';
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  const { state: presenceState, setState: setPresenceState } = useAdminPresenceHeartbeat(true);
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -21,60 +19,62 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen app-leaf-bg flex font-sans transition-colors duration-300">
+    <div className="h-screen overflow-hidden app-leaf-bg flex font-sans transition-colors duration-300">
       <Sidebar mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)}>
         {(isSidebarCollapsed) => (
           <>
-            <SidebarSection label="Platform" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_platform')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<LayoutDashboard className="w-5 h-5 shrink-0" />}
-              label="Dashboard"
+              label={t('nav_dashboard')}
               active={currentView === 'dashboard'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/dashboard')}
             />
             <SidebarItem
               icon={<Users className="w-5 h-5 shrink-0" />}
-              label="Customers"
+              label={t('nav_customers')}
               active={currentView === 'customers'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/customers')}
             />
             <SidebarItem
               icon={<Store className="w-5 h-5 shrink-0" />}
-              label="Stores"
+              label={t('nav_stores')}
               active={currentView === 'stores'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/stores')}
             />
             <SidebarItem
               icon={<DollarSign className="w-5 h-5 shrink-0" />}
-              label="Transactions"
+              label={t('nav_transactions')}
               active={currentView === 'transactions'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/transactions')}
             />
 
-            <SidebarSection label="Support" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_support')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<MessageSquare className="w-5 h-5 shrink-0" />}
-              label="Support Queue"
+              label={t('nav_support_queue')}
+              sublabel={t('nav_sublabel_restaurants')}
               active={currentView === 'support'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/support')}
             />
             <SidebarItem
               icon={<MessageCircle className="w-5 h-5 shrink-0" />}
-              label="Live Chat"
+              label={t('Live Chat')}
+              sublabel={t('nav_sublabel_customers')}
               active={currentView === 'live-chat'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/live-chat')}
             />
 
-            <SidebarSection label="System" collapsed={isSidebarCollapsed} />
+            <SidebarSection label={t('nav_section_system')} collapsed={isSidebarCollapsed} />
             <SidebarItem
               icon={<Settings className="w-5 h-5 shrink-0" />}
-              label="Settings"
+              label={t('nav_settings')}
               active={currentView === 'settings'}
               collapsed={isSidebarCollapsed}
               onClick={() => handleNavClick('/admin/settings')}
@@ -85,9 +85,6 @@ export default function AdminLayout() {
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header onMenuOpen={() => setMobileNavOpen(true)} />
-        <div className="absolute top-3 right-4 z-50 pointer-events-auto">
-          <AdminPresenceToggle state={presenceState} onChange={(next) => { void setPresenceState(next); }} />
-        </div>
         <main className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
             <motion.div

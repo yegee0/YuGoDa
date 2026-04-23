@@ -19,6 +19,21 @@ public class DisputeService {
 
     @Transactional
     public Dispute createDispute(String uid, String role, Map<String, Object> body) {
+        // Bug-1 fix: reuse the most recent open dispute instead of creating a duplicate row
+        List<Dispute> openDisputes = disputeRepository.findByUserIdAndStatusOrderByCreatedAtDesc(uid, "open");
+        if (!openDisputes.isEmpty()) {
+            Dispute existing = openDisputes.get(0);
+            DisputeMessage followUp = new DisputeMessage();
+            followUp.setId(UUID.randomUUID().toString());
+            followUp.setDisputeId(existing.getId());
+            followUp.setSenderId(uid);
+            followUp.setSenderRole(role != null ? role : "restaurant");
+            followUp.setMessage((String) body.get("message"));
+            messageRepository.save(followUp);
+            return existing;
+        }
+
+        // No open dispute — create a fresh one
         Dispute dispute = new Dispute();
         dispute.setId(UUID.randomUUID().toString());
         dispute.setUserId(uid);
@@ -93,6 +108,10 @@ public class DisputeService {
                 .orElseThrow(() -> new NoSuchElementException("Destek talebi bulunamadı."));
         if (!"admin".equals(role) && !dispute.getUserId().equals(uid)) {
             throw new SecurityException("Bu destek talebine erişim yetkiniz yok.");
+        }
+        // Bug-2 fix: non-admin cannot post to a closed or resolved dispute
+        if (!"admin".equals(role) && ("closed".equals(dispute.getStatus()) || "resolved".equals(dispute.getStatus()))) {
+            throw new IllegalStateException("Bu destek talebi kapatılmış; yeni mesaj gönderilemez.");
         }
 
         DisputeMessage msg = new DisputeMessage();

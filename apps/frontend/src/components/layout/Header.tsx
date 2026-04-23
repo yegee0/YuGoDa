@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { formatTime } from '@/lib/formatters';
 import { COLORS } from '@/lib/constants';
 import type { Notification } from '@/types';
+import { useAdminPresenceHeartbeat } from '@/hooks/useAdminPresenceHeartbeat';
 
 // ── colour tokens used only in this file ──────────────────────────
 const H = {
@@ -40,6 +41,8 @@ export default function Header({ onMenuOpen }: HeaderProps) {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const currentView = location.pathname.split('/')[1] || 'discover';
+  const isAdmin = userProfile?.role === 'admin';
+  const { state: presenceState, setState: setPresenceState } = useAdminPresenceHeartbeat(isAdmin);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -70,7 +73,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
         setNotifications(notifications);
       });
     }
-    navigate(n.orderId ? `/orders#${n.orderId}` : '/orders');
+    navigate(n.orderId ? `/profile?tab=orders&orderId=${n.orderId}` : '/profile?tab=orders');
   };
 
   const handleMarkAllRead = async () => {
@@ -285,6 +288,32 @@ export default function Header({ onMenuOpen }: HeaderProps) {
                   >
                     <Heart className="w-4 h-4" /> Favorites
                   </button>
+                )}
+                {isAdmin && (
+                  <div className="px-4 py-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: '#8FA396' }}>Status</p>
+                    <div className="flex gap-1.5">
+                      {(['available', 'away'] as const).map((s) => {
+                        const dot = s === 'available' ? 'bg-[#748f2b]' : 'bg-amber-500';
+                        const active = presenceState === s;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => { void setPresenceState(s); }}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-black capitalize transition-all border"
+                            style={{
+                              backgroundColor: active ? (s === 'available' ? 'rgba(116,143,43,0.12)' : 'rgba(245,158,11,0.12)') : 'transparent',
+                              borderColor: active ? (s === 'available' ? '#748f2b' : '#f59e0b') : 'rgba(0,0,0,0.1)',
+                              color: active ? (s === 'available' ? '#5a7a1a' : '#b45309') : '#8FA396',
+                            }}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${dot}`} />
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
                 <div className="my-1" style={{ borderTop: `1px solid ${H.dropBorder}` }} />
                 <button

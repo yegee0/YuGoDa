@@ -3,9 +3,7 @@ import bagImage from '../assets/bag.png';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
 import { COLORS, LANDING_STATS } from '@/lib/constants';
-import type { Review } from '@/types';
 import {
   Menu, X, Leaf, ArrowRight, ChevronDown, Star,
   ShoppingBag, Users, TrendingUp, Heart,
@@ -28,15 +26,13 @@ const C = {
 const bebas:  React.CSSProperties = { fontFamily: '"Bebas Neue", sans-serif' };
 const nunito: React.CSSProperties = { fontFamily: '"Nunito", sans-serif' };
 
-// ── nav links ──────────────────────────────────────────
-const NAV_LINKS = ['How It Works', 'For Businesses', 'Impact', 'FAQ'];
-
-const sectionIds: Record<string, string> = {
-  'How It Works':   'how-it-works',
-  'For Businesses': 'for-businesses',
-  'Impact':         'impact',
-  'FAQ':            'faq',
-};
+// ── nav items (translation key + target section id) ───
+const NAV_ITEMS = [
+  { labelKey: 'landing_nav_how',        sectionId: 'how-it-works'   },
+  { labelKey: 'landing_nav_businesses', sectionId: 'for-businesses' },
+  { labelKey: 'landing_nav_impact',     sectionId: 'impact'         },
+  { labelKey: 'landing_nav_faq',        sectionId: 'faq'            },
+] as const;
 
 // ── ticker words ───────────────────────────────────────
 const TICKER_WORDS = [
@@ -103,38 +99,21 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 // ── main component ─────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'tr' : 'en');
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [turkishReviews, setTurkishReviews] = useState<Review[]>([]);
-
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
-  // Fetch reviews once on mount, filter to Turkish-language comments, show top 4.
-  // Heuristic: presence of at least one Turkish-specific letter in the comment.
-  useEffect(() => {
-    let cancelled = false;
-    const TURKISH_CHAR = /[ıİğĞşŞçÇüÜöÖ]/;
-    api.get<{ success: boolean; reviews: Review[] }>('/reviews')
-      .then(res => {
-        if (cancelled || !res?.reviews) return;
-        const filtered = res.reviews
-          .filter(r => r.comment && TURKISH_CHAR.test(r.comment))
-          .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-          .slice(0, 4);
-        setTurkishReviews(filtered);
-      })
-      .catch(() => { /* silent — section hides when empty */ });
-    return () => { cancelled = true; };
-  }, []);
-
   const scrollTo = (id: string) => {
     setMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
   };
 
   return (
@@ -162,34 +141,42 @@ export default function LandingPage() {
 
           {/* Desktop links */}
           <ul className="hidden md:flex items-center gap-8">
-            {NAV_LINKS.map(l => (
-              <li key={l}>
+            {NAV_ITEMS.map(({ labelKey, sectionId }) => (
+              <li key={labelKey}>
                 <button
-                  onClick={() => scrollTo(sectionIds[l])}
+                  onClick={() => scrollTo(sectionId)}
                   className="text-sm font-extrabold uppercase tracking-widest hover:opacity-70 transition-opacity"
                   style={{ color: '#fff', ...nunito }}
                 >
-                  {l}
+                  {t(labelKey)}
                 </button>
               </li>
             ))}
           </ul>
 
-          {/* Desktop CTA */}
+          {/* Desktop CTA + language toggle */}
           <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={toggleLang}
+              className="px-3 py-1.5 rounded-full text-xs font-extrabold border border-white/30 hover:border-white/70 transition-colors"
+              style={{ color: '#fff', ...nunito, letterSpacing: '0.1em' }}
+              aria-label="Toggle language"
+            >
+              {t('lang_switch_label')}
+            </button>
             <button
               onClick={() => navigate('/auth')}
               className="text-sm font-extrabold hover:opacity-70 transition-opacity"
               style={{ color: '#fff', ...nunito }}
             >
-              Sign in
+              {t('landing_nav_signin')}
             </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
               className="px-5 py-2 rounded-full text-sm font-extrabold hover:opacity-90 transition-opacity active:scale-95"
               style={{ backgroundColor: C.coral, color: '#fff', ...nunito }}
             >
-              Get started
+              {t('landing_nav_signup')}
             </button>
           </div>
 
@@ -211,25 +198,32 @@ export default function LandingPage() {
               style={{ backgroundColor: C.teal }}
             >
               <div className="px-6 pb-6 pt-2 space-y-4">
-                {NAV_LINKS.map(l => (
+                {NAV_ITEMS.map(({ labelKey, sectionId }) => (
                   <button
-                    key={l}
-                    onClick={() => scrollTo(sectionIds[l])}
+                    key={labelKey}
+                    onClick={() => scrollTo(sectionId)}
                     className="block w-full text-left text-sm font-extrabold uppercase tracking-widest text-white py-2"
                   >
-                    {l}
+                    {t(labelKey)}
                   </button>
                 ))}
                 <div className="flex gap-3 pt-2">
                   <button
+                    onClick={toggleLang}
+                    className="py-3 px-4 rounded-full text-xs font-extrabold text-white border-2 border-white/40 hover:border-white/70 transition-colors"
+                    style={{ letterSpacing: '0.1em' }}
+                  >
+                    {t('lang_switch_label')}
+                  </button>
+                  <button
                     onClick={() => { setMenuOpen(false); navigate('/auth'); }}
                     className="flex-1 py-3 rounded-full text-sm font-extrabold text-white border-2 border-white/40"
-                  >Sign in</button>
+                  >{t('landing_nav_signin')}</button>
                   <button
                     onClick={() => { setMenuOpen(false); navigate('/auth?mode=signup'); }}
                     className="flex-1 py-3 rounded-full text-sm font-extrabold"
                     style={{ backgroundColor: C.coral, color: '#fff' }}
-                  >Get started</button>
+                  >{t('landing_nav_signup')}</button>
                 </div>
               </div>
             </motion.div>
@@ -257,23 +251,21 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest mb-6"
               style={{ backgroundColor: C.lime, color: C.teal }}
             >
-              <Leaf className="w-3.5 h-3.5" /> Fight food waste
+              <Leaf className="w-3.5 h-3.5" /> {t('landing_hero_eyebrow')}
             </div>
 
             <h1
               className="text-white leading-none mb-6"
               style={{ ...bebas, fontSize: 'clamp(3.5rem, 8vw, 6.5rem)', lineHeight: 0.95 }}
             >
-              SAVE FOOD.<br />
-              SAVE <span style={{ color: C.lime }}>MONEY.</span><br />
-              SAVE THE<br />
-              <span style={{ color: C.coral }}>PLANET.</span>
+              {t('landing_hero_l1')}<br />
+              {t('landing_hero_l2pre')}<span style={{ color: C.lime }}>{t('landing_hero_l2accent')}</span><br />
+              {t('landing_hero_l3')}<br />
+              <span style={{ color: C.coral }}>{t('landing_hero_l4accent')}</span>
             </h1>
 
             <p className="text-white/80 mb-8 max-w-md" style={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.6 }}>
-              Rescue surprise bags of unsold food from local restaurants
-              and stores — at up to 70% off. Good for your wallet.
-              Great for the Earth.
+              {t('landing_hero_desc')}
             </p>
 
             <div className="flex flex-wrap gap-4 mb-10">
@@ -282,14 +274,14 @@ export default function LandingPage() {
                 className="flex items-center gap-2 px-8 py-4 rounded-full font-extrabold text-sm hover:opacity-90 transition-opacity active:scale-95 group"
                 style={{ backgroundColor: C.coral, color: '#fff' }}
               >
-                Start saving food
+                {t('landing_hero_cta_primary')}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
                 onClick={() => scrollTo('how-it-works')}
                 className="flex items-center gap-2 px-8 py-4 rounded-full font-extrabold text-sm border-2 border-white/30 text-white hover:border-white/60 transition-colors"
               >
-                See how it works
+                {t('landing_hero_cta_secondary')}
               </button>
             </div>
 
@@ -313,20 +305,20 @@ export default function LandingPage() {
                 className="absolute -top-3 -right-3 md:-top-4 md:-right-4 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-lg"
                 style={{ backgroundColor: C.coral, color: '#fff' }}
               >
-                Up to 70% OFF
+                {t('landing_hero_badge')}
               </div>
             </div>
 
             {/* Floating food cards — hidden on very small screens */}
             <div className="hidden sm:block">
               {([
-                { icon: <Croissant className="w-4 h-4" />, label: 'Pastries',  style: { top: '0%',    left: '-22%'  }, delay: 0.3,  accent: C.coral },
-                { icon: <Pizza     className="w-4 h-4" />, label: 'Pizza',     style: { top: '15%',   right: '-22%' }, delay: 0.45, accent: C.teal },
-                { icon: <Utensils  className="w-4 h-4" />, label: 'Salads',    style: { bottom: '12%',left: '-20%'  }, delay: 0.6,  accent: C.teal },
-                { icon: <Soup      className="w-4 h-4" />, label: 'Bento',     style: { bottom: '0%', right: '-18%' }, delay: 0.75, accent: C.coral },
-              ] as const).map(({ icon, label, style, delay, accent }) => (
+                { icon: <Croissant className="w-4 h-4" />, labelKey: 'landing_food_pastries', style: { top: '0%',    left: '-22%'  }, delay: 0.3,  accent: C.coral },
+                { icon: <Pizza     className="w-4 h-4" />, labelKey: 'landing_food_pizza',    style: { top: '15%',   right: '-22%' }, delay: 0.45, accent: C.teal },
+                { icon: <Utensils  className="w-4 h-4" />, labelKey: 'landing_food_salads',   style: { bottom: '12%',left: '-20%'  }, delay: 0.6,  accent: C.teal },
+                { icon: <Soup      className="w-4 h-4" />, labelKey: 'landing_food_bento',    style: { bottom: '0%', right: '-18%' }, delay: 0.75, accent: C.coral },
+              ] as const).map(({ icon, labelKey, style, delay, accent }) => (
                 <motion.div
-                  key={label}
+                  key={labelKey}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay }}
@@ -334,7 +326,7 @@ export default function LandingPage() {
                   style={{ ...style, backgroundColor: 'rgba(255,255,255,0.95)' }}
                 >
                   <span style={{ color: accent }}>{icon}</span>
-                  <span className="text-xs font-extrabold" style={{ color: C.teal }}>{label}</span>
+                  <span className="text-xs font-extrabold" style={{ color: C.teal }}>{t(labelKey)}</span>
                 </motion.div>
               ))}
             </div>
@@ -347,8 +339,8 @@ export default function LandingPage() {
               className="absolute -bottom-6 left-1/2 -translate-x-1/2 px-4 md:px-6 py-3 rounded-2xl text-center shadow-xl whitespace-nowrap"
               style={{ backgroundColor: C.tealDark, border: `2px solid ${C.lime}` }}
             >
-              <p className="text-white text-lg md:text-xl font-extrabold">2.5 kg</p>
-              <p className="text-white/70 text-xs font-extrabold">CO₂ saved per bag</p>
+              <p className="text-white text-lg md:text-xl font-extrabold">{t('landing_hero_co2_amount')}</p>
+              <p className="text-white/70 text-xs font-extrabold">{t('landing_hero_co2_label')}</p>
             </motion.div>
           </motion.div>
         </div>
@@ -362,7 +354,7 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════ STATS BAR */}
-      <section style={{ backgroundColor: C.tealDark }} className="py-14">
+      <section style={{ backgroundColor: C.tealDark }} className="pt-14 pb-28">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
           {LANDING_STATS.map(({ value, suffix, labelKey }) => (
             <div key={labelKey} className="min-w-0">
@@ -384,17 +376,17 @@ export default function LandingPage() {
       <div style={{ backgroundColor: C.cream, paddingTop: '80px', paddingBottom: '80px' }}>
         <div className="text-center px-6">
           <p className="text-sm font-extrabold uppercase tracking-widest mb-3" style={{ color: C.coral }}>
-            Why choose YuGoDa
+            {t('landing_why_eyebrow')}
           </p>
           <h2 style={{ ...bebas, fontSize: 'clamp(2.8rem, 6vw, 5rem)', color: C.teal, lineHeight: 1 }}>
-            GOOD FOR YOU.<br />
-            <span style={{ color: C.coral }}>GREAT</span> FOR THE WORLD.
+            {t('landing_why_title_l1')}<br />
+            <span style={{ color: C.coral }}>{t('landing_why_title_l2')}</span> {t('landing_why_title_l3')}
           </h2>
         </div>
       </div>
 
       {/* ── Green: features + bag image ── */}
-      <div style={{ backgroundColor: '#1a3d2b', position: 'relative', overflow: 'hidden' }} className="py-12 md:py-0 md:h-[280px]">
+      <div style={{ backgroundColor: '#1a3d2b', position: 'relative' }} className="py-12 md:py-0 md:h-[280px]">
 
         {/* Bag image — desktop: centered straddling boundary; mobile: smaller, above features */}
         <div className="hidden md:block" style={{
@@ -402,7 +394,7 @@ export default function LandingPage() {
           top: '-160px',
           left: '49%',
           transform: 'translateX(-50%)',
-          width: '590px',
+          width: '370px',
           zIndex: 2,
           lineHeight: 0,
           pointerEvents: 'none',
@@ -434,13 +426,13 @@ export default function LandingPage() {
         {/* Features — desktop: 3-col grid around bag; mobile: 2x2 grid */}
         <div className="md:hidden max-w-sm mx-auto px-6 grid grid-cols-2 gap-6">
           {[
-            { icon: <DollarSign className="w-5 h-5" />, title: 'Save up to 70%', desc: 'Restaurant-quality food at a fraction of the price.' },
-            { icon: <Leaf className="w-5 h-5" />, title: 'Reduce waste', desc: 'Every bag rescued means less food in landfill.' },
-            { icon: <Gift className="w-5 h-5" />, title: 'Surprise every time', desc: 'A mystery selection unique to every visit.' },
-            { icon: <MapPin className="w-5 h-5" />, title: 'Shops near you', desc: 'Bakeries, cafés and grocers in your area.' },
-          ].map(({ icon, title, desc }, i) => (
+            { icon: <DollarSign className="w-5 h-5" />, titleKey: 'landing_why_f1_title', descKey: 'landing_why_f1_desc' },
+            { icon: <Leaf       className="w-5 h-5" />, titleKey: 'landing_why_f2_title', descKey: 'landing_why_f2_desc' },
+            { icon: <Gift       className="w-5 h-5" />, titleKey: 'landing_why_f3_title', descKey: 'landing_why_f3_desc' },
+            { icon: <MapPin     className="w-5 h-5" />, titleKey: 'landing_why_f4_title', descKey: 'landing_why_f4_desc' },
+          ].map(({ icon, titleKey, descKey }, i) => (
             <motion.div
-              key={title}
+              key={titleKey}
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -450,8 +442,8 @@ export default function LandingPage() {
               <div style={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: C.lime, color: '#1a3d2b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {icon}
               </div>
-              <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.9rem', color: '#fff', margin: 0 }}>{title}</h3>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{desc}</p>
+              <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.9rem', color: '#fff', margin: 0 }}>{t(titleKey)}</h3>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{t(descKey)}</p>
             </motion.div>
           ))}
         </div>
@@ -470,11 +462,11 @@ export default function LandingPage() {
         >
           <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: '24px', paddingTop: '24px' }}>
             {[
-              { icon: <DollarSign className="w-5 h-5" />, title: 'Save up to 70%', desc: 'Restaurant-quality food at a fraction of the price.' },
-              { icon: <Leaf       className="w-5 h-5" />, title: 'Reduce waste',   desc: 'Every bag rescued means less food in landfill.' },
-            ].map(({ icon, title, desc }, i) => (
+              { icon: <DollarSign className="w-5 h-5" />, titleKey: 'landing_why_f1_title', descKey: 'landing_why_f1_desc' },
+              { icon: <Leaf       className="w-5 h-5" />, titleKey: 'landing_why_f2_title', descKey: 'landing_why_f2_desc' },
+            ].map(({ icon, titleKey, descKey }, i) => (
               <motion.div
-                key={title}
+                key={titleKey}
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -484,19 +476,19 @@ export default function LandingPage() {
                 <div style={{ width: 52, height: 52, borderRadius: '14px', backgroundColor: C.lime, color: '#1a3d2b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {icon}
                 </div>
-                <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{title}</h3>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{desc}</p>
+                <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{t(titleKey)}</h3>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{t(descKey)}</p>
               </motion.div>
             ))}
           </div>
           <div />
           <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', alignItems: 'flex-start', justifyContent: 'flex-start', paddingLeft: '24px', paddingTop: '24px' }}>
             {[
-              { icon: <Gift   className="w-5 h-5" />, title: 'Surprise every time', desc: 'A mystery selection unique to every visit.' },
-              { icon: <MapPin className="w-5 h-5" />, title: 'Shops near you',      desc: 'Bakeries, cafés and grocers in your area.' },
-            ].map(({ icon, title, desc }, i) => (
+              { icon: <Gift   className="w-5 h-5" />, titleKey: 'landing_why_f3_title', descKey: 'landing_why_f3_desc' },
+              { icon: <MapPin className="w-5 h-5" />, titleKey: 'landing_why_f4_title', descKey: 'landing_why_f4_desc' },
+            ].map(({ icon, titleKey, descKey }, i) => (
               <motion.div
-                key={title}
+                key={titleKey}
                 initial={{ opacity: 0, x: 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -506,8 +498,8 @@ export default function LandingPage() {
                 <div style={{ width: 52, height: 52, borderRadius: '14px', backgroundColor: C.lime, color: '#1a3d2b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {icon}
                 </div>
-                <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{title}</h3>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{desc}</p>
+                <h3 style={{ ...nunito, fontWeight: 800, fontSize: '0.95rem', color: '#fff', margin: 0 }}>{t(titleKey)}</h3>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0, lineHeight: 1.6 }}>{t(descKey)}</p>
               </motion.div>
             ))}
           </div>
@@ -636,28 +628,20 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.lime }}>
-              For restaurants &amp; stores
+              {t('landing_biz_eyebrow')}
             </p>
             <h2 className="text-white leading-none mb-6" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 4rem)' }}>
-              TURN SURPLUS<br />
-              INTO <span style={{ color: C.coral }}>REVENUE.</span>
+              {t('landing_biz_title_l1')}<br />
+              {t('landing_biz_title_l2')}<span style={{ color: C.coral }}>{t('landing_biz_title_accent')}</span>
             </h2>
             <p className="text-white/70 mb-8 leading-relaxed font-extrabold text-sm">
-              Join thousands of businesses already using YuGoDa to recover value from
-              unsold inventory, reach new customers, and build a sustainability story
-              your guests will love.
+              {t('landing_biz_desc')}
             </p>
             <ul className="space-y-3 mb-8">
-              {[
-                'Zero upfront cost — pay only when you sell',
-                'Reach eco-conscious customers in your area',
-                'Dashboard analytics to track performance',
-                'Easy bag management from any device',
-                'Boost your brand with sustainability credentials',
-              ].map(item => (
-                <li key={item} className="flex items-start gap-3">
+              {(['landing_biz_f1','landing_biz_f2','landing_biz_f3','landing_biz_f4','landing_biz_f5'] as const).map(key => (
+                <li key={key} className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" style={{ color: C.lime }} />
-                  <span className="text-white/85 text-sm font-extrabold">{item}</span>
+                  <span className="text-white/85 text-sm font-extrabold">{t(key)}</span>
                 </li>
               ))}
             </ul>
@@ -666,7 +650,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-extrabold text-sm hover:opacity-90 transition-opacity active:scale-95"
               style={{ backgroundColor: C.coral, color: '#fff' }}
             >
-              Join as a business <ArrowRight className="w-4 h-4" />
+              {t('landing_biz_cta')} <ArrowRight className="w-4 h-4" />
             </button>
           </motion.div>
 
@@ -679,25 +663,10 @@ export default function LandingPage() {
             className="space-y-4"
           >
             {[
-              {
-                quote: 'We recover $400 extra per month from food we used to throw away. YuGoDa has been a game changer.',
-                name: 'Sophie L.',
-                role: 'Bakery owner, Istanbul',
-                rating: 5,
-              },
-              {
-                quote: 'Our new customer acquisition doubled after joining. People who find us through YuGoDa become regulars.',
-                name: 'Marco T.',
-                role: 'Restaurant manager, Ankara',
-                rating: 5,
-              },
-              {
-                quote: "Setup took 10 minutes. The dashboard is clean and we get payouts weekly. Couldn't be simpler.",
-                name: 'Aisha M.',
-                role: 'Cafe owner, Izmir',
-                rating: 5,
-              },
-            ].map(({ quote, name, role, rating }) => (
+              { quoteKey: 'landing_testimonial_1_quote', name: 'Elif K.',  roleKey: 'landing_testimonial_1_role', rating: 5 },
+              { quoteKey: 'landing_testimonial_2_quote', name: 'Murat T.', roleKey: 'landing_testimonial_2_role', rating: 5 },
+              { quoteKey: 'landing_testimonial_3_quote', name: 'Selin Ö.', roleKey: 'landing_testimonial_3_role', rating: 5 },
+            ].map(({ quoteKey, name, roleKey, rating }) => (
               <div
                 key={name}
                 className="p-5 rounded-2xl"
@@ -708,104 +677,35 @@ export default function LandingPage() {
                     <Star key={i} className="w-4 h-4 fill-current" style={{ color: C.lime }} />
                   ))}
                 </div>
-                <p className="text-white/90 text-sm font-extrabold leading-relaxed mb-3">"{quote}"</p>
-                <p className="text-white/60 text-xs font-extrabold">{name} · {role}</p>
+                <p className="text-white/90 text-sm font-extrabold leading-relaxed mb-3">"{t(quoteKey)}"</p>
+                <p className="text-white/60 text-xs font-extrabold">{name} · {t(roleKey)}</p>
               </div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ════════════════════════════════════ CUSTOMER REVIEWS (Turkish only) */}
-      {turkishReviews.length > 0 && (
-        <section className="py-20" style={{ backgroundColor: C.teal }}>
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-10">
-              <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.lime }}>
-                {t('landing_reviews_eyebrow')}
-              </p>
-              <h2 className="text-white leading-none" style={{ ...bebas, fontSize: 'clamp(2.25rem, 5vw, 3.5rem)' }}>
-                {t('landing_reviews_heading')}
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {turkishReviews.map(r => {
-                const firstName = (r.userName || 'A').trim().split(/\s+/)[0];
-                const initial = firstName.charAt(0).toUpperCase();
-                return (
-                  <motion.div
-                    key={r.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4 }}
-                    className="p-5 rounded-2xl flex flex-col h-full"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.12)' }}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shrink-0"
-                        style={{ backgroundColor: C.lime, color: C.teal }}
-                      >
-                        {initial}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-white font-extrabold text-sm truncate">{firstName}</p>
-                        <div className="flex gap-0.5 mt-0.5">
-                          {Array.from({ length: Math.min(Math.max(r.rating ?? 0, 0), 5) }).map((_, i) => (
-                            <Star key={i} className="w-3 h-3 fill-current" style={{ color: C.lime }} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {r.comment && (
-                      <p className="text-white/85 text-sm font-extrabold leading-relaxed line-clamp-5">
-                        "{r.comment}"
-                      </p>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ════════════════════════════════════ IMPACT */}
       <section id="impact" className="py-24" style={{ backgroundColor: C.tealDark }}>
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.lime }}>
-              Our mission
+              {t('landing_impact_eyebrow')}
             </p>
             <h2 className="text-white leading-none" style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 4rem)' }}>
-              WHERE WE'RE <span style={{ color: C.coral }}>HEADING</span>
+              {t('landing_impact_title_l1')}<span style={{ color: C.coral }}>{t('landing_impact_title_accent')}</span>
             </h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              {
-                icon: <Leaf className="w-8 h-8" />,
-                title: 'Climate action',
-                desc: 'Food waste accounts for ~8% of global greenhouse gas emissions. Every bag rescued is a direct step toward a healthier planet.',
-                stat: '10,000 kg', statLabel: 'CO₂ to prevent in year 1',
-              },
-              {
-                icon: <Users className="w-8 h-8" />,
-                title: 'Community impact',
-                desc: 'We aim to make quality food accessible to everyone — building more equitable, resilient communities one meal at a time.',
-                stat: '5,000', statLabel: 'meals to rescue in year 1',
-              },
-              {
-                icon: <TrendingUp className="w-8 h-8" />,
-                title: 'Growing together',
-                desc: "We're building a network of local restaurants and stores committed to zero waste — turning surplus into opportunity.",
-                stat: '100+', statLabel: 'partner stores by 2027',
-              },
-            ].map(({ icon, title, desc, stat, statLabel }, i) => (
+              { icon: <Leaf      className="w-8 h-8" />, titleKey: 'landing_impact_1_title', descKey: 'landing_impact_1_desc', statKey: 'landing_impact_1_stat_val', statLabelKey: 'landing_impact_1_stat_label' },
+              { icon: <Users     className="w-8 h-8" />, titleKey: 'landing_impact_2_title', descKey: 'landing_impact_2_desc', statKey: 'landing_impact_2_stat_val', statLabelKey: 'landing_impact_2_stat_label' },
+              { icon: <TrendingUp className="w-8 h-8" />, titleKey: 'landing_impact_3_title', descKey: 'landing_impact_3_desc', statKey: 'landing_impact_3_stat_val', statLabelKey: 'landing_impact_3_stat_label' },
+            ].map(({ icon, titleKey, descKey, statKey, statLabelKey }, i) => (
               <motion.div
-                key={title}
+                key={titleKey}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -823,10 +723,10 @@ export default function LandingPage() {
                 >
                   {icon}
                 </div>
-                <h3 className="text-white font-extrabold text-lg mb-2">{title}</h3>
-                <p className="text-white/60 text-sm leading-relaxed mb-5">{desc}</p>
-                <p style={{ ...bebas, fontSize: '2rem', color: C.lime }}>{stat}</p>
-                <p className="text-white/50 text-xs font-extrabold uppercase tracking-widest">{statLabel}</p>
+                <h3 className="text-white font-extrabold text-lg mb-2">{t(titleKey)}</h3>
+                <p className="text-white/60 text-sm leading-relaxed mb-5">{t(descKey)}</p>
+                <p style={{ ...bebas, fontSize: '2rem', color: C.lime }}>{t(statKey)}</p>
+                <p className="text-white/50 text-xs font-extrabold uppercase tracking-widest">{t(statLabelKey)}</p>
               </motion.div>
             ))}
           </div>
@@ -838,7 +738,7 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-14">
             <p className="text-xs font-extrabold uppercase tracking-widest mb-3" style={{ color: C.coral }}>
-              Questions
+              {t('faq_eyebrow')}
             </p>
             <h2 style={{ ...bebas, fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: C.teal }}>
               FAQ
@@ -850,44 +750,18 @@ export default function LandingPage() {
             style={{ backgroundColor: '#fff', boxShadow: '0 8px 40px rgba(27,94,82,0.08)' }}
           >
             {[
-              {
-                q: "What's inside a surprise bag?",
-                a: "Surprise bags contain a random selection of unsold food from that store — it could be pastries, sandwiches, hot meals, groceries, or prepared foods. You choose a store you like and trust the surprise!",
-              },
-              {
-                q: 'How much do I save?',
-                a: 'Typical savings are 50–70% off the original retail value. A ₺30 bag might contain ₺100 worth of food. The exact value depends on the store.',
-              },
-              {
-                q: 'Where do I pick up my bag?',
-                a: 'Each store has a defined pickup window (usually 30–90 minutes before closing). Your order confirmation will show the address and time. Just show up and show your QR code.',
-              },
-              {
-                q: "Can I choose what's inside?",
-                a: 'No — the surprise is part of the concept! Stores pack whatever is left over that day. However, you can filter by dietary type (vegetarian, vegan, etc.) when browsing.',
-              },
-              {
-                q: 'How do I become a partner store?',
-                a: "Click 'Join as a business' above, register, and complete your store profile. Our team will verify your listing within 24 hours and you can start selling bags immediately after.",
-              },
-              {
-                q: 'What payment methods do you accept?',
-                a: 'We accept credit and debit cards processed securely via iyzico, as well as YuGoPay wallet balance and cash on delivery for supported stores.',
-              },
-              {
-                q: 'Can I filter by dietary restrictions?',
-                a: 'Yes! Stores tag their bags with dietary labels like vegan, vegetarian, halal, gluten-free, and organic. Use the filters on the Discover page to find bags that match your preferences.',
-              },
-              {
-                q: 'What if something is wrong with my order?',
-                a: 'Contact our support team within 2 hours of pickup. We review every case individually and offer refunds or credits when appropriate.',
-              },
-              {
-                q: 'Do you offer delivery?',
-                a: 'Some partner stores offer delivery in addition to pickup. Check each store page for delivery availability and estimated delivery times.',
-              },
-            ].map(item => (
-              <FaqItem key={item.q} {...item} />
+              { id: 'faq1', q: t('faq_q1'), a: t('faq_a1') },
+              { id: 'faq2', q: t('faq_q2'), a: t('faq_a2') },
+              { id: 'faq3', q: t('faq_q3'), a: t('faq_a3') },
+              { id: 'faq4', q: t('faq_q4'), a: t('faq_a4') },
+              { id: 'faq5', q: t('faq_q5'), a: t('faq_a5') },
+              { id: 'faq6', q: t('faq_q6'), a: t('faq_a6') },
+              { id: 'faq7', q: t('faq_q7'), a: t('faq_a7') },
+              { id: 'faq8', q: t('faq_q8'), a: t('faq_a8') },
+              { id: 'faq9', q: t('faq_q9'), a: t('faq_a9') },
+            ].map(({ id, q, a }) => (
+              // @ts-expect-error React 19 key prop type narrowing — key is a React special attribute, not a component prop
+              <FaqItem key={id} q={q} a={a} />
             ))}
           </div>
         </div>
@@ -903,17 +777,17 @@ export default function LandingPage() {
           <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full opacity-15 pointer-events-none" style={{ backgroundColor: C.coral }} />
 
           <p className="text-xs font-extrabold uppercase tracking-widest mb-3 relative z-10" style={{ color: C.lime }}>
-            Join the movement
+            {t('landing_cta_eyebrow')}
           </p>
           <h2
             className="text-white leading-none mb-6 relative z-10"
             style={{ ...bebas, fontSize: 'clamp(2.5rem, 6vw, 5rem)' }}
           >
-            READY TO RESCUE<br />
-            SOME <span style={{ color: C.coral }}>FOOD?</span>
+            {t('landing_cta_title_l1')}<br />
+            {t('landing_cta_title_l2')}<span style={{ color: C.coral }}>{t('landing_cta_title_accent')}</span>
           </h2>
           <p className="text-white/70 font-extrabold mb-8 relative z-10">
-            Sign up on web — it's free to join.
+            {t('landing_cta_desc')}
           </p>
           <div className="flex flex-wrap justify-center gap-4 relative z-10">
             <button
@@ -921,13 +795,13 @@ export default function LandingPage() {
               className="flex items-center gap-2 px-8 py-4 rounded-full font-extrabold text-sm hover:opacity-90 transition-opacity active:scale-95"
               style={{ backgroundColor: C.coral, color: '#fff' }}
             >
-              Browse bags now <ArrowRight className="w-4 h-4" />
+              {t('landing_cta_primary')} <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => navigate('/auth?mode=signup')}
               className="flex items-center gap-2 px-8 py-4 rounded-full font-extrabold text-sm border-2 border-white/30 text-white hover:border-white/60 transition-colors"
             >
-              Create free account
+              {t('landing_cta_secondary')}
             </button>
           </div>
         </div>
@@ -947,56 +821,50 @@ export default function LandingPage() {
               </span>
             </div>
             <p className="text-white/50 text-xs leading-relaxed font-extrabold">
-              Fight food waste. Save money.<br />Save the planet.
+              {t('landing_footer_tagline')}
             </p>
           </div>
 
           {/* Link columns */}
           {[
-            { heading: 'Product',  links: ['How it works', 'For businesses'], ctaBelow: true },
-            { heading: 'Company',  links: ['About us'],                        ctaBelow: false },
-            { heading: 'Legal',    links: ['Privacy policy', 'Terms of service', 'Admin'], ctaBelow: false },
-          ].map(({ heading, links, ctaBelow }) => (
-            <div key={heading}>
+            {
+              headingKey: 'landing_footer_product',
+              links: [
+                { labelKey: 'landing_footer_howitworks', action: () => scrollTo('how-it-works') },
+                { labelKey: 'landing_footer_forbiz',     action: () => scrollTo('for-businesses') },
+              ],
+            },
+            {
+              headingKey: 'landing_footer_company',
+              links: [
+                { labelKey: 'landing_footer_about', action: () => navigate('/about') },
+              ],
+            },
+            {
+              headingKey: 'landing_footer_legal',
+              links: [
+                { labelKey: 'landing_footer_privacy', action: () => navigate('/privacy') },
+                { labelKey: 'landing_footer_terms',   action: () => navigate('/terms') },
+                { labelKey: 'landing_footer_admin',   action: () => navigate('/admin-auth') },
+              ],
+            },
+          ].map(({ headingKey, links }) => (
+            <div key={headingKey}>
               <h4 className="text-xs font-extrabold uppercase tracking-widest mb-4" style={{ color: C.lime }}>
-                {heading}
+                {t(headingKey)}
               </h4>
               <ul className="space-y-2.5">
-                {links.map(link => (
-                  <li key={link}>
+                {links.map(({ labelKey, action }) => (
+                  <li key={labelKey}>
                     <button
-                      onClick={() => {
-                        if (link === 'Admin') navigate('/admin-auth');
-                        else if (link === 'For businesses') scrollTo('for-businesses');
-                        else if (link === 'About us') navigate('/about');
-                        else if (link === 'Privacy policy') navigate('/privacy');
-                        else if (link === 'Terms of service') navigate('/terms');
-                        else if (link === 'How it works') scrollTo('how-it-works');
-                      }}
+                      onClick={action}
                       className="text-white/50 text-xs font-extrabold hover:text-white/90 transition-colors"
                     >
-                      {link}
+                      {t(labelKey)}
                     </button>
                   </li>
                 ))}
               </ul>
-
-              {ctaBelow && (
-                <div className="mt-5">
-                  <p className="text-[0.65rem] font-extrabold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    {t('landing_footer_cta_label')}
-                  </p>
-                  <button
-                    onClick={() => navigate('/discover')}
-                    className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-extrabold shadow-lg hover:shadow-xl transition-all active:scale-95"
-                    style={{ backgroundColor: C.coral, color: '#fff' }}
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    {t('landing_footer_cta_button')}
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -1011,7 +879,7 @@ export default function LandingPage() {
               className="px-4 py-1.5 rounded-full text-xs font-extrabold border"
               style={{ borderColor: C.lime, color: C.lime }}
             >
-              🌱 Certified Eco-Friendly Platform
+              {t('landing_footer_eco')}
             </div>
           </div>
         </div>

@@ -57,12 +57,28 @@ public class UserService {
             return userRepository.findById(uid).orElseThrow();
         }
 
-        // Security: only customer or restaurant are permitted for self-signup.
-        // Admin and driver roles MUST be assigned by an admin-gated endpoint
-        // (or manual DB promotion), never from the client body. Anything else
-        // collapses to the safe default "customer".
+        // Determine the allowed role for this self-signup.
+        //
+        // The "_principalRole" field is injected by UserController.register from the
+        // JWT-decoded UserPrincipal (role derived from the Firebase project's issuer
+        // claim). Clients cannot forge it. We trust it as a ceiling: the body's
+        // requested role is honoured only when it matches the principal's role.
+        //
+        // Result matrix:
+        //   principalRole=admin    + role=admin      → admin
+        //   principalRole=restaurant + role=restaurant → restaurant
+        //   anything else                             → customer
+        String principalRole = body.getOrDefault("_principalRole", "customer").toString();
         String requestedRole = body.getOrDefault("role", "customer").toString();
-        String role = ("restaurant".equals(requestedRole)) ? "restaurant" : "customer";
+        String role;
+        if ("admin".equals(requestedRole) && "admin".equals(principalRole)) {
+            role = "admin";
+        } else if ("restaurant".equals(requestedRole)
+                && ("restaurant".equals(principalRole) || "admin".equals(principalRole))) {
+            role = "restaurant";
+        } else {
+            role = "customer";
+        }
         User user = new User();
         user.setUid(uid);
         user.setEmail(email);
@@ -152,8 +168,10 @@ public class UserService {
 
         try {
             user.setFavorites(objectMapper.writeValueAsString(favorites));
-        } catch (Exception ignored) {}
-        userRepository.save(user);
+            userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Could not persist favorites", e);
+        }
         return favorites;
     }
 

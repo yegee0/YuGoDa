@@ -18,9 +18,29 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title ?? 'YuGoDa';
   const body  = payload.notification?.body  ?? '';
+  const orderId = payload.data?.orderId;
+  const url = orderId ? `/profile?tab=orders&orderId=${orderId}` : '/profile?tab=orders';
   self.registration.showNotification(title, {
     body,
     icon: '/favicon.ico',
     badge: '/favicon.ico',
+    data: { url },
   });
+});
+
+// Open/focus the app at the right page when the user clicks a background notification
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/discover';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If a tab is already open, navigate it instead of opening a new one
+      for (const client of windowClients) {
+        if ('navigate' in client) {
+          return client.navigate(url).then(() => client.focus());
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

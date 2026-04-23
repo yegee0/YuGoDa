@@ -46,6 +46,9 @@ public class Store {
     @Column(columnDefinition = "TEXT")
     private String bankingDetails;
 
+    @Column(columnDefinition = "TEXT")
+    private String dietaryTags = "[]";
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

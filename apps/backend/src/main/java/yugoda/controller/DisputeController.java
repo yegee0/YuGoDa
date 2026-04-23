@@ -93,6 +93,8 @@ public class DisputeController extends BaseController {
             return notFound(e.getMessage());
         } catch (SecurityException e) {
             return forbidden(e.getMessage());
+        } catch (IllegalStateException e) {
+            return badRequest(e.getMessage());
         }
     }
 }

@@ -3,7 +3,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { authCustomer, authPartner, authAdmin, getCustomerFcmToken, listenForegroundMessages, signOutAllProjects } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
 import { useTranslation } from 'react-i18next';
-import { api, ApiError, setBannedHandler } from '@/lib/api';
+import { api, ApiError, setBannedHandler, markAuthInitialized } from '@/lib/api';
 
 export function useAuthInit() {
   const { i18n } = useTranslation();
@@ -39,7 +39,10 @@ export function useAuthInit() {
     let isReadyAdmin = false;
 
     const checkReady = () => {
-      if (isReadyCustomer && isReadyPartner && isReadyAdmin) setIsAuthReady(true);
+      if (isReadyCustomer && isReadyPartner && isReadyAdmin) {
+        setIsAuthReady(true);
+        markAuthInitialized();
+      }
     };
 
     const handleAuth = async (currentUser: User, role: 'customer' | 'restaurant' | 'admin') => {
@@ -59,8 +62,25 @@ export function useAuthInit() {
         });
 
         // Backend'den profil bilgilerini al
+        // For network / 5xx failures, retry up to 2 extra times with a back-off
+        // before giving up — protects against transient connectivity blips and
+        // slow cold-starts without masking definitive errors (4xx).
+        const fetchProfile = async () => {
+          let lastErr: unknown;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              return await api.get('/users/me');
+            } catch (err) {
+              lastErr = err;
+              // Definitive HTTP response — don't retry, handle below
+              if (err instanceof ApiError) throw err;
+              if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+            }
+          }
+          throw lastErr;
+        };
         try {
-          const data = await api.get('/users/me');
+          const data = await fetchProfile();
           if (data.user) {
             // Admin portal is gated: if the Firebase admin session belongs to a
             // DB row whose role isn't admin (e.g. a customer who authed via
@@ -98,25 +118,49 @@ export function useAuthInit() {
             }).catch(() => {});
           }
         } catch (err: unknown) {
-          // Admin portal is closed-registration: we never auto-register an
-          // admin. A 404 means the account isn't provisioned in the DB (fail
-          // closed, route to explainer). A non-404/network error means we
-          // couldn't verify (uncertain — show retry, don't fail closed).
-          if (role === 'admin') {
-            const is404 = err instanceof ApiError && err.status === 404;
-            await authAdmin.signOut();
-            const target = is404 ? '/admin/not-provisioned' : '/admin/not-provisioned?reason=retry';
-            if (window.location.pathname + window.location.search !== target) {
-              window.location.assign(target);
-            }
-            return;
-          }
-          // Customer/restaurant: if 404, auto-register; other errors, continue
-          // with the default profile set earlier so the app doesn't hard-fail
-          // on a transient backend hiccup.
+          // Non-404 errors (401, 5xx, network): keep the optimistic profile and
+          // continue — same pattern as customer/restaurant. Redirecting on every
+          // auth error creates an infinite reload loop (window.location.assign
+          // re-triggers onAuthStateChanged → handleAuth → same error → redirect…).
           if (!(err instanceof ApiError && err.status === 404)) {
             return;
           }
+          // 404: user is not in the DB.
+          // Admin accounts are provisioned on first sign-in, just like customer /
+          // restaurant accounts. The backend allows role="admin" only when the JWT
+          // issuer confirms the token comes from the yugoda-admin Firebase project,
+          // so this is not a security hole.
+          if (role === 'admin') {
+            try {
+              const [firstName = '', ...rest] = (currentUser.displayName || '').trim().split(/\s+/).filter(Boolean);
+              const lastName = rest.join(' ');
+              await api.post('/users/register', {
+                displayName: currentUser.displayName || currentUser.email || 'Admin',
+                firstName,
+                lastName,
+                email: currentUser.email,
+                role: 'admin',
+              });
+              const retryData = await api.get('/users/me');
+              if (retryData.user) {
+                setUserProfile({
+                  ...retryData.user,
+                  role: 'admin',
+                  favorites: retryData.user.favorites || [],
+                  addresses: retryData.user.addresses || [],
+                  notificationsEnabled: retryData.user.notificationsEnabled ?? true,
+                  preferredLanguage: retryData.user.preferredLanguage || 'en',
+                });
+              }
+            } catch {
+              // Registration failed (backend unreachable or returned an error).
+              // Keep the optimistic profile — same as the non-404 path above.
+              // The admin panel will load with empty data; they can refresh once
+              // the backend is available.
+            }
+            return;
+          }
+          // Customer/restaurant 404: auto-register
           try {
             const storeName = currentUser.displayName || currentUser.email?.split('@')[0] || 'My Restaurant';
             // Google OAuth yields a combined displayName like "Ahmet Yılmaz"; split on

@@ -105,6 +105,7 @@ public class StoreService {
             if (body.containsKey("location")) store.setLocation(objectMapper.writeValueAsString(body.get("location")));
             if (body.containsKey("operatingHours")) store.setOperatingHours(objectMapper.writeValueAsString(body.get("operatingHours")));
             if (body.containsKey("bankingDetails")) store.setBankingDetails(objectMapper.writeValueAsString(body.get("bankingDetails")));
+            if (body.containsKey("dietaryTags")) store.setDietaryTags(objectMapper.writeValueAsString(body.get("dietaryTags")));
         } catch (Exception ignored) {}
 
         return storeRepository.save(store);

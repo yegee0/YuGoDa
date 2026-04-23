@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YuGoDa – Welcome</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:   #1B5E52;
+      --teal-dk:#143f36;
+      --lime:   #B8E04A;
+      --coral:  #E8674A;
+      --cream:  #F5F0E8;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: var(--teal);
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ─────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: rgba(20, 63, 54, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 0.05em;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--coral); }
+
+    /* Language toggle button */
+    .lang-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      background: transparent;
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .lang-btn:hover {
+      border-color: var(--lime);
+      background: rgba(184, 224, 74, 0.1);
+    }
+
+    .lang-btn .flag { font-size: 1rem; }
+
+    /* ── Hero ────────────────────────────────── */
+    .hero {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+    }
+
+    /* Eyebrow */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background-color: var(--lime);
+      color: var(--teal);
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Main title */
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3.2rem, 8vw, 6rem);
+      line-height: 0.95;
+      letter-spacing: 0.01em;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-title .accent-lime  { color: var(--lime); }
+    .hero-title .accent-coral { color: var(--coral); }
+
+    /* Description */
+    .hero-desc {
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.78);
+      max-width: 560px;
+      margin-bottom: 2rem;
+    }
+
+    /* Feature list */
+    .features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .features li {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: rgba(255,255,255,0.88);
+    }
+
+    .features li::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--lime);
+      flex-shrink: 0;
+    }
+
+    /* CTA button */
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 2rem;
+      border-radius: 999px;
+      background-color: var(--coral);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .cta-btn:hover  { opacity: 0.9; }
+    .cta-btn:active { transform: scale(0.97); }
+    .cta-btn .arrow { transition: transform 0.2s; }
+    .cta-btn:hover .arrow { transform: translateX(4px); }
+
+    /* ── Responsive ──────────────────────────── */
+    @media (max-width: 600px) {
+      nav { padding: 0 1rem; }
+      .hero { padding: 3.5rem 1.25rem 4rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══ NAV ══════════════════════════════════════════ -->
+  <nav>
+    <a href="/" class="nav-logo">Yu<span>Go</span>Da</a>
+
+    <button class="lang-btn" id="lang-toggle" onclick="toggleLang()">
+      <span class="flag" id="lang-flag"></span>
+      <span data-i18n="lang_label"></span>
+    </button>
+  </nav>
+
+  <!-- ══ HERO ═════════════════════════════════════════ -->
+  <section class="hero">
+
+    <!-- Eyebrow -->
+    <div class="eyebrow">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/>
+      </svg>
+      <span data-i18n="eyebrow"></span>
+    </div>
+
+    <!-- Title — accents are markup, not i18n-swapped -->
+    <h1 class="hero-title">
+      <span data-i18n="title_line1"></span><br>
+      <span data-i18n="title_line2" class="accent-lime"></span><br>
+      <span data-i18n="title_line3"></span><br>
+      <span data-i18n="title_line4" class="accent-coral"></span>
+    </h1>
+
+    <!-- Description -->
+    <p class="hero-desc" data-i18n="description"></p>
+
+    <!-- Features -->
+    <ul class="features">
+      <li><span data-i18n="feature_1"></span></li>
+      <li><span data-i18n="feature_2"></span></li>
+      <li><span data-i18n="feature_3"></span></li>
+      <li><span data-i18n="feature_4"></span></li>
+    </ul>
+
+    <!-- CTA -->
+    <a href="/auth?mode=signup" class="cta-btn">
+      <span data-i18n="cta"></span>
+      <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </a>
+
+  </section>
+
+  <!-- ══ i18n ══════════════════════════════════════════
+       How it works:
+       1. Every text node has a data-i18n="key" attribute.
+       2. applyTranslations() loops over them and sets textContent
+          from the active language object.
+       3. toggleLang() flips the language and calls applyTranslations().
+       4. The chosen language is persisted in localStorage.
+  ════════════════════════════════════════════════════ -->
+  <script>
+    // ── Translation strings ──────────────────────────
+    const translations = {
+      en: {
+        lang_label:   'Türkçe',
+        lang_flag:    '🇹🇷',
+
+        eyebrow:      'Fight Food Waste',
+        title_line1:  'SAVE FOOD.',
+        title_line2:  'SAVE MONEY.',
+        title_line3:  'SAVE THE',
+        title_line4:  'PLANET.',
+        description:  'Rescue surprise bags of unsold food from local restaurants and stores — at up to 70% off. Good for your wallet. Great for the Earth.',
+        feature_1:    'Up to 70% off restaurant-quality food',
+        feature_2:    'Reduce food waste and CO₂ emissions',
+        feature_3:    'Discover bakeries, cafés, and grocers near you',
+        feature_4:    'A surprise selection — unique every time',
+        cta:          'Start saving food',
+      },
+      tr: {
+        lang_label:   'English',
+        lang_flag:    '🇬🇧',
+
+        eyebrow:      'Gıda İsrafını Önle',
+        title_line1:  'YİYECEĞİ',
+        title_line2:  'KURTAR.',
+        title_line3:  'PARA BİRİKTİR.',
+        title_line4:  'GEZEGENİ KORU.',
+        description:  'Yerel restoran ve mağazaların satılamayan yiyeceklerini sürpriz çantalarla %70\'e kadar indirimli satın al. Cüzdanın için iyi, Dünya için harika.',
+        feature_1:    'Restoran kalitesinde yiyeceklerde %70\'e kadar indirim',
+        feature_2:    'Gıda israfını ve CO₂ emisyonlarını azalt',
+        feature_3:    'Yakınındaki fırın, kafe ve marketleri keşfet',
+        feature_4:    'Sürpriz seçim — her seferinde farklı',
+        cta:          'Yiyecek kurtarmaya başla',
+      },
+    };
+
+    // ── State ────────────────────────────────────────
+    let currentLang = localStorage.getItem('yugoda_lang') || 'en';
+
+    // ── Core function ────────────────────────────────
+    function applyTranslations() {
+      const t = translations[currentLang];
+
+      // Swap every [data-i18n] element
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key] !== undefined) el.textContent = t[key];
+      });
+
+      // Swap the flag separately (it lives outside data-i18n)
+      document.getElementById('lang-flag').textContent = t.lang_flag;
+
+      // Keep the <html lang> attribute in sync for accessibility
+      document.documentElement.lang = currentLang;
+    }
+
+    // ── Toggle ───────────────────────────────────────
+    function toggleLang() {
+      currentLang = currentLang === 'en' ? 'tr' : 'en';
+      localStorage.setItem('yugoda_lang', currentLang);
+      applyTranslations();
+    }
+
+    // ── Init ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', applyTranslations);
+  </script>
+
+</body>
+</html>

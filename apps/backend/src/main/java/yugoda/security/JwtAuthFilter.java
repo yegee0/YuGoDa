@@ -88,13 +88,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 FirebaseToken decoded = FirebaseAuth.getInstance().verifyIdToken(token);
                 String uid = decoded.getUid();
                 String email = decoded.getEmail();
-                var dbUser = userRepository.findById(uid).orElse(null);
-                String role = dbUser != null ? dbUser.getRole() : "customer";
-                String displayName = dbUser != null ? dbUser.getDisplayName() : decoded.getName();
-                String resolvedEmail = email != null ? email : (dbUser != null ? dbUser.getEmail() : null);
-                String accountStatus = dbUser != null && dbUser.getAccountStatus() != null
-                        ? dbUser.getAccountStatus() : "active";
-                return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null, accountStatus);
+
+                // Determine default role from the Firebase project that issued the token.
+                // This is the authoritative role for first-time users not yet in the DB.
+                String issuerRole = roleFromIssuer(decoded.getIssuer() != null ? decoded.getIssuer() : "");
+
+                String role = "customer";
+                String displayName = decoded.getName();
+                String resolvedEmail = email;
+                String accountStatus = "active";
+                boolean exists = false;
+
+                try {
+                    var dbUser = userRepository.findById(uid).orElse(null);
+                    if (dbUser != null) {
+                        role = dbUser.getRole();
+                        displayName = dbUser.getDisplayName();
+                        resolvedEmail = email != null ? email : dbUser.getEmail();
+                        accountStatus = dbUser.getAccountStatus() != null ? dbUser.getAccountStatus() : "active";
+                        exists = true;
+                    } else {
+                        role = issuerRole;
+                    }
+                } catch (Exception dbEx) {
+                    log.error("[Auth] DB lookup failed (strategy 1) for uid={}: {}", uid, dbEx.getMessage());
+                    role = issuerRole;
+                }
+
+                return new UserPrincipal(uid, resolvedEmail, role, displayName, exists, accountStatus);
             } catch (Exception e) {
                 log.debug("[Auth] Firebase Admin verification failed, trying JWT decode: {}", e.getMessage());
             }
@@ -106,9 +127,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @SuppressWarnings("unchecked")
     private UserPrincipal decodeJwtPayload(String token) {
+        // Step 1: Decode the JWT payload (cryptography-free — dev/multi-project mode).
+        String uid;
+        String email;
+        String issuerRole; // Role inferred from the Firebase project that issued the token
         try {
             String[] parts = token.split("\\.");
-            if (parts.length != 3) return null;
+            if (parts.length != 3) {
+                log.warn("[Auth] JWT decode failed: expected 3 parts, got {}", parts.length);
+                return null;
+            }
 
             String payload = parts[1].replace('-', '+').replace('_', '/');
             int mod = payload.length() % 4;
@@ -121,23 +149,63 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             Object exp = claims.get("exp");
             if (exp != null && ((Number) exp).longValue() < System.currentTimeMillis() / 1000) {
+                log.warn("[Auth] JWT decode failed: token expired (exp={})", exp);
                 return null;
             }
 
-            String uid = (String) claims.getOrDefault("sub", claims.get("user_id"));
-            if (uid == null) return null;
+            // Firebase tokens use both "sub" and "user_id" for the UID
+            Object subRaw = claims.get("sub");
+            Object userIdRaw = claims.get("user_id");
+            uid = subRaw instanceof String s ? s : (userIdRaw instanceof String u ? u : null);
+            if (uid == null) {
+                log.warn("[Auth] JWT decode failed: no uid (sub={}, user_id={})", subRaw, userIdRaw);
+                return null;
+            }
 
-            String email = (String) claims.get("email");
-            var dbUser = userRepository.findById(uid).orElse(null);
-            String role = dbUser != null ? dbUser.getRole() : "customer";
-            String displayName = dbUser != null ? dbUser.getDisplayName() : null;
-            String resolvedEmail = email != null ? email : (dbUser != null ? dbUser.getEmail() : null);
-            String accountStatus = dbUser != null && dbUser.getAccountStatus() != null
-                    ? dbUser.getAccountStatus() : "active";
-
-            return new UserPrincipal(uid, resolvedEmail, role, displayName, dbUser != null, accountStatus);
+            email = (String) claims.get("email");
+            // Derive the expected role from the Firebase project ID embedded in the issuer
+            // claim. Format: "https://securetoken.google.com/<project-id>"
+            // This is the authoritative role when the user is not yet in the DB.
+            String iss = claims.get("iss") instanceof String i ? i : "";
+            issuerRole = roleFromIssuer(iss);
         } catch (Exception e) {
+            log.warn("[Auth] JWT decode failed with exception: {}", e.getMessage());
             return null;
         }
+
+        // Step 2: Enrich with DB data. Isolated in its own try-catch so a transient
+        // DB error never causes authentication to fail — the JWT itself is the
+        // ground truth; the DB just enriches the principal.
+        String role = issuerRole;
+        String displayName = null;
+        String resolvedEmail = email;
+        String accountStatus = "active";
+        boolean exists = false;
+        try {
+            var dbUser = userRepository.findById(uid).orElse(null);
+            if (dbUser != null) {
+                role = dbUser.getRole();
+                displayName = dbUser.getDisplayName();
+                resolvedEmail = email != null ? email : dbUser.getEmail();
+                accountStatus = dbUser.getAccountStatus() != null ? dbUser.getAccountStatus() : "active";
+                exists = true;
+            }
+        } catch (Exception e) {
+            log.error("[Auth] DB lookup failed for uid={}, proceeding with issuer-derived role='{}': {}",
+                    uid, issuerRole, e.getMessage());
+        }
+
+        log.debug("[Auth] JWT decode OK: uid={}, role={}, dbExists={}", uid, role, exists);
+        return new UserPrincipal(uid, resolvedEmail, role, displayName, exists, accountStatus);
+    }
+
+    /**
+     * Maps a Firebase token issuer URL to the corresponding portal role.
+     * Issuer format: "https://securetoken.google.com/{project-id}"
+     */
+    private static String roleFromIssuer(String iss) {
+        if (iss.endsWith("/yugoda-admin"))   return "admin";
+        if (iss.endsWith("/yugoda-partner")) return "restaurant";
+        return "customer"; // yugoda-customer and any unrecognised project
     }
 }

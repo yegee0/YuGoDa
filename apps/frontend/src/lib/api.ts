@@ -38,20 +38,51 @@ export class ApiError extends Error {
 }
 
 /**
+ * Set to true by useAuthInit once all three onAuthStateChanged callbacks have
+ * fired. After that point we know the auth state definitively — no need to
+ * poll waiting for Firebase to restore a session.
+ */
+let _authInitialized = false;
+export function markAuthInitialized(): void {
+  _authInitialized = true;
+}
+
+/**
  * Aktif Firebase Auth kullanıcısından ID token alır.
  * 3 Firebase projesinden hangisinde giriş yapılmışsa onun token'ını döner.
+ *
+ * If all three auth instances have a null currentUser (e.g. Firebase is still
+ * restoring the session from IndexedDB after a page reload), the function
+ * polls up to MAX_WAIT_MS before giving up, so that callers don't silently
+ * fire requests without an Authorization header during the auth-init window.
+ * Once markAuthInitialized() has been called, polling is skipped entirely —
+ * a null currentUser definitively means "no user signed in."
  */
-async function getAuthToken(): Promise<string | null> {
-  // Sırasıyla tüm Firebase Auth instance'larını kontrol et
-  const currentUser =
+async function getAuthToken(forceRefresh = false): Promise<string | null> {
+  const resolveUser = () =>
     authCustomer.currentUser ||
     authPartner.currentUser ||
     authAdmin.currentUser;
 
+  let currentUser = resolveUser();
+
+  // Only poll during the Firebase session-restore window (before auth is
+  // initialized). Once initialized, a null currentUser means "not signed in."
+  if (!currentUser && !_authInitialized) {
+    const MAX_WAIT_MS = 3000;
+    const POLL_INTERVAL_MS = 50;
+    let waited = 0;
+    while (!currentUser && waited < MAX_WAIT_MS) {
+      await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+      waited += POLL_INTERVAL_MS;
+      currentUser = resolveUser();
+    }
+  }
+
   if (!currentUser) return null;
 
   try {
-    return await currentUser.getIdToken();
+    return await currentUser.getIdToken(forceRefresh);
   } catch {
     return null;
   }
@@ -87,6 +118,32 @@ export async function apiFetch<T = any>(
   const data = await response.json();
 
   if (!response.ok) {
+    // On 401, try a force-refreshed token and retry the request once.
+    // This handles stale/near-expired tokens and transient auth hiccups
+    // without requiring the user to log out and back in.
+    if (response.status === 401 && token) {
+      try {
+        const freshToken = await getAuthToken(true);
+        if (freshToken && freshToken !== token) {
+          const retryHeaders = { ...headers, 'Authorization': `Bearer ${freshToken}` };
+          const retryResponse = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers: retryHeaders,
+          });
+          const retryData = await retryResponse.json();
+          if (retryResponse.ok) return retryData;
+          // Retry also failed — fall through to throw the retry's error
+          if (retryResponse.status === 403 && retryData?.message === 'Account banned.' && bannedHandler) {
+            bannedHandler();
+          }
+          throw new ApiError(retryData.message || `API Error: ${retryResponse.status}`, retryResponse.status);
+        }
+      } catch (retryErr) {
+        if (retryErr instanceof ApiError) throw retryErr;
+        // Network error on retry — fall through to original error
+      }
+    }
+
     // Banned users' Firebase session stays valid client-side, but the backend
     // rejects every call with 403 + "Account banned." Force a hard logout so
     // no banned user lingers in the authed UI.

@@ -32,7 +32,7 @@ export { STATUS_CONFIG as STATUS_CFG } from '@/lib/constants';
 
 export default function StorePanel() {
   const { t } = useTranslation();
-  const { user } = useStore();
+  const { user, isAuthReady } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const activeTab = location.pathname.split('/')[2] || 'dashboard';
@@ -78,7 +78,7 @@ export default function StorePanel() {
 
   // ── Data fetching ──
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isAuthReady) return;
     const fetchOrders = async () => {
       try { const res = await api.get('/orders') as { orders?: Order[] }; setOrders(res.orders || []); } catch { /* silent */ }
     };
@@ -103,7 +103,7 @@ export default function StorePanel() {
     fetchData();
     pollingRef.current = setInterval(fetchOrders, ORDER_POLL_INTERVAL);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [user]);
+  }, [user, isAuthReady]);
 
   // ── Shared handlers ──
   const handleUpdateOrderStatus = async (

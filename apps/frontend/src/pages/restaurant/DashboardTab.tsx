@@ -66,7 +66,7 @@ export default function DashboardTab({
               <ArrowUpRight className="w-3 h-3" /> {t('rest_dashboard_live')}
             </div>
           </div>
-          <div className="h-48">
+          <div className="h-48 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -90,7 +90,7 @@ export default function DashboardTab({
             <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_dashboard_order_volume')}</h3>
             <p className="text-xs text-[#8FA396] mt-0.5">{t('rest_dashboard_order_volume_sub')}</p>
           </div>
-          <div className="h-48">
+          <div className="h-48 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} barSize={20}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />

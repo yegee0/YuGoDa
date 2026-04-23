@@ -63,6 +63,7 @@ public class EntityEnricher {
         parseJsonField(map, "location", store.getLocation(), null);
         parseJsonField(map, "operatingHours", store.getOperatingHours(), null);
         parseJsonField(map, "bankingDetails", store.getBankingDetails(), null);
+        parseJsonField(map, "dietaryTags", store.getDietaryTags() != null ? store.getDietaryTags() : "[]", List.of());
         toBooleanField(map, "isApproved", store.getIsApproved());
         return map;
     }

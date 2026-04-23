@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 import {
   Star, Heart, ShoppingBag, Plus, Minus, ChevronLeft,
   MapPin, Clock, CreditCard, Truck, Loader2, Package,
@@ -130,6 +131,7 @@ export default function StorePage() {
   const { cart, addToCart, removeFromCart, updateCartQuantity, favorites, toggleFavorite } = useStore();
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [store, setStore] = useState<StoreProfile | null>(null);
+  const [favLoading, setFavLoading] = useState(false);
   const [bags, setBags] = useState<Bag[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,14 +219,23 @@ export default function StorePage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             {/* Fav button */}
-            <button
-              onClick={() => toggleFavorite(store.id)}
+            <motion.button
+              whileTap={{ scale: 0.8 }}
+              onClick={() => {
+                if (favLoading) return;
+                const adding = !isFavStore;
+                setFavLoading(true);
+                // Fire-and-forget: Zustand's optimistic update inside toggleFavorite
+                // updates isFavStore immediately — no await needed for visual feedback.
+                void toggleFavorite(store.id).finally(() => setFavLoading(false));
+                toast.success(adding ? t('store_fav_added') : t('store_fav_removed'), { duration: 2000 });
+              }}
               className={`absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm transition-all ${
                 isFavStore ? 'bg-red-500 text-white' : 'bg-white/15 text-white hover:bg-white/25'
               }`}
             >
-              <Heart className={`w-5 h-5 ${isFavStore ? 'fill-current' : ''}`} />
-            </button>
+              <Heart className={`w-5 h-5 transition-transform ${isFavStore ? 'fill-current scale-110' : ''}`} />
+            </motion.button>
           </div>
 
           {/* Store identity card */}
@@ -275,6 +286,11 @@ export default function StorePage() {
               <div className="flex items-center gap-1.5 text-xs text-[#8FA396] font-medium bg-[#F5F0E8] px-3 py-1.5 rounded-full">
                 <Truck className="w-3 h-3" /> {t('Delivery available')}
               </div>
+              {store.dietaryTags && store.dietaryTags.length > 0 && store.dietaryTags.map(tag => (
+                <div key={tag} className="flex items-center gap-1.5 text-xs text-[#5a7a1a] font-bold bg-[#748f2b]/15 px-3 py-1.5 rounded-full">
+                  <Leaf className="w-3 h-3" /> {tag}
+                </div>
+              ))}
             </div>
 
           </div>
@@ -504,8 +520,8 @@ export default function StorePage() {
                 onClick={() => setDeliveryType(opt)}
                 className={`flex-1 py-2 rounded-full text-xs font-black capitalize transition-all ${
                   deliveryType === opt
-                    ? 'bg-white shadow-sm text-[#1B1B1B]'
-                    : 'text-[#8FA396]'
+                    ? 'bg-[#1B5E52] text-white shadow-sm'
+                    : 'text-[#5C6B63] hover:text-[#1B1B1B]'
                 }`}
               >
                 {opt}
