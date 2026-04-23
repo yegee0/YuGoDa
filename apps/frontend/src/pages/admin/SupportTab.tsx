@@ -19,12 +19,32 @@ export default function SupportTab({ disputes, onUpdateDisputeStatus }: SupportT
   const [chatMessages, setChatMessages] = useState<DisputeMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
+  // Only auto-scroll when the message count actually grows (new messages arrived).
+  // This avoids jumping the admin to the bottom while reading older messages.
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatMessages.length > prevMessageCountRef.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessageCountRef.current = chatMessages.length;
   }, [chatMessages]);
+
+  // Poll for new messages every 5 s while the chat modal is open so restaurant
+  // replies appear immediately.
+  useEffect(() => {
+    if (!chatDispute) return;
+    const poll = async () => {
+      try {
+        const res = await api.get(`/disputes/${chatDispute.id}/messages`);
+        setChatMessages(res.messages || []);
+      } catch { /* silent */ }
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [chatDispute?.id]);
 
   useEffect(() => {
     let cancelled = false;

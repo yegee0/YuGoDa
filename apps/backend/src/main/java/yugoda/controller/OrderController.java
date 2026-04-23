@@ -6,6 +6,8 @@ import yugoda.service.OrderService;
 import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +17,8 @@ import java.util.*;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController extends BaseController {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     private final OrderService orderService;
     private final EntityEnricher enricher;
@@ -42,9 +46,13 @@ public class OrderController extends BaseController {
                                                            @RequestParam(required = false) String status) {
         UserPrincipal user = getUser(request);
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
-        List<Order> orders = orderService.listOrders(user.getUid(), user.getRole(), status);
-        List<Map<String, Object>> enriched = orders.stream().map(this::enrichOrder).toList();
-        return ResponseEntity.ok(Map.of("success", true, "orders", enriched));
+        try {
+            List<Order> orders = orderService.listOrders(user.getUid(), user.getRole(), status);
+            List<Map<String, Object>> enriched = orders.stream().map(this::enrichOrder).toList();
+            return ResponseEntity.ok(Map.of("success", true, "orders", enriched));
+        } catch (Exception e) {
+            return serverError("Siparişler yüklenemedi.");
+        }
     }
 
     // GET /:id
@@ -82,6 +90,9 @@ public class OrderController extends BaseController {
             return badRequest(e.getMessage());
         } catch (SecurityException e) {
             return forbidden(e.getMessage());
+        } catch (Exception e) {
+            log.error("[updateStatus] orderId={} status={} error={}", id, body.get("status"), e.getMessage(), e);
+            return serverError("Sipariş durumu güncellenemedi.");
         }
     }
 

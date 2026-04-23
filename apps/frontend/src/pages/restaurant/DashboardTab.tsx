@@ -66,23 +66,21 @@ export default function DashboardTab({
               <ArrowUpRight className="w-3 h-3" /> {t('rest_dashboard_live')}
             </div>
           </div>
-          <div className="h-48 overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#1B5E52" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#1B5E52" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="revenue" stroke="#1B5E52" strokeWidth={2.5} fillOpacity={1} fill="url(#revGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={192}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#1B5E52" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#1B5E52" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Area type="monotone" dataKey="revenue" stroke="#1B5E52" strokeWidth={2.5} fillOpacity={1} fill="url(#revGrad)" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-[#E8E0D5] shadow-sm">
@@ -90,17 +88,15 @@ export default function DashboardTab({
             <h3 className="font-bold text-[#1B1B1B] text-sm">{t('rest_dashboard_order_volume')}</h3>
             <p className="text-xs text-[#8FA396] mt-0.5">{t('rest_dashboard_order_volume_sub')}</p>
           </div>
-          <div className="h-48 overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} barSize={20}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="orders" fill="#1B5E52" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={192}>
+            <BarChart data={chartData} barSize={20}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
+              <YAxis hide />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="orders" fill="#1B5E52" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

@@ -6,6 +6,8 @@ import yugoda.service.UserService;
 import yugoda.util.EntityEnricher;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +17,8 @@ import java.util.*;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController extends BaseController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
     private final EntityEnricher enricher;
@@ -43,10 +47,15 @@ public class UserController extends BaseController {
     public ResponseEntity<Map<String, Object>> getProfile(HttpServletRequest request) {
         UserPrincipal user = getUser(request);
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
-        User dbUser = userService.getProfile(user.getUid());
-        if (dbUser == null) return notFound("Kullanıcı bulunamadı.");
-        Map<String, Object> enriched = enrichUser(dbUser);
-        return ResponseEntity.ok(Map.of("success", true, "user", enriched));
+        try {
+            User dbUser = userService.getProfile(user.getUid());
+            if (dbUser == null) return notFound("Kullanıcı bulunamadı.");
+            Map<String, Object> enriched = enrichUser(dbUser);
+            return ResponseEntity.ok(Map.of("success", true, "user", enriched));
+        } catch (Exception e) {
+            log.error("[getProfile] uid={} error={}", user.getUid(), e.getMessage(), e);
+            return serverError("Profil yüklenemedi.");
+        }
     }
 
     // PUT /me
@@ -60,6 +69,7 @@ public class UserController extends BaseController {
             User updated = userService.updateProfile(user.getUid(), body);
             return ResponseEntity.ok(Map.of("success", true, "user", enrichUser(updated)));
         } catch (Exception e) {
+            log.error("[updateProfile] uid={} keys={} error={}", user.getUid(), body.keySet(), e.getMessage(), e);
             return serverError("Profil güncellenemedi.");
         }
     }

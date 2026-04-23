@@ -21,6 +21,7 @@ public class User {
     private String displayName;
     private String firstName;
     private String lastName;
+    @Column(columnDefinition = "TEXT")
     private String photoURL;
 
     @Column(nullable = false)

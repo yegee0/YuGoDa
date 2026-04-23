@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '@/app/store/useStore';
 import { AnimatePresence } from 'motion/react';
@@ -58,6 +58,20 @@ export default function AdminPanel() {
 
     fetchAdminData();
   }, []);
+
+  // Poll disputes every 5 s while the support tab is open so new restaurant
+  // messages appear immediately without a manual page refresh.
+  useEffect(() => {
+    if (activeTab !== 'support') return;
+    const poll = async () => {
+      try {
+        const res = await api.get('/disputes').catch(() => ({ disputes: [] }));
+        setDisputes((res as { disputes: Dispute[] }).disputes || []);
+      } catch { /* silent */ }
+    };
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [activeTab]);
 
   const handleApproveStore = async (storeId: string, approved: boolean) => {
     try {

@@ -1,6 +1,10 @@
 package yugoda.service;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import yugoda.model.AdminPresence;
@@ -13,7 +17,9 @@ import yugoda.repository.ChatMessageRepository;
 import yugoda.repository.NotificationRepository;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +27,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class LiveChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveChatService.class);
 
     private static final List<String> ACTIVE_STATUSES = List.of("queued", "active");
     private static final List<String> RESOLUTIONS = List.of("solved", "still_investigating");
@@ -30,6 +38,14 @@ public class LiveChatService {
     private final AdminPresenceRepository presenceRepository;
     private final NotificationRepository notificationRepository;
     private final AdminPresenceService presenceService;
+
+    /**
+     * Optional — null-safe. Marked required=false so unit tests without a
+     * WebSocket context still work. In production this bean is always present
+     * because spring-boot-starter-websocket is on the classpath.
+     */
+    @Autowired(required = false)
+    private SimpMessagingTemplate messagingTemplate;
 
     // ── Conversation lifecycle ────────────────────────────────
 
@@ -59,6 +75,10 @@ public class LiveChatService {
         messageRepository.save(msg);
 
         notifyAvailableAdmins(conv);
+
+        // Push queue-changed event so the admin panel refreshes immediately
+        pushQueueChanged();
+
         return conv;
     }
 
@@ -106,6 +126,12 @@ public class LiveChatService {
 
         presenceService.assignConversation(adminUid, conv.getId());
         notifyCustomerAssigned(conv);
+
+        // Push status update so the customer's LiveChatPanel transitions to ActiveView instantly
+        pushConversationStatus(conv);
+        // Push queue-changed so the admin queue list removes this conversation
+        pushQueueChanged();
+
         return conv;
     }
 
@@ -133,6 +159,10 @@ public class LiveChatService {
         messageRepository.save(msg);
 
         notifyCounterparty(conv, senderRole);
+
+        // Push the new message to both participants via WebSocket
+        pushMessage(msg);
+
         return msg;
     }
 
@@ -182,6 +212,12 @@ public class LiveChatService {
         conv.setEndedAt(LocalDateTime.now());
         conversationRepository.save(conv);
         presenceService.releaseConversation(adminUid);
+
+        // Notify customer the conversation ended (triggers receipt view via WebSocket)
+        pushConversationStatus(conv);
+        // Queue may have changed
+        pushQueueChanged();
+
         return conv;
     }
 
@@ -198,6 +234,11 @@ public class LiveChatService {
         if (conv.getAdminId() != null) {
             presenceService.releaseConversation(conv.getAdminId());
         }
+
+        // Let the admin know the customer left
+        pushConversationStatus(conv);
+        pushQueueChanged();
+
         return conv;
     }
 
@@ -213,7 +254,53 @@ public class LiveChatService {
                 conv.setAssignedAt(null);
                 conversationRepository.save(conv);
                 notifyAvailableAdmins(conv);
+                pushConversationStatus(conv);
+                pushQueueChanged();
             });
+        }
+    }
+
+    // ── WebSocket push helpers ────────────────────────────────
+
+    /**
+     * Push a new ChatMessage to both participants: /topic/chat.{conversationId}
+     */
+    private void pushMessage(ChatMessage msg) {
+        if (messagingTemplate == null) return;
+        try {
+            messagingTemplate.convertAndSend("/topic/chat." + msg.getConversationId(), msg);
+        } catch (Exception e) {
+            log.warn("[WS] pushMessage conv={} failed: {}", msg.getConversationId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Push a conversation status change to /topic/chat.status.{conversationId}.
+     * Frontend uses this to transition views (queued→active, active→archived, etc.)
+     */
+    private void pushConversationStatus(ChatConversation conv) {
+        if (messagingTemplate == null) return;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("id", conv.getId());
+            payload.put("status", conv.getStatus());
+            payload.put("adminId", conv.getAdminId());
+            messagingTemplate.convertAndSend("/topic/chat.status." + conv.getId(), payload);
+        } catch (Exception e) {
+            log.warn("[WS] pushConversationStatus conv={} failed: {}", conv.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Push a lightweight "queue changed" event to /topic/chat.queue.
+     * Admin panels subscribe and re-fetch the full queue list via REST.
+     */
+    private void pushQueueChanged() {
+        if (messagingTemplate == null) return;
+        try {
+            messagingTemplate.convertAndSend("/topic/chat.queue", Map.of("event", "changed"));
+        } catch (Exception e) {
+            log.warn("[WS] pushQueueChanged failed: {}", e.getMessage());
         }
     }
 

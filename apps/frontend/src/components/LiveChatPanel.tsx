@@ -6,6 +6,7 @@ import { api, ApiError } from '@/lib/api';
 import { CHAT_POLL_INTERVAL } from '@/lib/constants';
 import { formatDate, formatTime } from '@/lib/formatters';
 import { useLiveChatPoll } from '@/hooks/useLiveChatPoll';
+import { createStompClient } from '@/lib/wsClient';
 import { ChatMessageList } from '@/components/shared';
 import type { ChatAvailability, ChatConversation, AdminResolution } from '@/types';
 
@@ -93,13 +94,38 @@ export default function LiveChatPanel({ isOpen, onClose }: LiveChatPanelProps) {
     };
   }, [isOpen]);
 
-  // If messages hook reports 410 (customer reading deleted conversation),
+  // If messages hook reports gone (archived / customer_deleted via WebSocket),
   // flip conversation.status locally to surface the receipt view.
   useEffect(() => {
     if (gone && conversation && conversation.status !== 'customer_deleted') {
       setConversation({ ...conversation, status: 'customer_deleted' });
     }
   }, [gone, conversation]);
+
+  // WebSocket: listen for conversation status changes so the view transitions
+  // instantly (queued→active when admin joins, active→archived when admin ends).
+  useEffect(() => {
+    if (!conversation?.id || !isOpen) return;
+
+    const client = createStompClient();
+    client.onConnect = () => {
+      client.subscribe(`/topic/chat.status.${conversation.id}`, (frame) => {
+        const update = JSON.parse(frame.body) as {
+          id: string;
+          status: string;
+          adminId: string | null;
+        };
+        setConversation(prev =>
+          prev
+            ? { ...prev, status: update.status as ChatConversation['status'], adminId: update.adminId }
+            : prev,
+        );
+      });
+    };
+    client.activate();
+
+    return () => { client.deactivate(); };
+  }, [conversation?.id, isOpen]);
 
   const handleStart = async () => {
     if (!initialMessage.trim() || starting) return;

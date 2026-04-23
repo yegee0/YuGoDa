@@ -3,10 +3,10 @@ import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, Send, Inbox } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
-import { CHAT_POLL_INTERVAL, CHAT_QUEUE_POLL_INTERVAL } from '@/lib/constants';
 import { formatTime } from '@/lib/formatters';
 import { ChatMessageList } from '@/components/shared';
 import { useLiveChatPoll } from '@/hooks/useLiveChatPoll';
+import { createStompClient } from '@/lib/wsClient';
 import type { AdminResolution, ChatConversation } from '@/types';
 
 interface QueuedResponse {
@@ -29,7 +29,8 @@ export default function LiveChatAdminTab() {
 
   const { messages, setMessages } = useLiveChatPoll(active ? active.id : null, false);
 
-  const queueTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Stable ref so the WebSocket callback always calls the latest loadQueue
+  const loadQueueRef = useRef<() => Promise<void>>(async () => {});
 
   const loadQueue = async () => {
     try {
@@ -42,12 +43,24 @@ export default function LiveChatAdminTab() {
     }
   };
 
+  // Keep ref in sync so the STOMP subscriber always calls the latest version
+  useEffect(() => { loadQueueRef.current = loadQueue; });
+
   useEffect(() => {
+    // Initial load
     void loadQueue();
-    queueTimerRef.current = setInterval(loadQueue, CHAT_QUEUE_POLL_INTERVAL);
-    return () => {
-      if (queueTimerRef.current) clearInterval(queueTimerRef.current);
+
+    // WebSocket subscription: re-fetch queue whenever the backend pushes a
+    // "queue changed" event (new conversation, claim, or conversation ended)
+    const client = createStompClient();
+    client.onConnect = () => {
+      client.subscribe('/topic/chat.queue', () => {
+        void loadQueueRef.current();
+      });
     };
+    client.activate();
+
+    return () => { client.deactivate(); };
   }, []);
 
   const flashToast = (msg: string) => {

@@ -1,25 +1,26 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import type { Client } from '@stomp/stompjs';
 import { api, ApiError } from '@/lib/api';
-import { CHAT_POLL_INTERVAL } from '@/lib/constants';
+import { createStompClient } from '@/lib/wsClient';
 import type { ChatMessage } from '@/types';
 
 export interface UseLiveChatPollResult {
   messages: ChatMessage[];
-  /** True when backend has returned 410 Gone (customer reading own deleted conversation). */
+  /** True when the backend signals the conversation has ended (archived / customer_deleted). */
   gone: boolean;
   /** Prepend/reset messages — used when switching conversations or loading history. */
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
 }
 
 /**
- * Polls `GET /api/live-chat/conversations/{id}/messages?since={epochMs}` at
- * `CHAT_POLL_INTERVAL`. Stops polling when `conversationId` is null, `paused`
- * is true, or the backend returns 410 (conversation soft-deleted from the
- * customer's side — the receipt view takes over).
+ * Real-time chat messages via WebSocket (STOMP).
  *
- * Uses the cursor `?since=` pattern so each poll only returns newly-created
- * messages. The cursor is the `createdAt` epoch-ms of the last known message;
- * new messages are appended by ID (deduped).
+ * On mount:  loads full history once with GET /live-chat/conversations/{id}/messages?since=0
+ * Ongoing:   subscribes to /topic/chat.{conversationId} for instant message delivery
+ *            subscribes to /topic/chat.status.{conversationId} for gone detection
+ *
+ * Stops when conversationId is null, paused is true, or the backend pushes
+ * status=archived / status=customer_deleted.
  */
 export function useLiveChatPoll(
   conversationId: string | null,
@@ -27,59 +28,59 @@ export function useLiveChatPoll(
 ): UseLiveChatPollResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [gone, setGone] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const messagesRef = useRef<ChatMessage[]>([]);
+  const clientRef = useRef<Client | null>(null);
 
-  messagesRef.current = messages;
-
+  // Reset state when the target conversation changes
   useEffect(() => {
     setMessages([]);
     setGone(false);
   }, [conversationId]);
 
+  // One-shot: load full message history via REST
   useEffect(() => {
-    if (!conversationId || paused || gone) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-
+    if (!conversationId || paused) return;
     let cancelled = false;
+    api.get<{ success: boolean; messages: ChatMessage[] }>(
+      `/live-chat/conversations/${conversationId}/messages?since=0`,
+    )
+      .then(res => { if (!cancelled) setMessages(res.messages || []); })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 410) setGone(true);
+      });
+    return () => { cancelled = true; };
+  }, [conversationId, paused]);
 
-    const poll = async () => {
-      try {
-        const last = messagesRef.current[messagesRef.current.length - 1];
-        const since = last ? new Date(last.createdAt).getTime() : 0;
-        const res = await api.get<{ success: boolean; messages: ChatMessage[] }>(
-          `/live-chat/conversations/${conversationId}/messages?since=${since}`,
+  // Real-time: WebSocket subscriptions
+  useEffect(() => {
+    if (!conversationId || paused || gone) return;
+
+    const client = createStompClient();
+    clientRef.current = client;
+
+    client.onConnect = () => {
+      // New messages pushed by the backend after sendMessage()
+      client.subscribe(`/topic/chat.${conversationId}`, (frame) => {
+        const msg: ChatMessage = JSON.parse(frame.body);
+        setMessages(prev =>
+          prev.some(m => m.id === msg.id) ? prev : [...prev, msg],
         );
-        if (cancelled) return;
-        if (res.messages && res.messages.length > 0) {
-          setMessages(prev => {
-            const seen = new Set(prev.map(m => m.id));
-            const fresh = res.messages.filter(m => !seen.has(m.id));
-            return fresh.length === 0 ? prev : [...prev, ...fresh];
-          });
-        }
-      } catch (err: unknown) {
-        if (cancelled) return;
-        if (err instanceof ApiError && err.status === 410) {
+      });
+
+      // Conversation ended — flip to gone so the receipt view takes over
+      client.subscribe(`/topic/chat.status.${conversationId}`, (frame) => {
+        const { status } = JSON.parse(frame.body) as { status: string };
+        if (status === 'archived' || status === 'customer_deleted') {
           setGone(true);
         }
-      }
+      });
     };
 
-    void poll();
-    timerRef.current = setInterval(poll, CHAT_POLL_INTERVAL);
+    client.activate();
 
     return () => {
-      cancelled = true;
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      client.deactivate();
+      clientRef.current = null;
     };
   }, [conversationId, paused, gone]);
 

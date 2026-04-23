@@ -29,6 +29,7 @@ public class EntityEnricher {
     public Map<String, Object> enrichOrder(Order order) {
         Map<String, Object> map = objectMapper.convertValue(order, Map.class);
         parseJsonField(map, "items", order.getItems(), List.of());
+        parseJsonField(map, "driverLocation", order.getDriverLocation(), null);
         toBooleanField(map, "leaveAtDoor", order.getLeaveAtDoor());
         return map;
     }
@@ -51,6 +52,7 @@ public class EntityEnricher {
         Map<String, Object> map = objectMapper.convertValue(user, Map.class);
         parseJsonField(map, "favorites", user.getFavorites() != null ? user.getFavorites() : "[]", List.of());
         parseJsonField(map, "addresses", user.getAddresses() != null ? user.getAddresses() : "[]", List.of());
+        parseJsonField(map, "location", user.getLocation(), null);
         toBooleanField(map, "notificationsEnabled", user.getNotificationsEnabled());
         return map;
     }

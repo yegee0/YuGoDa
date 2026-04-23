@@ -178,7 +178,8 @@ public class OrderService {
                 transactionRepository.save(tx);
             });
             bagRepository.findById(order.getBagId()).ifPresent(bag -> {
-                bag.setAvailable(bag.getAvailable() + 1);
+                int current = bag.getAvailable() != null ? bag.getAvailable() : 0;
+                bag.setAvailable(current + 1);
                 bagRepository.save(bag);
             });
         }
