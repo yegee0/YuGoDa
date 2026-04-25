@@ -51,9 +51,10 @@ const MAP_STYLE = [
     { elementType: 'geometry', stylers: [{ color: '#f5f5f0' }] },
     { elementType: 'labels.text.fill', stylers: [{ color: '#7a7a7a' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f0' }] },
-    // Building footprints: slightly darker cream so they read against the landscape.
+    // Building footprints: slightly darker cream fill + dark, bolder stroke so they read clearly.
     { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e8e0d0' }] },
-    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: '#d8cdb6' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: '#1a1a1a' }, { weight: 1.5 }, { visibility: 'on' }] },
+    { featureType: 'poi.business', elementType: 'geometry.stroke', stylers: [{ color: '#1a1a1a' }, { weight: 1.5 }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
     { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ede8df' }] },
