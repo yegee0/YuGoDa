@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Headset, Lock, Plus } from 'lucide-react';
+import { Send, Headset, Lock, Plus, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
-import type { SupportMessage, Dispute } from '@/types';
+import { COLORS } from '@/lib/constants';
+import type { SupportMessage, Dispute, ChatAvailability } from '@/types';
 
 export interface SupportTabProps {}
 
@@ -17,6 +18,10 @@ export default function SupportTab(_props: SupportTabProps) {
   const [activeDispute, setActiveDispute] = useState<Dispute | null>(null);
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Admin presence: polled alongside the dispute thread on the same 10s cadence.
+  // null → not yet loaded (treat as available so the input doesn't flicker shut).
+  const [availableAdmins, setAvailableAdmins] = useState<number | null>(null);
+  const isAdminAway = availableAdmins === 0;
   const supportPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // prevent polling from restoring old messages while the new-ticket clean-slate is showing
   const newTicketModeRef = useRef(false);
@@ -29,6 +34,14 @@ export default function SupportTab(_props: SupportTabProps) {
 
     const fetchSupportThread = async () => {
       try {
+        // Side-fetch admin availability in parallel; failure leaves prior state.
+        api
+          .get<{ success: boolean } & ChatAvailability>('/live-chat/availability')
+          .then(res => {
+            if (typeof res.availableAdmins === 'number') setAvailableAdmins(res.availableAdmins);
+          })
+          .catch(() => { /* transient */ });
+
         const disputesRes = await api.get('/disputes').catch(() => ({ disputes: [] }));
         const disputes: Dispute[] = (disputesRes as { disputes: Dispute[] }).disputes || [];
 
@@ -142,7 +155,10 @@ export default function SupportTab(_props: SupportTabProps) {
                 </>
               ) : (
                 <>
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full animate-pulse ${isAdminAway ? '' : 'bg-emerald-400'}`}
+                    style={isAdminAway ? { backgroundColor: COLORS.sidebarWarm } : undefined}
+                  />
                   <p className="text-xs text-[#8FA396]">{t('rest_support_chat_typing_reply')}</p>
                 </>
               )}
@@ -210,6 +226,13 @@ export default function SupportTab(_props: SupportTabProps) {
                 <Plus className="w-3.5 h-3.5" />
                 {t('rest_support_chat_new_ticket')}
               </button>
+            </div>
+          ) : isAdminAway ? (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5]">
+              <Info className="w-4 h-4 shrink-0" style={{ color: COLORS.sidebarWarm }} />
+              <p className="text-xs text-[#8FA396] font-medium">
+                {t('rest_support_chat_admin_away_notice')}
+              </p>
             </div>
           ) : (
             <form onSubmit={handleSendSupport} className="flex gap-3">
