@@ -210,7 +210,7 @@ export function Sidebar({
                 className="text-xl font-black tracking-tight truncate"
                 style={{ fontFamily: "'Nunito', sans-serif", color: '#ffffff' }}
               >
-                Yu<span style={{ color: COLORS.logoAccent }}>Go</span>Da
+                Yu<span style={{ color: COLORS.forest }}>Go</span>Da
               </span>
             )}
           </Link>
