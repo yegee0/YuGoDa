@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { useStore } from '@/app/store/useStore';
 import { reverseGeocodeNominatim, nominatimDisplayName } from '@/lib/geocoding';
+import i18n from '@/lib/i18n';
 
 const ISTANBUL = { lat: 41.0082, lng: 28.9784 };
 
@@ -50,6 +51,9 @@ const MAP_STYLE = [
     { elementType: 'geometry', stylers: [{ color: '#f5f5f0' }] },
     { elementType: 'labels.text.fill', stylers: [{ color: '#7a7a7a' }] },
     { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f0' }] },
+    // Building footprints: slightly darker cream so they read against the landscape.
+    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e8e0d0' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: '#d8cdb6' }] },
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
     { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ede8df' }] },
@@ -136,18 +140,23 @@ function useReverseGeocoder() {
             try {
                 const response = await geocoderRef.current.geocode({
                     location: { lat, lng },
-                    language: 'tr',
+                    language: i18n.language?.startsWith('tr') ? 'tr' : (i18n.language || 'en'),
                 });
                 const result = response.results[0];
                 if (result) {
                     const get = (type: string) =>
                         result.address_components.find(c => c.types.includes(type))?.long_name ?? '';
-                    const label =
-                        get('sublocality_level_1') ||
+                    // Short address: "{neighborhood}, {district}/{city}".
+                    const neighborhood =
                         get('neighborhood') ||
-                        get('sublocality') ||
-                        get('locality') ||
-                        fallbackLabel;
+                        get('sublocality_level_2') ||
+                        get('sublocality_level_1') ||
+                        get('sublocality');
+                    const district = get('administrative_area_level_2');
+                    const city = get('administrative_area_level_1');
+                    const districtCity = [district, city].filter(Boolean).join('/');
+                    const label =
+                        [neighborhood, districtCity].filter(Boolean).join(', ') || fallbackLabel;
                     const apartmentHint = [get('route'), get('street_number')].filter(Boolean).join(' ');
                     return { label, apartmentHint };
                 }
@@ -306,9 +315,6 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                     {address || 'Locating...'}
                                 </motion.p>
                             </AnimatePresence>
-                            <p className="text-[10px] text-[#8FA396] truncate">
-                                {pendingCoords.lat.toFixed(4)}, {pendingCoords.lng.toFixed(4)}
-                            </p>
                         </div>
                     </div>
                     <button

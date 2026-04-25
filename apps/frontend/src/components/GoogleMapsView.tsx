@@ -21,6 +21,10 @@ const MAP_STYLE = [
     { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
     { featureType: 'administrative.neighborhood', stylers: [{ visibility: 'off' }] },
 
+    // Building footprints: slightly darker cream so they read against the landscape.
+    { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#e8e0d0' }] },
+    { featureType: 'landscape.man_made', elementType: 'geometry.stroke', stylers: [{ color: '#d8cdb6' }] },
+
     { featureType: 'poi', stylers: [{ visibility: 'off' }] },
     { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e5eee3', visibility: 'on' }] },
     { featureType: 'poi.park', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
