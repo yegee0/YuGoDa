@@ -391,7 +391,7 @@ export default function LandingPage() {
         {/* Bag image — desktop: centered straddling boundary; mobile: smaller, above features */}
         <div className="hidden md:block" style={{
           position: 'absolute',
-          top: '-160px',
+          top: '-80px',
           left: '49%',
           transform: 'translateX(-50%)',
           width: '370px',
