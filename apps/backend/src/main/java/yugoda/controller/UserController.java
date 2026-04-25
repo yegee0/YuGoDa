@@ -48,8 +48,13 @@ public class UserController extends BaseController {
         UserPrincipal user = getUser(request);
         if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
         try {
-            User dbUser = userService.getProfile(user.getUid());
-            if (dbUser == null) return notFound("Kullanıcı bulunamadı.");
+            // Lazy-create the DB row from the verified JWT principal if it doesn't
+            // exist yet. Closes the Google-sign-in hole where the frontend's
+            // register-on-404 fallback could fail silently and leave the user
+            // permanently rowless. JwtAuthFilter has already validated the token,
+            // and the role is issuer-derived so it cannot be escalated by a client.
+            User dbUser = userService.getOrCreateProfile(
+                    user.getUid(), user.getEmail(), user.getDisplayName(), user.getRole());
             Map<String, Object> enriched = enrichUser(dbUser);
             return ResponseEntity.ok(Map.of("success", true, "user", enriched));
         } catch (Exception e) {

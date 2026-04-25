@@ -62,14 +62,33 @@ export default function ProfileView() {
     mobileNumber: userProfile?.mobileNumber || '',
   });
 
+  // Re-sync the form whenever userProfile lands a fresh value (DB GET, post-save
+  // refresh, photo upload, etc.). Skipped while the user is actively editing so
+  // we never clobber in-progress typing. Without this, a profile loaded after
+  // ProfileView already mounted (common on Google redirect, where the page
+  // reloads with auth state still resolving) would leave the form snapshotted
+  // against the optimistic stub and submit stale values on save.
+  useEffect(() => {
+    if (isEditing || !userProfile) return;
+    setFormData({
+      firstName:    userProfile.firstName    || '',
+      lastName:     userProfile.lastName     || '',
+      displayName:  userProfile.displayName  || '',
+      email:        userProfile.email        || '',
+      countryCode:  userProfile.countryCode  || '+90',
+      mobileNumber: userProfile.mobileNumber || '',
+    });
+  }, [userProfile, isEditing]);
+
   /* ── Handlers ─────────────────────────────────────────── */
   const handleSaveProfile = async () => {
     if (!userProfile) return;
     setSaving(true);
     try {
-      // Email is read-only (Firebase is source of truth); omit from PUT body.
-      const { email: _emailOmitted, ...payload } = formData;
-      const data = await api.put<{ success: boolean; user: UserProfile }>('/users/me', payload);
+      // DB is the source of truth for all profile fields, including email — the
+      // Firebase auth identity stays as the OAuth login anchor and is decoupled
+      // from this user-facing email column.
+      const data = await api.put<{ success: boolean; user: UserProfile }>('/users/me', formData);
       // Use the backend's enriched response directly instead of merging with client formData —
       // prevents drift when the server normalizes/derives fields.
       if (data?.user) {
@@ -370,8 +389,12 @@ export default function ProfileView() {
                     <div className="relative">
                       <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B0BDB7]" />
                       <input
-                        type="email" disabled value={formData.email}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] opacity-50"
+                        type="email"
+                        disabled={!isEditing}
+                        value={formData.email}
+                        onChange={e => setFormData(f => ({ ...f, email: e.target.value }))}
+                        placeholder="you@example.com"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] disabled:opacity-50 transition-colors"
                       />
                     </div>
                   </div>

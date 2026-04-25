@@ -114,6 +114,57 @@ public class UserService {
         return userRepository.findById(uid).orElse(null);
     }
 
+    /**
+     * Idempotent profile fetch with backend-side lazy provisioning.
+     *
+     * The legacy flow had the frontend handle a GET /users/me 404 by POSTing to
+     * /users/register, but that fallback lived inside a swallow-all `catch {}`
+     * — when the register call failed for any reason (transient network, race
+     * during the OAuth redirect, backend hiccup) the user was left signed-in
+     * but rowless, and every subsequent /me kept returning 404 forever. The
+     * symptom only showed up for Google sign-in since email/password signup
+     * provisions the row explicitly via {@link #register}.
+     *
+     * Moving the provision into GET /me — which only fires for authenticated
+     * users (JwtAuthFilter has already verified the token) — makes the row
+     * guaranteed-to-exist for any signed-in caller, with no client-side
+     * recovery dance.
+     */
+    @Transactional
+    public User getOrCreateProfile(String uid, String email, String displayName, String role) {
+        return userRepository.findById(uid).orElseGet(() -> {
+            User u = new User();
+            u.setUid(uid);
+            // email is NOT NULL on the User entity. Firebase tokens always carry
+            // an email claim for Google / email-password providers, but fall back
+            // to empty string defensively so a malformed claim can never block
+            // the bootstrap.
+            u.setEmail(email != null ? email : "");
+            if (displayName != null) u.setDisplayName(displayName);
+            // Role precedence: the JWT-derived role wins over the entity default.
+            // JwtAuthFilter resolves it from the issuer's Firebase project ID, so
+            // a customer token can never escalate to admin or restaurant here.
+            if (role != null) u.setRole(role);
+            userRepository.save(u);
+
+            // Restaurant Google sign-ins also need a paired store row — the
+            // restaurant panel relies on a 1:1 user↔store mapping. Mirrors the
+            // auto-create the existing register flow performs for explicit
+            // restaurant signups.
+            if ("restaurant".equals(role) && !storeRepository.existsById(uid)) {
+                Store store = new Store();
+                store.setId(uid);
+                store.setName(displayName != null && !displayName.isBlank()
+                        ? displayName : "My Restaurant");
+                store.setCategory("Restaurant");
+                store.setStatus("pending");
+                storeRepository.save(store);
+            }
+
+            return u;
+        });
+    }
+
     @Transactional
     public User updateProfile(String uid, Map<String, Object> body) {
         User user = userRepository.findById(uid).orElseThrow();
@@ -121,6 +172,10 @@ public class UserService {
         if (body.containsKey("displayName")) user.setDisplayName((String) body.get("displayName"));
         if (body.containsKey("firstName")) user.setFirstName((String) body.get("firstName"));
         if (body.containsKey("lastName")) user.setLastName((String) body.get("lastName"));
+        // Email is decoupled from the Firebase auth identity: this column drives
+        // app-side display + communication. The Firebase email remains the OAuth
+        // login anchor and is never mutated from here.
+        if (body.containsKey("email")) user.setEmail((String) body.get("email"));
         if (body.containsKey("photoURL")) user.setPhotoURL((String) body.get("photoURL"));
         if (body.containsKey("countryCode")) user.setCountryCode((String) body.get("countryCode"));
         if (body.containsKey("mobileNumber")) user.setMobileNumber((String) body.get("mobileNumber"));
