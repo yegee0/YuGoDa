@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Headset, Lock, Plus, Info } from 'lucide-react';
+import { Send, Headset, Lock, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '@/app/store/useStore';
@@ -159,7 +159,9 @@ export default function SupportTab(_props: SupportTabProps) {
                     className={`w-1.5 h-1.5 rounded-full animate-pulse ${isAdminAway ? '' : 'bg-emerald-400'}`}
                     style={isAdminAway ? { backgroundColor: COLORS.sidebarWarm } : undefined}
                   />
-                  <p className="text-xs text-[#8FA396]">{t('rest_support_chat_typing_reply')}</p>
+                  <p className="text-xs text-[#8FA396]">
+                    {t(isAdminAway ? 'rest_support_chat_admin_away_subtitle' : 'rest_support_chat_typing_reply')}
+                  </p>
                 </>
               )}
             </div>
@@ -226,13 +228,6 @@ export default function SupportTab(_props: SupportTabProps) {
                 <Plus className="w-3.5 h-3.5" />
                 {t('rest_support_chat_new_ticket')}
               </button>
-            </div>
-          ) : isAdminAway ? (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5]">
-              <Info className="w-4 h-4 shrink-0" style={{ color: COLORS.sidebarWarm }} />
-              <p className="text-xs text-[#8FA396] font-medium">
-                {t('rest_support_chat_admin_away_notice')}
-              </p>
             </div>
           ) : (
             <form onSubmit={handleSendSupport} className="flex gap-3">
