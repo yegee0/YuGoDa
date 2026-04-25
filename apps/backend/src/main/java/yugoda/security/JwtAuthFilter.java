@@ -88,6 +88,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 FirebaseToken decoded = FirebaseAuth.getInstance().verifyIdToken(token);
                 String uid = decoded.getUid();
                 String email = decoded.getEmail();
+                boolean emailVerified = decoded.isEmailVerified();
 
                 // Determine default role from the Firebase project that issued the token.
                 // This is the authoritative role for first-time users not yet in the DB.
@@ -98,10 +99,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String resolvedEmail = email;
                 String accountStatus = "active";
                 boolean exists = false;
+                String canonicalUid = uid;
 
                 try {
-                    var dbUser = userRepository.findById(uid).orElse(null);
+                    // Cross-provider account linking: a verified email scoped to the
+                    // same role wins over the JWT's UID. Firebase mints separate UIDs
+                    // for the same email across providers (Google vs email/password),
+                    // so without this hop a single human ends up with one DB row per
+                    // provider. The role gate keeps customer/restaurant/admin
+                    // accounts that legitimately share an email distinct.
+                    var dbUser = (email != null && !email.isBlank() && emailVerified)
+                            ? userRepository.findFirstByEmailAndRoleOrderByCreatedAtAsc(email, issuerRole).orElse(null)
+                            : null;
+                    if (dbUser == null) {
+                        dbUser = userRepository.findById(uid).orElse(null);
+                    }
                     if (dbUser != null) {
+                        canonicalUid = dbUser.getUid();
                         role = dbUser.getRole();
                         displayName = dbUser.getDisplayName();
                         resolvedEmail = email != null ? email : dbUser.getEmail();
@@ -115,7 +129,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     role = issuerRole;
                 }
 
-                return new UserPrincipal(uid, resolvedEmail, role, displayName, exists, accountStatus);
+                return new UserPrincipal(canonicalUid, resolvedEmail, role, displayName, exists, accountStatus);
             } catch (Exception e) {
                 log.debug("[Auth] Firebase Admin verification failed, trying JWT decode: {}", e.getMessage());
             }
@@ -130,6 +144,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // Step 1: Decode the JWT payload (cryptography-free — dev/multi-project mode).
         String uid;
         String email;
+        boolean emailVerified;
         String issuerRole; // Role inferred from the Firebase project that issued the token
         try {
             String[] parts = token.split("\\.");
@@ -163,6 +178,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
             email = (String) claims.get("email");
+            Object verifiedRaw = claims.get("email_verified");
+            emailVerified = verifiedRaw instanceof Boolean b ? b : false;
             // Derive the expected role from the Firebase project ID embedded in the issuer
             // claim. Format: "https://securetoken.google.com/<project-id>"
             // This is the authoritative role when the user is not yet in the DB.
@@ -181,9 +198,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String resolvedEmail = email;
         String accountStatus = "active";
         boolean exists = false;
+        String canonicalUid = uid;
         try {
-            var dbUser = userRepository.findById(uid).orElse(null);
+            // Cross-provider account linking — see strategy 1 for the rationale.
+            // Email-keyed lookup (gated on email_verified) wins over UID-keyed
+            // lookup so that Firebase's per-provider UIDs collapse onto a single
+            // DB row.
+            var dbUser = (email != null && !email.isBlank() && emailVerified)
+                    ? userRepository.findFirstByEmailAndRoleOrderByCreatedAtAsc(email, issuerRole).orElse(null)
+                    : null;
+            if (dbUser == null) {
+                dbUser = userRepository.findById(uid).orElse(null);
+            }
             if (dbUser != null) {
+                canonicalUid = dbUser.getUid();
                 role = dbUser.getRole();
                 displayName = dbUser.getDisplayName();
                 resolvedEmail = email != null ? email : dbUser.getEmail();
@@ -195,8 +223,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     uid, issuerRole, e.getMessage());
         }
 
-        log.debug("[Auth] JWT decode OK: uid={}, role={}, dbExists={}", uid, role, exists);
-        return new UserPrincipal(uid, resolvedEmail, role, displayName, exists, accountStatus);
+        log.debug("[Auth] JWT decode OK: jwtUid={}, canonicalUid={}, role={}, dbExists={}", uid, canonicalUid, role, exists);
+        return new UserPrincipal(canonicalUid, resolvedEmail, role, displayName, exists, accountStatus);
     }
 
     /**
