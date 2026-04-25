@@ -89,6 +89,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String uid = decoded.getUid();
                 String email = decoded.getEmail();
                 boolean emailVerified = decoded.isEmailVerified();
+                // Same fallback rationale as the JWT-decode path: read the email
+                // from firebase.identities.email[0] when the top-level claim is
+                // empty so Google sign-ins surface their address for linking.
+                if (email == null || email.isBlank()) {
+                    Object firebaseClaim = decoded.getClaims().get("firebase");
+                    if (firebaseClaim instanceof Map<?, ?> fc) {
+                        Object identities = fc.get("identities");
+                        if (identities instanceof Map<?, ?> idMap) {
+                            Object emails = idMap.get("email");
+                            if (emails instanceof java.util.List<?> emailList && !emailList.isEmpty()
+                                    && emailList.get(0) instanceof String firstEmail
+                                    && !firstEmail.isBlank()) {
+                                email = firstEmail;
+                                if (!emailVerified) emailVerified = true;
+                            }
+                        }
+                    }
+                }
+                if (email == null || email.isBlank()) {
+                    log.warn("[Auth] FirebaseToken has no email (uid={}, issuer={}). " +
+                            "Cross-provider linking cannot run.", uid, decoded.getIssuer());
+                }
 
                 // Determine default role from the Firebase project that issued the token.
                 // This is the authoritative role for first-time users not yet in the DB.
@@ -180,6 +202,33 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             email = (String) claims.get("email");
             Object verifiedRaw = claims.get("email_verified");
             emailVerified = verifiedRaw instanceof Boolean b ? b : false;
+            // Firebase ID tokens duplicate the email under firebase.identities.email[0].
+            // For some provider/project configurations the top-level "email" claim is
+            // empty while the nested one is populated — fall back to it before giving
+            // up so cross-provider linking actually works for Google sign-ins.
+            if (email == null || email.isBlank()) {
+                Object firebaseClaim = claims.get("firebase");
+                if (firebaseClaim instanceof Map<?, ?> fc) {
+                    Object identities = fc.get("identities");
+                    if (identities instanceof Map<?, ?> idMap) {
+                        Object emails = idMap.get("email");
+                        if (emails instanceof java.util.List<?> emailList && !emailList.isEmpty()
+                                && emailList.get(0) instanceof String firstEmail
+                                && !firstEmail.isBlank()) {
+                            email = firstEmail;
+                            // If the nested path supplied the email, treat it as
+                            // verified — Firebase only populates that path for
+                            // providers that have already validated the address
+                            // (Google, verified password, etc.).
+                            if (!emailVerified) emailVerified = true;
+                        }
+                    }
+                }
+            }
+            if (email == null || email.isBlank()) {
+                log.warn("[Auth] JWT decode: token has no email claim (uid={}, iss={}). " +
+                        "Cross-provider linking cannot run for this request.", uid, claims.get("iss"));
+            }
             // Derive the expected role from the Firebase project ID embedded in the issuer
             // claim. Format: "https://securetoken.google.com/<project-id>"
             // This is the authoritative role when the user is not yet in the DB.

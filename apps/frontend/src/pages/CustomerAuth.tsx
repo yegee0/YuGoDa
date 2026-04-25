@@ -191,6 +191,13 @@ export default function Auth() {
     setError('');
     setLoading(true);
     const provider = new GoogleAuthProvider();
+    // Explicit scopes so Google always returns email + basic profile fields,
+    // which the backend uses for cross-provider account linking. Without these,
+    // some Firebase project configurations omit the email claim from the
+    // resulting ID token and the backend can't resolve the user back to their
+    // existing email/password row.
+    provider.addScope('email');
+    provider.addScope('profile');
     try {
       // Sign out other-role sessions BEFORE OAuth so a returning redirect can
       // only resolve against the customer principal.
