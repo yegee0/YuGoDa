@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { authCustomer, authPartner, authAdmin, getCustomerFcmToken, listenForegroundMessages, signOutAllProjects } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
@@ -8,6 +8,11 @@ import { api, ApiError, setBannedHandler, markAuthInitialized } from '@/lib/api'
 export function useAuthInit() {
   const { i18n } = useTranslation();
   const { setUser, setUserProfile, setIsAuthReady, isDarkMode } = useStore();
+  // Prevents /users/register from firing twice when onAuthStateChanged emits
+  // multiple callbacks during a Google sign-in popup (race condition guard).
+  // useRef — not useState — so the flag update is synchronous and catches
+  // back-to-back calls within the same event-loop turn.
+  const registrationInFlightRef = useRef(false);
 
   const isRTL = i18n.language === 'ar';
 
@@ -143,6 +148,8 @@ export function useAuthInit() {
           // issuer confirms the token comes from the yugoda-admin Firebase project,
           // so this is not a security hole.
           if (role === 'admin') {
+            if (registrationInFlightRef.current) return;
+            registrationInFlightRef.current = true;
             try {
               const [firstName = '', ...rest] = (currentUser.displayName || '').trim().split(/\s+/).filter(Boolean);
               const lastName = rest.join(' ');
@@ -169,10 +176,14 @@ export function useAuthInit() {
               // Keep the optimistic profile — same as the non-404 path above.
               // The admin panel will load with empty data; they can refresh once
               // the backend is available.
+            } finally {
+              registrationInFlightRef.current = false;
             }
             return;
           }
           // Customer/restaurant 404: auto-register
+          if (registrationInFlightRef.current) return;
+          registrationInFlightRef.current = true;
           try {
             const storeName = currentUser.displayName || currentUser.email?.split('@')[0] || 'My Restaurant';
             // Google OAuth yields a combined displayName like "Ahmet Yılmaz"; split on
@@ -209,6 +220,8 @@ export function useAuthInit() {
             }
           } catch {
             // Backend unreachable — continue with default profile
+          } finally {
+            registrationInFlightRef.current = false;
           }
         }
       }

@@ -8,6 +8,9 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Runs lightweight, idempotent schema fixes on startup.
  *
@@ -33,6 +36,7 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         migrateOrders();
         migrateNotifications();
         migrateStores();
+        migrateUniqueEmailRoleIndex();
         verifyMigrations();
         log.info("[Migration] Schema migrations complete.");
     }
@@ -95,6 +99,52 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
 
     private void migrateStores() {
         alterToTextIfNeeded("stores", "logo");
+    }
+
+    private void migrateUniqueEmailRoleIndex() {
+        try {
+            // Pre-flight: detect existing (email, role) duplicates among active rows.
+            // If any are found we refuse to create the index and halt startup with a
+            // clear message so an operator can resolve them first.
+            List<Map<String, Object>> dupes = jdbcTemplate.queryForList(
+                    "SELECT LOWER(email) AS email, role, COUNT(*) AS cnt " +
+                    "FROM users " +
+                    "WHERE email IS NOT NULL AND email <> '' AND account_status <> 'deleted' " +
+                    "GROUP BY LOWER(email), role " +
+                    "HAVING COUNT(*) > 1");
+            if (!dupes.isEmpty()) {
+                StringBuilder msg = new StringBuilder(
+                        "[Migration] Duplicate (email, role) pairs found among active users — " +
+                        "cannot create unique index. Resolve manually before redeploying. " +
+                        "Offending entries: ");
+                for (Map<String, Object> row : dupes) {
+                    msg.append(row.get("email")).append(" / ").append(row.get("role"))
+                       .append(" (count=").append(row.get("cnt")).append("), ");
+                }
+                throw new IllegalStateException(msg.toString());
+            }
+
+            // Create partial unique index — composite (LOWER(email), role) so that
+            //   • admin@yugoda.com with 3 different roles → 3 rows, no conflict
+            //   • soft-deleted rows with anonymized emails → excluded by WHERE clause
+            //   • case-insensitive: Foo@gmail.com == foo@gmail.com
+            //   • IF NOT EXISTS → idempotent across restarts
+            jdbcTemplate.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_active_unique " +
+                    "ON users (LOWER(email), role) " +
+                    "WHERE account_status <> 'deleted' AND email IS NOT NULL AND email <> ''");
+            log.info("[Migration] users_email_role_active_unique index ensured.");
+        } catch (IllegalStateException e) {
+            // Propagate so startup fails loudly rather than silently continuing
+            // without the safety net.
+            throw e;
+        } catch (Exception e) {
+            log.error("[Migration] Could not create users_email_role_active_unique: {} — " +
+                    "run manually: CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_active_unique " +
+                    "ON users (LOWER(email), role) WHERE account_status <> 'deleted' AND " +
+                    "email IS NOT NULL AND email <> '';",
+                    e.getMessage(), e);
+        }
     }
 
     // ── post-migration verification ───────────────────────────────────────────

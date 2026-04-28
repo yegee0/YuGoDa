@@ -9,6 +9,9 @@ import yugoda.repository.ReviewRepository;
 import yugoda.repository.StoreRepository;
 import yugoda.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
@@ -83,6 +88,19 @@ public class UserService {
         } else {
             role = "customer";
         }
+        // Idempotency guard: if an active user already exists with the same
+        // email+role (e.g. two rapid Google sign-ins before the first insert
+        // commits), return the existing row instead of creating a duplicate.
+        // Case-insensitive to match the DB index created in DatabaseMigrationRunner.
+        if (email != null && !email.isBlank()) {
+            Optional<User> emailMatch = userRepository.findFirstByEmailIgnoreCaseAndRole(email, role);
+            if (emailMatch.isPresent() && !"deleted".equals(emailMatch.get().getAccountStatus())) {
+                log.warn("[USER_REGISTER] duplicate prevented — returning existing user uid={} email={} role={}",
+                        emailMatch.get().getUid(), email, role);
+                return emailMatch.get();
+            }
+        }
+
         User user = new User();
         user.setUid(uid);
         user.setEmail(email);
@@ -93,7 +111,20 @@ public class UserService {
         user.setMobileNumber((String) body.getOrDefault("phone", ""));
         user.setFavorites("[]");
         user.setAddresses("[]");
-        userRepository.save(user);
+
+        // Race-condition safety net: a second concurrent insert that slips past
+        // the pre-check above will be blocked by the DB unique index. We catch
+        // the violation and return the row that won the race instead of surfacing
+        // a 500 to the client.
+        try {
+            userRepository.save(user);
+            log.info("[USER_REGISTER] new user created uid={} email={} role={}", uid, email, role);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("[USER_REGISTER] race condition resolved — unique index blocked duplicate insert, " +
+                    "returning winner for email={} role={}", email, role);
+            return userRepository.findFirstByEmailIgnoreCaseAndRole(email, role)
+                    .orElseThrow(() -> e);
+        }
 
         // Auto-create store for restaurant users
         if ("restaurant".equals(role)) {
