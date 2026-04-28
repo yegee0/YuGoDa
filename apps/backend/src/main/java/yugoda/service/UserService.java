@@ -31,6 +31,10 @@ public class UserService {
 
     @Transactional
     public User register(String uid, String email, Map<String, Object> body) {
+        // Defensive assertion — Fix A (JwtAuthFilter) should prevent this in production.
+        if (email == null || email.isBlank()) {
+            throw new IllegalStateException("Email is required for registration (uid=" + uid + ")");
+        }
         Optional<User> existing = userRepository.findById(uid);
 
         if (existing.isPresent()) {
@@ -152,52 +156,79 @@ public class UserService {
     /**
      * Idempotent profile fetch with backend-side lazy provisioning.
      *
-     * The legacy flow had the frontend handle a GET /users/me 404 by POSTing to
-     * /users/register, but that fallback lived inside a swallow-all `catch {}`
-     * — when the register call failed for any reason (transient network, race
-     * during the OAuth redirect, backend hiccup) the user was left signed-in
-     * but rowless, and every subsequent /me kept returning 404 forever. The
-     * symptom only showed up for Google sign-in since email/password signup
-     * provisions the row explicitly via {@link #register}.
+     * Cross-provider linking is the primary job of this method: when a Google
+     * sign-in arrives for an email that was previously registered via
+     * email/password, the email-keyed lookup returns the existing row so the two
+     * provider identities collapse onto one DB row. This mirrors the logic in
+     * JwtAuthFilter and is the safety net for the case where JwtAuthFilter could
+     * not resolve canonicalUid (e.g. because the UID lookup path was taken).
      *
-     * Moving the provision into GET /me — which only fires for authenticated
-     * users (JwtAuthFilter has already verified the token) — makes the row
-     * guaranteed-to-exist for any signed-in caller, with no client-side
-     * recovery dance.
+     * The ordering matters:
+     *   1. email-keyed lookup  → cross-provider link (most important)
+     *   2. uid-keyed lookup    → returning same-provider user (fast path)
+     *   3. create new row      → genuinely new user
      */
     @Transactional
     public User getOrCreateProfile(String uid, String email, String displayName, String role) {
-        return userRepository.findById(uid).orElseGet(() -> {
-            User u = new User();
-            u.setUid(uid);
-            // email is NOT NULL on the User entity. Firebase tokens always carry
-            // an email claim for Google / email-password providers, but fall back
-            // to empty string defensively so a malformed claim can never block
-            // the bootstrap.
-            u.setEmail(email != null ? email : "");
-            if (displayName != null) u.setDisplayName(displayName);
-            // Role precedence: the JWT-derived role wins over the entity default.
-            // JwtAuthFilter resolves it from the issuer's Firebase project ID, so
-            // a customer token can never escalate to admin or restaurant here.
-            if (role != null) u.setRole(role);
+        log.debug("[USER_GET_OR_CREATE] uid={} email={} role={}", uid, email, role);
+
+        // Fix A (JwtAuthFilter) should prevent blank-email tokens from reaching here,
+        // but this guard is the last line of defence against future regressions or
+        // unexpected code paths introducing empty-email principals.
+        if (email == null || email.isBlank()) {
+            throw new IllegalStateException(
+                    "Cannot create profile without email (uid=" + uid + ")");
+        }
+
+        // 1. Email-keyed cross-provider lookup.
+        // If a row already exists for this email+role (e.g. an email/password account),
+        // return it — do NOT create a second row under the Google UID.
+        Optional<User> byEmail = userRepository.findFirstByEmailIgnoreCaseAndRole(email, role);
+        if (byEmail.isPresent() && !"deleted".equals(byEmail.get().getAccountStatus())) {
+            log.info("[USER_GET_OR_CREATE] linked existing user uid={} email={} role={}",
+                    byEmail.get().getUid(), email, role);
+            return byEmail.get();
+        }
+
+        // 2. UID-keyed lookup — same-provider returning user.
+        Optional<User> byUid = userRepository.findById(uid);
+        if (byUid.isPresent()) {
+            return byUid.get();
+        }
+
+        // 3. Genuinely new user — create the row.
+        User u = new User();
+        u.setUid(uid);
+        u.setEmail(email);
+        if (displayName != null) u.setDisplayName(displayName);
+        // Role is issuer-derived in JwtAuthFilter; a customer token can never
+        // escalate to admin or restaurant here.
+        if (role != null) u.setRole(role);
+
+        // Race-condition safety net: mirrors the guard in register().
+        try {
             userRepository.save(u);
+            log.info("[USER_GET_OR_CREATE] new user created uid={} email={} role={}", uid, email, role);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("[USER_GET_OR_CREATE] race condition resolved — unique index blocked duplicate insert, " +
+                    "returning winner for email={} role={}", email, role);
+            return userRepository.findFirstByEmailIgnoreCaseAndRole(email, role)
+                    .orElseThrow(() -> e);
+        }
 
-            // Restaurant Google sign-ins also need a paired store row — the
-            // restaurant panel relies on a 1:1 user↔store mapping. Mirrors the
-            // auto-create the existing register flow performs for explicit
-            // restaurant signups.
-            if ("restaurant".equals(role) && !storeRepository.existsById(uid)) {
-                Store store = new Store();
-                store.setId(uid);
-                store.setName(displayName != null && !displayName.isBlank()
-                        ? displayName : "My Restaurant");
-                store.setCategory("Restaurant");
-                store.setStatus("pending");
-                storeRepository.save(store);
-            }
+        // Restaurant Google sign-ins also need a paired store row — the
+        // restaurant panel relies on a 1:1 user↔store mapping.
+        if ("restaurant".equals(role) && !storeRepository.existsById(uid)) {
+            Store store = new Store();
+            store.setId(uid);
+            store.setName(displayName != null && !displayName.isBlank()
+                    ? displayName : "My Restaurant");
+            store.setCategory("Restaurant");
+            store.setStatus("pending");
+            storeRepository.save(store);
+        }
 
-            return u;
-        });
+        return u;
     }
 
     @Transactional
