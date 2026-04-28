@@ -61,6 +61,9 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
         alterToTextIfNeeded("users", "location");
         addColumnIfMissing("users", "addresses",             "TEXT DEFAULT '[]'");
         alterToTextIfNeeded("users", "addresses");
+        // Soft-delete fields (KVKK/GDPR account deletion)
+        addColumnIfMissing("users", "is_deleted",            "BOOLEAN NOT NULL DEFAULT false");
+        addColumnIfMissing("users", "deleted_at",            "TIMESTAMP");
     }
 
     private void migrateOrders() {

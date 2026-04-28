@@ -11,6 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
+
 import java.util.*;
 
 @RestController
@@ -76,6 +81,42 @@ public class UserController extends BaseController {
         } catch (Exception e) {
             log.error("[updateProfile] uid={} keys={} error={}", user.getUid(), body.keySet(), e.getMessage(), e);
             return serverError("Profil güncellenemedi.");
+        }
+    }
+
+    // DELETE /me
+    @DeleteMapping("/me")
+    public ResponseEntity<Map<String, Object>> deleteAccount(HttpServletRequest request) {
+        UserPrincipal user = getUser(request);
+        if (!requireAuth(user)) return unauthorized("Yetkilendirme token'ı bulunamadı.");
+        if (!hasRole(user, "customer")) return forbidden("Only customer accounts can be deleted.");
+        try {
+            userService.softDeleteUser(user.getUid());
+            // Disable the Firebase account so the user cannot obtain a new token
+            // after the DB row is soft-deleted.  Guard against local-dev environments
+            // where the Firebase Admin SDK is not initialised.
+            boolean customerAppExists = FirebaseApp.getApps().stream()
+                    .anyMatch(app -> "yugoda-customer".equals(app.getName()));
+            log.info("[ACCOUNT_DELETE_FB_DISABLE] customerAppExists={}, uid={}", customerAppExists, user.getUid());
+            if (customerAppExists) {
+                log.info("[ACCOUNT_DELETE_FB_DISABLE] Attempting to disable Firebase user uid={}", user.getUid());
+                try {
+                    FirebaseAuth.getInstance(FirebaseApp.getInstance("yugoda-customer"))
+                            .updateUser(new UserRecord.UpdateRequest(user.getUid()).setDisabled(true));
+                    log.info("[ACCOUNT_DELETE_FB_DISABLE] Successfully disabled Firebase user uid={}", user.getUid());
+                } catch (FirebaseAuthException fae) {
+                    log.error("[ACCOUNT_DELETE_FB_DISABLE] FAILED to disable Firebase user uid={}, code={}, message={}",
+                            user.getUid(), fae.getAuthErrorCode(), fae.getMessage(), fae);
+                }
+            } else {
+                log.warn("[ACCOUNT_DELETE_FB_DISABLE] yugoda-customer app not initialized, skipping disable");
+            }
+            return ResponseEntity.ok(Map.of("success", true, "message", "Account deleted successfully."));
+        } catch (NoSuchElementException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("[deleteAccount] uid={} error={}", user.getUid(), e.getMessage(), e);
+            return serverError("Hesap silinemedi.");
         }
     }
 

@@ -50,4 +50,7 @@ public class User {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    private Boolean isDeleted = false;
+    private LocalDateTime deletedAt;
 }

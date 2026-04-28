@@ -60,6 +60,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             "{\"success\":false,\"message\":\"Account banned.\"}");
                     return;
                 }
+                if ("deleted".equals(principal.getAccountStatus())) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write(
+                            "{\"success\":false,\"message\":\"Invalid credentials.\"}");
+                    return;
+                }
                 if ("suspended".equals(principal.getAccountStatus()) && isMutatingMethod(request.getMethod())) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");

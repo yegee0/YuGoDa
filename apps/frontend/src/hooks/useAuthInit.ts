@@ -118,9 +118,21 @@ export function useAuthInit() {
             }).catch(() => {});
           }
         } catch (err: unknown) {
-          // Non-404 errors (401, 5xx, network): keep the optimistic profile and
+          // 401 from /users/me means the session is definitively invalid —
+          // api.ts already attempted a token refresh before throwing, so a
+          // fresh Firebase token was tried and also rejected. This happens for
+          // soft-deleted accounts (accountStatus = "deleted") and for any other
+          // permanently revoked session. Keeping a stub profile visible is a
+          // security bug; force a full sign-out immediately.
+          if (err instanceof ApiError && err.status === 401) {
+            await signOutAllProjects();
+            setUser(null);
+            setUserProfile(null);
+            return;
+          }
+          // Non-404 errors (5xx, network): keep the optimistic profile and
           // continue — same pattern as customer/restaurant. Redirecting on every
-          // auth error creates an infinite reload loop (window.location.assign
+          // transient error creates an infinite reload loop (window.location.assign
           // re-triggers onAuthStateChanged → handleAuth → same error → redirect…).
           if (!(err instanceof ApiError && err.status === 404)) {
             return;

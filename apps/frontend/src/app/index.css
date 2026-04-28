@@ -4,6 +4,7 @@
   --color-eco-primary: #1B5E52;     /* == COLORS.forest      in src/lib/constants.ts */
   --color-eco-secondary: #ad3115;   /* == COLORS.accentWarm  in src/lib/constants.ts */
   --color-eco-lime: #748f2b;
+  --color-danger: #DC2626;          /* Destructive actions only (delete account, hard errors) */
   --color-eco-bg: var(--bg-color);
   --color-eco-surface: var(--surface-color);
   --color-eco-text: var(--text-color);

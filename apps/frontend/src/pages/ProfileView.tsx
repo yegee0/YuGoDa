@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { signOutAllProjects } from '@/lib/firebase';
 import {
   User, Mail, Phone, Globe, MapPin, Camera, Save,
   Trash2, CheckCircle2, Wallet, Plus, Home, Briefcase,
@@ -13,6 +14,10 @@ import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Address, Order, CartItem, StoreProfile, UserProfile } from '@/types';
+import { reverseGeocodeNominatim, formatNominatimAddress } from '@/lib/geocoding';
+
+/** Matches the coordinate fallback label stored by LocationPickerMap ("41.0052, 29.0353"). */
+const COORD_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
@@ -29,8 +34,9 @@ const TAG_LABEL: Record<string, string> = {
 
 export default function ProfileView() {
   const { t, i18n } = useTranslation();
-  const { userProfile, setUserProfile, orders, setOrders, isAuthReady } = useStore();
+  const { userProfile, setUserProfile, setUser, orders, setOrders, isAuthReady } = useStore();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialTab = (['profile', 'addresses', 'orders', 'settings'] as Tab[])
     .includes(searchParams.get('tab') as Tab)
     ? (searchParams.get('tab') as Tab)
@@ -43,6 +49,12 @@ export default function ProfileView() {
   const [editingAddrIndex, setEditingAddrIndex] = useState<number | null>(null);
   const [editingAddr, setEditingAddr] = useState<Address | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  /** Ref guard — healing runs at most once per mount, even if addresses re-render. */
+  const healedRef = useRef(false);
+  /** Always holds the latest userProfile so the healing closure doesn't go stale. */
+  const userProfileRef = useRef(userProfile);
   const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [inlineRating, setInlineRating] = useState(5);
@@ -79,6 +91,55 @@ export default function ProfileView() {
       mobileNumber: userProfile.mobileNumber || '',
     });
   }, [userProfile, isEditing]);
+
+  // Keep the ref current so the healing closure always reads the latest profile.
+  useEffect(() => { userProfileRef.current = userProfile; }, [userProfile]);
+
+  /**
+   * One-time healing pass on mount: find addresses whose label is missing or was
+   * stored as raw coordinates (geocoding fallback), resolve them in parallel via
+   * our self-hosted Nominatim instance, then persist all fixes in a single PUT.
+   *
+   * Race-condition safety: we read `userProfileRef.current` just before writing so
+   * any concurrent edit/delete is reflected in the final payload. Addresses whose
+   * geocoding fails are left untouched (they will retry on the next page load).
+   */
+  useEffect(() => {
+    if (!userProfile?.addresses?.length || healedRef.current) return;
+
+    const candidates = userProfile.addresses
+      .map((addr: Address, i: number) => ({ addr, i }))
+      .filter(({ addr }: { addr: Address }) =>
+        addr.latitude != null &&
+        addr.longitude != null &&
+        (!addr.addressLabel || COORD_RE.test(addr.addressLabel.trim()))
+      );
+
+    if (candidates.length === 0) return;
+    healedRef.current = true;
+
+    Promise.all(
+      candidates.map(async ({ addr, i }: { addr: Address; i: number }) => {
+        const res = await reverseGeocodeNominatim(addr.latitude!, addr.longitude!);
+        const formatted = formatNominatimAddress(res);
+        return formatted ? { i, formatted } : null;
+      })
+    ).then(results => {
+      const updates = results.filter((r): r is { i: number; formatted: string } => r !== null);
+      if (updates.length === 0) return;
+
+      // Merge against the latest profile snapshot to avoid overwriting concurrent edits.
+      const current = userProfileRef.current;
+      if (!current) return;
+      const latest = current.addresses.map((a: Address, i: number) => {
+        const hit = updates.find(u => u.i === i);
+        return hit ? { ...a, addressLabel: hit.formatted } : a;
+      });
+
+      setUserProfile({ ...current, addresses: latest });
+      api.put('/users/me', { addresses: latest }).catch(() => {});
+    }).catch(() => {});
+  }, [userProfile?.addresses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Handlers ─────────────────────────────────────────── */
   const handleSaveProfile = async () => {
@@ -148,6 +209,22 @@ export default function ProfileView() {
     api.put('/users/me', { walletBalance: newBalance }).catch(() => {});
     setShowWalletModal(false);
     toast.success(t('profile_wallet_topup_success', { amount: topUpAmount }));
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      await api.delete('/users/me');
+      toast.success(t('profile_delete_success'));
+      // Sign out Firebase session, clear store, redirect to home
+      await signOutAllProjects();
+      setUser(null);
+      setUserProfile(null);
+      navigate('/');
+    } catch {
+      toast.error(t('profile_delete_failed'));
+      setDeleteLoading(false);
+    }
   };
 
   const handleNotificationToggle = () => {
@@ -832,6 +909,18 @@ export default function ProfileView() {
                     <span className="capitalize">{t('profile_account_role', { role: userProfile?.role || 'customer' })}</span>
                   </div>
                 </div>
+
+                {/* Delete Account — customers only */}
+                {userProfile?.role === 'customer' && <div className="bg-[#ffffff] rounded-2xl border border-danger px-5 py-4 shadow-sm space-y-3">
+                  <p className="text-xs font-bold text-danger uppercase tracking-widest">{t('profile_delete_section')}</p>
+                  <p className="text-xs text-danger/70 leading-relaxed">{t('profile_delete_helper')}</p>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="w-full py-2.5 rounded-xl border border-danger bg-[#ffffff] text-danger text-sm font-bold hover:bg-danger hover:text-white transition-colors"
+                  >
+                    {t('profile_delete_btn')}
+                  </button>
+                </div>}
               </div>
             )}
 
@@ -892,6 +981,57 @@ export default function ProfileView() {
               >
                 {t('profile_wallet_add', { amount: topUpAmount })}
               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete Account Confirmation Modal ── */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div
+            className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => { if (!deleteLoading) setShowDeleteModal(false); }}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+              className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+              onKeyDown={e => { if (e.key === 'Escape' && !deleteLoading) setShowDeleteModal(false); }}
+              tabIndex={-1}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-[#1B1B1B] text-lg">{t('profile_delete_modal_title')}</h3>
+                <button
+                  disabled={deleteLoading}
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center disabled:opacity-40"
+                >
+                  <X className="w-4 h-4 text-[#8FA396]" />
+                </button>
+              </div>
+              <p className="text-sm text-[#5C6B63] leading-relaxed mb-6">{t('profile_delete_modal_body')}</p>
+              <div className="flex gap-3">
+                <button
+                  disabled={deleteLoading}
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-3 rounded-2xl bg-[#F5F0E8] text-[#5C6B63] font-bold text-sm hover:bg-[#E8E0D5] transition-colors disabled:opacity-40"
+                >
+                  {t('Cancel')}
+                </button>
+                <button
+                  disabled={deleteLoading}
+                  onClick={handleDeleteAccount}
+                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {deleteLoading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('profile_saving')}</>
+                    : t('profile_delete_confirm_btn')}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

@@ -2,7 +2,7 @@
 
 // ── Auth & Users ─────────────────────────────────────────
 export type UserRole = 'customer' | 'restaurant' | 'admin' | 'driver';
-export type AccountStatus = 'active' | 'suspended' | 'banned';
+export type AccountStatus = 'active' | 'suspended' | 'banned' | 'deleted';
 
 export interface UserProfile {
   uid: string;

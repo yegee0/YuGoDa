@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import yugoda.model.Store;
 import yugoda.model.User;
+import yugoda.repository.NotificationRepository;
+import yugoda.repository.ReviewRepository;
 import yugoda.repository.StoreRepository;
 import yugoda.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
     private final ObjectMapper objectMapper;
+    private final NotificationRepository notificationRepository;
+    private final ReviewRepository reviewRepository;
 
     @Transactional
     public User register(String uid, String email, Map<String, Object> body) {
@@ -251,5 +255,51 @@ public class UserService {
             .sorted(Comparator.comparing(u -> u.getCreatedAt() == null ? "" : u.getCreatedAt().toString(),
                     Comparator.reverseOrder()))
             .toList();
+    }
+
+    /**
+     * Soft-deletes and anonymizes a user account in a single transaction.
+     *
+     * Idempotent: if the user is already deleted, returns immediately without
+     * re-running the anonymization (safe for network retries and double-clicks).
+     *
+     * Transaction scope:
+     *   1. Anonymize personal fields on User
+     *   2. Hard-delete Notifications (no business value post-deletion)
+     *   3. Null-out Review.userName (personal data; rating/comment preserved)
+     * On any failure the entire transaction rolls back — no partial state.
+     */
+    @Transactional
+    public void softDeleteUser(String uid) {
+        User user = userRepository.findById(uid)
+                .orElseThrow(() -> new NoSuchElementException("User not found."));
+
+        // Idempotency guard — second call is a no-op
+        if (Boolean.TRUE.equals(user.getIsDeleted())) return;
+
+        // 1. Flag and anonymize the User row
+        user.setIsDeleted(true);
+        user.setDeletedAt(java.time.LocalDateTime.now());
+        user.setAccountStatus("deleted");
+        // Email placeholder preserves the unique-email constraint while freeing
+        // the original address for future re-registration.
+        user.setEmail("deleted_user_" + uid + "@yugoda.deleted");
+        user.setDisplayName("Deleted User");
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setPhotoURL(null);
+        user.setMobileNumber(null);
+        user.setCountryCode(null);
+        user.setAddresses("[]");
+        user.setFavorites("[]");
+        user.setLocation(null);
+        user.setFcmToken(null);
+        userRepository.save(user);
+
+        // 2. Delete notifications (personal inbox, no business value)
+        notificationRepository.deleteByUserId(uid);
+
+        // 3. Anonymize review author names (rating and comment are preserved)
+        reviewRepository.anonymizeByUserId(uid);
     }
 }

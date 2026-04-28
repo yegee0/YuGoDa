@@ -97,3 +97,20 @@ export function nominatimDisplayName(
     || fallback
   );
 }
+
+/**
+ * Format a Nominatim reverse-geocode response as "City › District › Neighbourhood",
+ * including only the parts that are actually present. Returns null if no usable
+ * parts are found (caller should fall back to raw coordinates).
+ */
+export function formatNominatimAddress(
+  res: NominatimReverseResponse | null,
+): string | null {
+  if (!res) return null;
+  const a = res.address ?? {};
+  const city         = a.city || a.town || a.village || null;
+  const district     = a.district || null;
+  const neighbourhood = a.neighbourhood || a.suburb || a.quarter || null;
+  const parts = [city, district, neighbourhood].filter(Boolean) as string[];
+  return parts.length > 0 ? parts.join(' › ') : null;
+}

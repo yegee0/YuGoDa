@@ -179,8 +179,13 @@ export default function Auth() {
         }
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+      const code = (err as { code?: string })?.code || '';
+      if (code === 'auth/user-disabled') {
+        setError(t('auth_user_disabled'));
+      } else {
+        const message = err instanceof Error ? err.message : '';
+        setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+      }
     } finally {
       setLoading(false);
     }
@@ -217,7 +222,9 @@ export default function Auth() {
       } else {
         const msg = err instanceof Error ? err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() : '';
         setError(
-          code === 'auth/unauthorized-domain'
+          code === 'auth/user-disabled'
+            ? t('auth_user_disabled')
+            : code === 'auth/unauthorized-domain'
             ? 'This domain is not authorised for Google sign-in. Please add it in Firebase Console → Authentication → Authorised Domains.'
             : code === 'auth/operation-not-allowed'
             ? 'Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in methods.'

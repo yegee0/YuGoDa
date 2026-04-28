@@ -1,6 +1,7 @@
 package yugoda.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ImpersonatedCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * Firebase Admin SDK initialization.
@@ -39,8 +41,19 @@ public class FirebaseConfig {
     @Value("${firebase.project-id:yugoda-5b36a}")
     private String projectId;
 
+    @Value("${firebase.customer-project-id:}")
+    private String customerProjectId;
+
+    @Value("${firebase.customer-impersonate-sa:}")
+    private String customerImpersonateSa;
+
     @PostConstruct
     public void initialize() {
+        initializeDefaultApp();
+        initializeCustomerApp();
+    }
+
+    private void initializeDefaultApp() {
         if (!FirebaseApp.getApps().isEmpty()) return;
 
         try {
@@ -86,6 +99,50 @@ public class FirebaseConfig {
             log.warn("[Firebase] No credentials found. FCM push notifications will be disabled.");
             log.warn("[Firebase] To enable locally: run 'gcloud auth application-default login' and restart.");
             return null;
+        }
+    }
+
+    /**
+     * Initializes a second named FirebaseApp ("yugoda-customer") for the customer-facing
+     * Firebase project using Service Account Impersonation.
+     *
+     * The Cloud Run service account (ADC) must have roles/iam.serviceAccountTokenCreator
+     * on the impersonated SA in the yugoda-customer GCP project.
+     * No JSON key file is required.
+     */
+    private void initializeCustomerApp() {
+        if (customerProjectId == null || customerProjectId.isBlank()
+                || customerImpersonateSa == null || customerImpersonateSa.isBlank()) {
+            log.warn("[FIREBASE_CUSTOMER] Project ID or impersonate SA not configured — customer admin operations will be skipped");
+            return;
+        }
+
+        // Guard: skip if already initialized (e.g. on context refresh in tests)
+        boolean alreadyExists = FirebaseApp.getApps().stream()
+                .anyMatch(app -> "yugoda-customer".equals(app.getName()));
+        if (alreadyExists) return;
+
+        try {
+            GoogleCredentials baseCreds = GoogleCredentials.getApplicationDefault();
+            ImpersonatedCredentials impCreds = ImpersonatedCredentials.create(
+                    baseCreds,
+                    customerImpersonateSa,
+                    null,
+                    Arrays.asList(
+                            "https://www.googleapis.com/auth/cloud-platform",
+                            "https://www.googleapis.com/auth/firebase"
+                    ),
+                    3600
+            );
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(impCreds)
+                    .setProjectId(customerProjectId)
+                    .build();
+            FirebaseApp.initializeApp(options, "yugoda-customer");
+            log.info("[FIREBASE_CUSTOMER] Initialized via impersonation of {} for project {}",
+                    customerImpersonateSa, customerProjectId);
+        } catch (Exception e) {
+            log.error("[FIREBASE_CUSTOMER] Failed to initialize: {}", e.getMessage());
         }
     }
 }
