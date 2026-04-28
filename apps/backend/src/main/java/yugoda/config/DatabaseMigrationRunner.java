@@ -103,30 +103,15 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
 
     private void migrateUniqueEmailRoleIndex() {
         try {
-            // Version detection: the v1 index has "email IS NOT NULL" in its predicate.
-            // If the current index already has the tighter predicate (or doesn't exist
-            // yet) we proceed; if it's v1 we upgrade it.
-            String currentDef = null;
-            try {
-                currentDef = jdbcTemplate.queryForObject(
-                        "SELECT indexdef FROM pg_indexes WHERE indexname = 'users_email_role_active_unique'",
-                        String.class);
-            } catch (Exception ignored) { /* index doesn't exist yet */ }
-
-            boolean isV1 = currentDef != null && currentDef.contains("email IS NOT NULL");
-            boolean absent = currentDef == null;
-
-            if (!isV1 && !absent) {
-                // Already at the correct version — idempotent restart behaviour.
-                log.info("[Migration] users_email_role_active_unique already at v2 — skipping.");
-                return;
-            }
-
-            // Pre-flight 1: detect (email, role) duplicates among active rows.
+            // Pre-flight: detect existing (email, role) duplicates among active rows.
+            // If any are found we refuse to create the index and halt startup with a
+            // clear message so an operator can resolve them first.
             List<Map<String, Object>> dupes = jdbcTemplate.queryForList(
                     "SELECT LOWER(email) AS email, role, COUNT(*) AS cnt " +
-                    "FROM users WHERE account_status <> 'deleted' " +
-                    "GROUP BY LOWER(email), role HAVING COUNT(*) > 1");
+                    "FROM users " +
+                    "WHERE email IS NOT NULL AND email <> '' AND account_status <> 'deleted' " +
+                    "GROUP BY LOWER(email), role " +
+                    "HAVING COUNT(*) > 1");
             if (!dupes.isEmpty()) {
                 StringBuilder msg = new StringBuilder(
                         "[Migration] Duplicate (email, role) pairs found among active users — " +
@@ -139,37 +124,25 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
                 throw new IllegalStateException(msg.toString());
             }
 
-            // Pre-flight 2: confirm no active rows have a blank email.
-            // The tighter v2 index covers ALL non-deleted rows; a blank-email active
-            // row would mean our application guards have a gap.
-            List<Map<String, Object>> blankEmails = jdbcTemplate.queryForList(
-                    "SELECT uid FROM users WHERE (email IS NULL OR email = '') AND account_status <> 'deleted'");
-            if (!blankEmails.isEmpty()) {
-                StringBuilder uids = new StringBuilder();
-                for (Map<String, Object> row : blankEmails) uids.append(row.get("uid")).append(", ");
-                throw new IllegalStateException(
-                        "[Migration] Active users with blank email found — cannot create v2 index. " +
-                        "Clean up these UIDs first: " + uids);
-            }
-
-            // Drop v1 (or any remnant) and recreate with tighter predicate.
-            // v1 escape clause "email IS NOT NULL AND email <> ''" let empty-email
-            // rows slip through the constraint — the root cause of the duplicate bug.
-            // v2 covers every non-deleted row so blank emails are now blocked at the DB.
-            jdbcTemplate.execute("DROP INDEX IF EXISTS users_email_role_active_unique");
+            // Create partial unique index — composite (LOWER(email), role) so that
+            //   • admin@yugoda.com with 3 different roles → 3 rows, no conflict
+            //   • soft-deleted rows with anonymized emails → excluded by WHERE clause
+            //   • case-insensitive: Foo@gmail.com == foo@gmail.com
+            //   • IF NOT EXISTS → idempotent across restarts
             jdbcTemplate.execute(
-                    "CREATE UNIQUE INDEX users_email_role_active_unique " +
+                    "CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_active_unique " +
                     "ON users (LOWER(email), role) " +
-                    "WHERE account_status <> 'deleted'");
-            log.info("[Migration] users_email_role_active_unique {} (v2 — no email escape).",
-                    isV1 ? "upgraded from v1" : "created fresh");
+                    "WHERE account_status <> 'deleted' AND email IS NOT NULL AND email <> ''");
+            log.info("[Migration] users_email_role_active_unique index ensured.");
         } catch (IllegalStateException e) {
-            throw e; // propagate so startup fails loudly
+            // Propagate so startup fails loudly rather than silently continuing
+            // without the safety net.
+            throw e;
         } catch (Exception e) {
-            log.error("[Migration] Could not recreate users_email_role_active_unique: {} — " +
-                    "run manually: DROP INDEX IF EXISTS users_email_role_active_unique; " +
-                    "CREATE UNIQUE INDEX users_email_role_active_unique ON users (LOWER(email), role) " +
-                    "WHERE account_status <> 'deleted';",
+            log.error("[Migration] Could not create users_email_role_active_unique: {} — " +
+                    "run manually: CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_active_unique " +
+                    "ON users (LOWER(email), role) WHERE account_status <> 'deleted' AND " +
+                    "email IS NOT NULL AND email <> '';",
                     e.getMessage(), e);
         }
     }

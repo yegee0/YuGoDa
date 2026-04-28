@@ -42,26 +42,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     public static final String USER_ATTR = "currentUser";
 
-    /** Thrown when a Google OAuth token is missing the email claim after all fallbacks. */
-    private static final class EmailClaimMissingException extends RuntimeException {
-        private final String uid;
-        EmailClaimMissingException(String uid) { super("EMAIL_CLAIM_MISSING"); this.uid = uid; }
-        String getUid() { return uid; }
-    }
-
-    /**
-     * Returns true if the token was issued via a Google OAuth provider.
-     * Checks the firebase.sign_in_provider claim — "google.com" in practice,
-     * "accounts.google.com" included for forward-compatibility.
-     */
-    private static boolean isGoogleSignIn(Object firebaseClaim) {
-        if (firebaseClaim instanceof Map<?, ?> fc) {
-            Object provider = fc.get("sign_in_provider");
-            return "google.com".equals(provider) || "accounts.google.com".equals(provider);
-        }
-        return false;
-    }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -71,18 +51,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            UserPrincipal principal;
-            try {
-                principal = verifyToken(token);
-            } catch (EmailClaimMissingException e) {
-                log.error("[AUTH_REJECT] Google token missing email claim, uid={}", e.getUid());
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write(
-                        "{\"success\":false,\"code\":\"EMAIL_CLAIM_MISSING\"," +
-                        "\"message\":\"Google sign-in token is missing the email claim. Please sign in again.\"}");
-                return;
-            }
+            UserPrincipal principal = verifyToken(token);
             if (principal != null) {
                 if ("banned".equals(principal.getAccountStatus())) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -146,12 +115,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     }
                 }
                 if (email == null || email.isBlank()) {
-                    // Reject Google sign-ins with a missing email outright — they result
-                    // from partially-hydrated tokens (OAuth popup race). The 401 tells the
-                    // frontend to retry once Firebase finishes populating the claim.
-                    if (isGoogleSignIn(decoded.getClaims().get("firebase"))) {
-                        throw new EmailClaimMissingException(uid);
-                    }
                     log.warn("[Auth] FirebaseToken has no email (uid={}, issuer={}). " +
                             "Cross-provider linking cannot run.", uid, decoded.getIssuer());
                 }
@@ -196,8 +159,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
 
                 return new UserPrincipal(canonicalUid, resolvedEmail, role, displayName, exists, accountStatus);
-            } catch (EmailClaimMissingException e) {
-                throw e; // propagate — don't fall through to the JWT-decode strategy
             } catch (Exception e) {
                 log.debug("[Auth] Firebase Admin verification failed, trying JWT decode: {}", e.getMessage());
             }
@@ -272,9 +233,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
             }
             if (email == null || email.isBlank()) {
-                if (isGoogleSignIn(claims.get("firebase"))) {
-                    throw new EmailClaimMissingException(uid);
-                }
                 log.warn("[Auth] JWT decode: token has no email claim (uid={}, iss={}). " +
                         "Cross-provider linking cannot run for this request.", uid, claims.get("iss"));
             }
