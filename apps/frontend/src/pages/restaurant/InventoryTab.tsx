@@ -336,7 +336,7 @@ export default function InventoryTab({
                 </button>
                 <button onClick={handleAddPackage} disabled={addPackageStatus === 'loading' || addPackageStatus === 'success'}
                   className="flex-1 py-3 bg-[#1B5E52] text-white rounded-xl font-bold hover:bg-[#164d43] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {addPackageStatus === 'loading' ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Create Package'}
+                  {addPackageStatus === 'loading' ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('restaurant_inventory_creating')}</> : t('rest_inv_create_package')}
                 </button>
               </div>
             </motion.div>

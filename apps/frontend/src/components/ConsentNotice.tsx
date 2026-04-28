@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Cookie, Shield, ChevronDown, ChevronUp, X, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface CookiePreferences {
     necessary: boolean;
@@ -12,6 +13,7 @@ interface CookiePreferences {
 const COOKIE_KEY = 'yugoda_cookie_consent';
 
 export default function ConsentNotice() {
+    const { t } = useTranslation();
     const [show, setShow] = useState(false);
     const [showCustomize, setShowCustomize] = useState(false);
     const [prefs, setPrefs] = useState<CookiePreferences>({
@@ -142,7 +144,7 @@ export default function ConsentNotice() {
                                         onClick={saveCustom}
                                         className="flex items-center gap-1.5 px-4 py-2.5 border-2 border-[#1B5E52] text-[#1B5E52] rounded-2xl text-xs font-bold hover:bg-[#1B5E52]/5 transition-colors"
                                     >
-                                        <Check className="w-3.5 h-3.5" /> Save Preferences
+                                        <Check className="w-3.5 h-3.5" /> {t('consent_save_preferences')}
                                     </button>
                                 )}
 

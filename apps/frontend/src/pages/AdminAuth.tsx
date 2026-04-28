@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { authAdmin, signOutOtherProjects } from '@/lib/firebase';
 import { useStore } from '@/app/store/useStore';
@@ -93,6 +94,7 @@ function ArrowRight({ animating }: { animating: boolean }) {
 // ─────────────────────────────────────────────────────────────
 export default function AdminAuth() {
   const navigate  = useNavigate();
+  const { t } = useTranslation();
   const { userProfile } = useStore();
 
   const [email,    setEmail]    = useState('');
@@ -132,7 +134,7 @@ export default function AdminAuth() {
       const message = err instanceof Error ? err.message : '';
       setError(
         message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
-        || 'Authentication failed.'
+        || t('auth_error_generic')
       );
     } finally {
       setLoading(false);
@@ -140,17 +142,17 @@ export default function AdminAuth() {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) { setError('Enter your email above first.'); return; }
+    if (!email) { setError(t('auth_error_email_first')); return; }
     setError('');
     setLoading(true);
     try {
       await sendPasswordResetEmail(authAdmin, email);
-      setMsg('Reset link sent — check your inbox.');
+      setMsg(t('auth_success_reset_sent'));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
       setError(
         message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim()
-        || 'Failed to send reset email.'
+        || t('auth_error_reset_failed')
       );
     } finally {
       setLoading(false);
@@ -278,8 +280,8 @@ export default function AdminAuth() {
               margin: 0,
               fontWeight: 600,
             }}>
-              Secure admin<br/>
-              <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>portal.</em>
+              {t('auth_admin_heading')}<br/>
+              <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>{t('auth_admin_heading_portal')}</em>
             </h1>
 
             <p style={{
@@ -291,7 +293,7 @@ export default function AdminAuth() {
               lineHeight: 1.65,
               maxWidth: '320px',
             }}>
-              Authorized personnel only. All actions are logged and audited in real time.
+              {t('auth_admin_body')}
             </p>
           </div>
 
@@ -347,14 +349,14 @@ export default function AdminAuth() {
               color: C.forest,
               margin: 0,
               lineHeight: 1.2,
-            }}>Welcome back.</h2>
+            }}>{t('auth_admin_welcome')}</h2>
             <p style={{
               ...dm,
               fontSize: '14px',
               fontWeight: 300,
               color: '#7a7268',
               marginTop: '7px',
-            }}>Sign in to access the admin dashboard.</p>
+            }}>{t('auth_admin_subtitle')}</p>
           </div>
 
           {/* form */}
@@ -362,7 +364,7 @@ export default function AdminAuth() {
 
             {/* email */}
             <div>
-              <label style={labelStyle}>Email address</label>
+              <label style={labelStyle}>{t('auth_field_email')}</label>
               <div style={{ position: 'relative' }}>
                 <span style={{
                   position: 'absolute', left: '13px', top: '50%',
@@ -387,7 +389,7 @@ export default function AdminAuth() {
             {/* password */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>{t('auth_field_password')}</label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
@@ -403,7 +405,7 @@ export default function AdminAuth() {
                   onMouseEnter={(e) => (e.currentTarget.style.color = C.forest)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#9e9589')}
                 >
-                  Forgot password?
+                  {t('auth_link_forgot_password')}
                 </button>
               </div>
               <div style={{ position: 'relative' }}>
@@ -446,7 +448,7 @@ export default function AdminAuth() {
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                   color: 'rgba(14,46,30,0.5)',
-                }}>2FA enabled</span>
+                }}>{t('auth_admin_2fa_enabled')}</span>
               </div>
             </div>
 
@@ -500,7 +502,7 @@ export default function AdminAuth() {
                 width: '100%',
               }}
             >
-              {loading ? 'Authenticating…' : 'Secure Sign In'}
+              {loading ? t('auth_admin_authenticating') : t('auth_admin_secure_signin')}
               {!loading && <ArrowRight animating={ctaHover} />}
             </button>
           </form>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authPartner, signOutOtherProjects } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useStore } from '@/app/store/useStore';
@@ -82,6 +83,7 @@ function ArrowRight({ on }: { on: boolean }) {
 // ─────────────────────────────────────────────────────────────
 export default function RestaurantAuth() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { userProfile } = useStore();
 
@@ -145,7 +147,7 @@ export default function RestaurantAuth() {
         await signInWithEmailAndPassword(authPartner, form.email, form.password);
       } else {
         if (!form.email || !form.password || !form.businessName)
-          throw new Error('Email, password and business name are required.');
+          throw new Error(t('auth_restaurant_required_fields_error'));
         await createUserWithEmailAndPassword(authPartner, form.email, form.password);
         const displayName = `${form.firstName} ${form.lastName}`.trim() || form.email;
         await api.post('/users/register', {
@@ -157,11 +159,11 @@ export default function RestaurantAuth() {
           address: form.address, phone: form.phone, email: form.email,
           ...(form.lat && form.lng ? { location: JSON.stringify({ lat: form.lat, lng: form.lng }) } : {}),
         }).catch(() => {});
-        setMsg('Account created! Redirecting…');
+        setMsg(t('auth_restaurant_account_created'));
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
-      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_generic'));
     } finally {
       setLoading(false);
     }
@@ -217,15 +219,15 @@ export default function RestaurantAuth() {
         <div className="w-full lg:w-1/2 flex flex-col p-8 md:py-16 md:px-20 text-white overflow-y-auto">
           <div className="max-w-2xl mt-8 lg:mt-12">
             <h1 className="text-4xl lg:text-5xl font-bold leading-tight mb-6">
-              Reach Millions of Users with the #1 On-Demand Delivery App
+              {t('auth_restaurant_hero_heading')}
             </h1>
             <p className="text-lg text-white/90 mb-10">
-              Sign up to list your business on the YuGoDa platform. Reach more users, reduce food waste, and increase your revenue.
+              {t('auth_restaurant_hero_subtitle')}
             </p>
             <div className="flex gap-4 items-center mb-16">
               <span className="w-12 h-1 bg-emerald-400" />
               <span className="text-sm font-bold uppercase tracking-widest text-white/80">
-                Partner Portal
+                {t('auth_restaurant_partner_portal')}
               </span>
             </div>
           </div>
@@ -255,23 +257,23 @@ export default function RestaurantAuth() {
               borderBottom: '1.5px solid rgba(255,255,255,0.12)',
               marginBottom: '32px',
             }}>
-              {(['signup', 'signin'] as const).map(t => (
+              {(['signup', 'signin'] as const).map(tabKey => (
                 <button
-                  key={t}
-                  ref={t === 'signin' ? signinRef : signupRef}
-                  onClick={() => { setTab(t); setError(''); setMsg(''); }}
+                  key={tabKey}
+                  ref={tabKey === 'signin' ? signinRef : signupRef}
+                  onClick={() => { setTab(tabKey); setError(''); setMsg(''); }}
                   style={{
                     ...dm,
                     background: 'none', border: 'none', cursor: 'pointer',
                     padding: '0 4px 14px 4px',
                     marginRight: '28px',
                     fontSize: '14px',
-                    fontWeight: tab === t ? 500 : 400,
-                    color: tab === t ? C.lime : 'rgba(255,255,255,0.4)',
+                    fontWeight: tab === tabKey ? 500 : 400,
+                    color: tab === tabKey ? C.lime : 'rgba(255,255,255,0.4)',
                     transition: 'color 0.2s',
                   }}
                 >
-                  {t === 'signin' ? 'Sign In' : 'Sign Up'}
+                  {tabKey === 'signin' ? t('auth_signin_tab') : t('auth_signup_tab')}
                 </button>
               ))}
               <div style={{
@@ -284,12 +286,12 @@ export default function RestaurantAuth() {
             {/* title */}
             <div style={{ marginBottom: '28px' }}>
               <h2 style={{ ...playfair, fontSize: '26px', fontWeight: 600, color: C.cream, margin: 0, lineHeight: 1.2 }}>
-                {tab === 'signin' ? 'Welcome back.' : 'Join as a partner.'}
+                {tab === 'signin' ? t('auth_signin_heading_restaurant') : t('auth_signup_heading_restaurant')}
               </h2>
               <p style={{ ...dm, fontSize: '13px', fontWeight: 300, color: 'rgba(245,240,232,0.5)', marginTop: '6px' }}>
                 {tab === 'signin'
-                  ? 'Sign in to manage your restaurant dashboard.'
-                  : 'List your business and start saving food today.'}
+                  ? t('auth_signin_subtitle_restaurant')
+                  : t('auth_signup_subtitle_restaurant')}
               </p>
             </div>
 
@@ -313,22 +315,22 @@ export default function RestaurantAuth() {
                   {/* first + last name */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={lbl}>First name</label>
+                      <label style={lbl}>{t('auth_field_first_name')}</label>
                       <input type="text" value={form.firstName} onChange={set('firstName')}
                         onFocus={() => setFocused('firstName')} onBlur={() => setFocused('')}
-                        placeholder="Ahmet" style={{ ...inp('firstName', false) }} />
+                        placeholder={t('auth_field_first_name_placeholder')} style={{ ...inp('firstName', false) }} />
                     </div>
                     <div>
-                      <label style={lbl}>Last name</label>
+                      <label style={lbl}>{t('auth_field_last_name')}</label>
                       <input type="text" value={form.lastName} onChange={set('lastName')}
                         onFocus={() => setFocused('lastName')} onBlur={() => setFocused('')}
-                        placeholder="Yılmaz" style={{ ...inp('lastName', false) }} />
+                        placeholder={t('auth_field_last_name_placeholder')} style={{ ...inp('lastName', false) }} />
                     </div>
                   </div>
 
                   {/* phone */}
                   <div>
-                    <label style={lbl}>Phone number</label>
+                    <label style={lbl}>{t('auth_field_phone')}</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
                         style={{
@@ -360,7 +362,7 @@ export default function RestaurantAuth() {
 
               {/* email */}
               <div>
-                <label style={lbl}>Email address</label>
+                <label style={lbl}>{t('auth_field_email')}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={iconWrap}><MailIcon /></span>
                   <input type="email" required value={form.email} onChange={set('email')}
@@ -371,7 +373,7 @@ export default function RestaurantAuth() {
 
               {/* password */}
               <div>
-                <label style={lbl}>Password</label>
+                <label style={lbl}>{t('auth_field_password')}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={iconWrap}><LockIcon /></span>
                   <input type="password" required value={form.password} onChange={set('password')}
@@ -385,7 +387,7 @@ export default function RestaurantAuth() {
                 <>
                   {/* business name */}
                   <div>
-                    <label style={lbl}>Business name *</label>
+                    <label style={lbl}>{t('auth_restaurant_business_name_label')}</label>
                     <div style={{ position: 'relative' }}>
                       <span style={iconWrap}><StoreIcon /></span>
                       <input type="text" required value={form.businessName} onChange={set('businessName')}
@@ -396,7 +398,7 @@ export default function RestaurantAuth() {
 
                   {/* address */}
                   <div>
-                    <label style={lbl}>Business address</label>
+                    <label style={lbl}>{t('auth_restaurant_business_address_label')}</label>
                     <AddressAutocomplete
                       value={form.address}
                       onChange={(address, coords) => {
@@ -407,13 +409,13 @@ export default function RestaurantAuth() {
                           lng: coords?.lng ?? p.lng,
                         }));
                       }}
-                      placeholder="Start typing your address…"
+                      placeholder={t('auth_restaurant_business_address_placeholder')}
                     />
                   </div>
 
                   {/* business type */}
                   <div>
-                    <label style={lbl}>Business type</label>
+                    <label style={lbl}>{t('auth_restaurant_business_type_label')}</label>
                     <select value={form.businessType} onChange={set('businessType')}
                       style={{
                         width: '100%',
@@ -428,10 +430,10 @@ export default function RestaurantAuth() {
                         appearance: 'none',
                         boxSizing: 'border-box',
                       }}>
-                      <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>Restaurant</option>
-                      <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>Bakery & Patisserie</option>
-                      <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>Grocery Store</option>
-                      <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>Cafe</option>
+                      <option value="Restaurant" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>{t('auth_restaurant_business_type_restaurant')}</option>
+                      <option value="Bakery & Patisserie" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>{t('auth_restaurant_business_type_bakery')}</option>
+                      <option value="Grocery Store" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>{t('auth_restaurant_business_type_grocery')}</option>
+                      <option value="Cafe" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>{t('auth_restaurant_business_type_cafe')}</option>
                     </select>
                   </div>
                 </>
@@ -457,14 +459,14 @@ export default function RestaurantAuth() {
                   width: '100%',
                 }}
               >
-                {loading ? 'Please wait…' : tab === 'signin' ? 'Sign In' : 'Create Partner Account'}
+                {loading ? t('auth_button_loading') : tab === 'signin' ? t('auth_button_signin') : t('auth_button_create_partner')}
                 {!loading && <ArrowRight on={ctaHover} />}
               </button>
             </form>
 
             {/* footer */}
             <p style={{ ...mono, marginTop: '24px', fontSize: '10px', color: 'rgba(255,255,255,0.22)', textAlign: 'center', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              By continuing you agree to YuGoDa's Terms & Conditions
+              {t('auth_restaurant_terms_legal')}
             </p>
 
             <p style={{ ...dm, marginTop: '12px', fontSize: '13px', color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontWeight: 300 }}>
@@ -472,7 +474,7 @@ export default function RestaurantAuth() {
                 onClick={() => navigate('/')}
                 style={{ ...dm, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(197,241,53,0.7)', fontWeight: 500, fontSize: '13px', padding: 0, textDecoration: 'underline', textUnderlineOffset: '2px' }}
               >
-                ← Back to homepage
+                {t('auth_link_back_to_homepage')}
               </button>
             </p>
           </div>

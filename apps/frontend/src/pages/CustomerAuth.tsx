@@ -184,7 +184,7 @@ export default function Auth() {
         setError(t('auth_user_disabled'));
       } else {
         const message = err instanceof Error ? err.message : '';
-        setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Something went wrong.');
+        setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_generic'));
       }
     } finally {
       setLoading(false);
@@ -217,7 +217,7 @@ export default function Auth() {
           return; // page will reload after redirect
         } catch (redirectErr: unknown) {
           const redirectMessage = redirectErr instanceof Error ? redirectErr.message : '';
-          setError(redirectMessage?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Google sign-in failed.');
+          setError(redirectMessage?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_google_signin_failed'));
         }
       } else {
         const msg = err instanceof Error ? err.message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() : '';
@@ -225,10 +225,10 @@ export default function Auth() {
           code === 'auth/user-disabled'
             ? t('auth_user_disabled')
             : code === 'auth/unauthorized-domain'
-            ? 'This domain is not authorised for Google sign-in. Please add it in Firebase Console → Authentication → Authorised Domains.'
+            ? t('auth_error_google_unauthorized_domain')
             : code === 'auth/operation-not-allowed'
-            ? 'Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in methods.'
-            : msg || 'Google sign-in failed.'
+            ? t('auth_error_google_not_enabled')
+            : msg || t('auth_error_google_signin_failed')
         );
       }
     } finally {
@@ -238,15 +238,15 @@ export default function Auth() {
 
   // ── forgot password ───────────────────────────────────────
   const handleForgotPassword = async () => {
-    if (!email) { setError('Enter your email above first.'); return; }
+    if (!email) { setError(t('auth_error_email_first')); return; }
     setError('');
     setLoading(true);
     try {
       await sendPasswordResetEmail(authCustomer, email);
-      setMsg('Reset link sent — check your inbox.');
+      setMsg(t('auth_success_reset_sent'));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '';
-      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || 'Failed to send reset email.');
+      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_reset_failed'));
     } finally {
       setLoading(false);
     }
@@ -445,11 +445,11 @@ export default function Auth() {
             borderBottom: '1.5px solid #d9d3c7',
             marginBottom: '36px',
           }}>
-            {(['signin', 'signup'] as const).map((t) => (
+            {(['signin', 'signup'] as const).map((tabKey) => (
               <button
-                key={t}
-                ref={t === 'signin' ? signinRef : signupRef}
-                onClick={() => setTab(t)}
+                key={tabKey}
+                ref={tabKey === 'signin' ? signinRef : signupRef}
+                onClick={() => setTab(tabKey)}
                 style={{
                   ...dm,
                   background: 'none',
@@ -458,12 +458,12 @@ export default function Auth() {
                   padding: '0 4px 14px 4px',
                   marginRight: '28px',
                   fontSize: '14px',
-                  fontWeight: tab === t ? 500 : 400,
-                  color: tab === t ? C.forest : '#9e9589',
+                  fontWeight: tab === tabKey ? 500 : 400,
+                  color: tab === tabKey ? C.forest : '#9e9589',
                   transition: 'color 0.2s',
                 }}
               >
-                {t === 'signin' ? 'Sign In' : 'Sign Up'}
+                {tabKey === 'signin' ? t('auth_signin_tab') : t('auth_signup_tab')}
               </button>
             ))}
 
@@ -488,7 +488,7 @@ export default function Auth() {
               margin: 0,
               lineHeight: 1.2,
             }}>
-              {tab === 'signin' ? 'Welcome back' : 'Create account'}
+              {tab === 'signin' ? t('auth_signin_heading_customer') : t('auth_signup_heading_customer')}
             </h2>
             <p style={{
               ...dm,
@@ -498,8 +498,8 @@ export default function Auth() {
               marginTop: '6px',
             }}>
               {tab === 'signin'
-                ? 'Sign in to continue rescuing food.'
-                : 'Join the movement. It only takes a minute.'}
+                ? t('auth_signin_subtitle_customer')
+                : t('auth_signup_subtitle_customer')}
             </p>
           </div>
 
@@ -510,26 +510,26 @@ export default function Auth() {
             {tab === 'signup' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={labelStyle}>First name</label>
+                  <label style={labelStyle}>{t('auth_field_first_name')}</label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     onFocus={() => setFocused('firstName')}
                     onBlur={() => setFocused('')}
-                    placeholder="Ahmet"
+                    placeholder={t('auth_field_first_name_placeholder')}
                     style={inputStyle('firstName')}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Last name</label>
+                  <label style={labelStyle}>{t('auth_field_last_name')}</label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     onFocus={() => setFocused('lastName')}
                     onBlur={() => setFocused('')}
-                    placeholder="Yılmaz"
+                    placeholder={t('auth_field_last_name_placeholder')}
                     style={inputStyle('lastName')}
                   />
                 </div>
@@ -538,7 +538,7 @@ export default function Auth() {
 
             {/* email */}
             <div>
-              <label style={labelStyle}>Email address</label>
+              <label style={labelStyle}>{t('auth_field_email')}</label>
               <input
                 type="email"
                 required
@@ -554,7 +554,7 @@ export default function Auth() {
             {/* password */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>{t('auth_field_password')}</label>
                 {tab === 'signin' && (
                   <button
                     type="button"
@@ -573,7 +573,7 @@ export default function Auth() {
                     onMouseEnter={(e) => (e.currentTarget.style.color = C.forest)}
                     onMouseLeave={(e) => (e.currentTarget.style.color = '#9e9589')}
                   >
-                    Forgot password?
+                    {t('auth_link_forgot_password')}
                   </button>
                 )}
               </div>
@@ -638,7 +638,7 @@ export default function Auth() {
                 letterSpacing: '0.01em',
               }}
             >
-              {loading ? 'Please wait…' : tab === 'signin' ? 'Sign In' : 'Create Account'}
+              {loading ? t('auth_button_loading') : tab === 'signin' ? t('auth_button_signin') : t('auth_button_create_account')}
               {!loading && <ArrowRight animating={ctaHover} />}
             </button>
           </form>
@@ -651,7 +651,7 @@ export default function Auth() {
             margin: '24px 0',
           }}>
             <div style={{ flex: 1, height: '1px', background: '#d9d3c7' }}/>
-            <span style={{ ...dm, fontSize: '12px', color: '#b0a89e', fontWeight: 400 }}>or</span>
+            <span style={{ ...dm, fontSize: '12px', color: '#b0a89e', fontWeight: 400 }}>{t('auth_divider_or')}</span>
             <div style={{ flex: 1, height: '1px', background: '#d9d3c7' }}/>
           </div>
 
@@ -687,7 +687,7 @@ export default function Auth() {
             }}
           >
             <GoogleLogo />
-            Continue with Google
+            {t('auth_continue_with_google')}
           </button>
 
           {/* footer switch */}
@@ -699,7 +699,7 @@ export default function Auth() {
             textAlign: 'center',
             fontWeight: 300,
           }}>
-            {tab === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+            {tab === 'signin' ? `${t('auth_footer_no_account')} ` : `${t('auth_footer_have_account')} `}
             <button
               onClick={() => setTab(tab === 'signin' ? 'signup' : 'signin')}
               style={{
@@ -715,7 +715,7 @@ export default function Auth() {
                 textUnderlineOffset: '2px',
               }}
             >
-              {tab === 'signin' ? 'Sign up free' : 'Sign in'}
+              {tab === 'signin' ? t('auth_footer_signup_free') : t('auth_footer_signin')}
             </button>
           </p>
 
@@ -730,7 +730,7 @@ export default function Auth() {
               onMouseEnter={(e) => (e.currentTarget.style.color = '#7a7268')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#b0a89e')}
             >
-              Restaurant partner? Sign in here
+              {t('auth_link_restaurant_partner')}
             </button>
           </p>
         </div>

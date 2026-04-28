@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/app/store/useStore';
@@ -11,14 +11,21 @@ import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { TL } from '@/lib/formatters';
 
-const STEPS = ['Cart', 'Delivery', 'Payment', 'Confirm'] as const;
-type Step = typeof STEPS[number];
+const STEP_KEYS = ['Cart', 'Delivery', 'Payment', 'Confirm'] as const;
+type Step = typeof STEP_KEYS[number];
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { cart, removeFromCart, updateCartQuantity, clearCart, userProfile } = useStore();
   const [step, setStep] = useState<Step>('Cart');
+
+  const STEPS = useMemo(() => [
+    { key: 'Cart' as const,     label: t('checkout_step_cart') },
+    { key: 'Delivery' as const, label: t('checkout_step_delivery') },
+    { key: 'Payment' as const,  label: t('checkout_step_payment') },
+    { key: 'Confirm' as const,  label: t('checkout_step_confirm') },
+  ], [t]);
   const [deliveryOption, setDeliveryOption] = useState<'delivery' | 'takeaway'>('delivery');
   const [tip, setTip] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash' | 'wallet'>('card');
@@ -31,20 +38,20 @@ export default function CheckoutPage() {
   const deliveryFee = deliveryOption === 'delivery' ? 15.00 : 0;
   const total = subtotal + deliveryFee + tip;
 
-  const stepIndex = STEPS.indexOf(step);
+  const stepIndex = STEPS.findIndex(s => s.key === step);
 
   const validateCard = (): boolean => {
     const errors = { number: '', expiry: '', cvv: '' };
     const digits = cardDetails.number.replace(/\s/g, '');
-    if (digits.length !== 16 || !/^\d+$/.test(digits)) errors.number = 'Enter a valid 16-digit card number.';
+    if (digits.length !== 16 || !/^\d+$/.test(digits)) errors.number = t('checkout_validation_card_invalid');
     const expiryMatch = cardDetails.expiry.match(/^(\d{2})\/(\d{2})$/);
     if (!expiryMatch) {
-      errors.expiry = 'Use MM/YY format.';
+      errors.expiry = t('checkout_validation_expiry_invalid');
     } else {
       const month = parseInt(expiryMatch[1]);
-      if (month < 1 || month > 12) errors.expiry = 'Invalid month.';
+      if (month < 1 || month > 12) errors.expiry = t('checkout_validation_month_invalid');
     }
-    if (!/^\d{3,4}$/.test(cardDetails.cvv)) errors.cvv = 'Enter 3 or 4 digits.';
+    if (!/^\d{3,4}$/.test(cardDetails.cvv)) errors.cvv = t('checkout_validation_cvc_invalid');
     setCardErrors(errors);
     return !errors.number && !errors.expiry && !errors.cvv;
   };
@@ -112,7 +119,7 @@ export default function CheckoutPage() {
           {/* Step indicator */}
           <div className="flex items-center gap-1">
             {STEPS.map((s, i) => (
-              <React.Fragment key={s}>
+              <React.Fragment key={s.key}>
                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
                   i === stepIndex
                     ? 'bg-[#164d43] text-white ring-1 ring-white/30'
@@ -121,7 +128,7 @@ export default function CheckoutPage() {
                     : 'text-white/40'
                 }`}>
                   {i < stepIndex ? <Check className="w-3 h-3" /> : null}
-                  <span className="hidden sm:inline">{s}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
                   <span className="sm:hidden">{i + 1}</span>
                 </div>
                 {i < STEPS.length - 1 && (
@@ -433,7 +440,7 @@ export default function CheckoutPage() {
           <div className="flex gap-3">
             {stepIndex > 0 && (
               <button
-                onClick={() => setStep(STEPS[stepIndex - 1])}
+                onClick={() => setStep(STEPS[stepIndex - 1].key)}
                 className="flex-1 py-3.5 rounded-xl bg-white/15 border border-white/25 font-bold text-white hover:bg-white/25 transition-colors text-sm"
               >
                 {t('Back')}
@@ -443,7 +450,7 @@ export default function CheckoutPage() {
               <button
                 onClick={() => {
                   if (step === 'Payment' && paymentMethod === 'card' && !validateCard()) return;
-                  setStep(STEPS[stepIndex + 1]);
+                  setStep(STEPS[stepIndex + 1].key);
                 }}
                 disabled={cart.length === 0}
                 className="flex-1 py-3.5 rounded-xl bg-[#1B5E52] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#164d43] transition-colors disabled:opacity-40 text-sm"

@@ -39,7 +39,7 @@ export default function TransactionsTab({
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
               <YAxis hide />
-              <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} formatter={(v: number) => [`₺${Number(v).toFixed(2)}`, '']} />
               <Area type="monotone" dataKey="revenue" stroke="#1B5E52" strokeWidth={2} fillOpacity={1} fill="url(#gr2)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -73,8 +73,8 @@ export default function TransactionsTab({
                 <tr key={tx.id} className="hover:bg-[#F5F0E8] transition-colors">
                   <td className="px-6 py-4 font-mono text-xs text-[#8FA396]">#{tx.id.slice(0, 8)}</td>
                   <td className="px-6 py-4 font-bold text-[#1B1B1B]">{TL(tx.amount || 0)}</td>
-                  <td className="px-6 py-4 text-sm text-orange-600 font-bold">{TL(tx.commissionAmount || 0)}</td>
-                  <td className="px-6 py-4 text-sm text-emerald-600 font-bold">{TL(tx.restaurantAmount || 0)}</td>
+                  <td className="px-6 py-4 text-sm text-[#1B1B1B] font-bold">{TL(tx.commissionAmount || 0)}</td>
+                  <td className="px-6 py-4 text-sm text-[#1B1B1B] font-bold">{TL(tx.restaurantAmount || 0)}</td>
                   <td className="px-6 py-4">
                     <span className="px-2 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[10px] font-bold uppercase">
                       {tx.status || t('admin_tx_status_completed')}

@@ -58,11 +58,12 @@ export const TICKET_PRIORITY_CONFIG: Record<TicketPriority, { activeCls: string;
 // Admin CustomersTab account-status chip styling. Status values are backend-owned
 // and set via admin suspend/ban/reinstate endpoints (see #65). `dotCls` is the
 // small colored dot, `textCls` wraps both the dot's container and the label.
-export const ACCOUNT_STATUSES = ['active', 'suspended', 'banned'] as const;
+export const ACCOUNT_STATUSES = ['active', 'suspended', 'banned', 'deleted'] as const;
 export const ACCOUNT_STATUS_CONFIG: Record<typeof ACCOUNT_STATUSES[number], { dotCls: string; textCls: string; labelKey: string }> = {
   active:    { dotCls: 'bg-emerald-500',   textCls: 'text-emerald-600',    labelKey: 'account_status_active' },
   suspended: { dotCls: 'bg-amber-500',     textCls: 'text-amber-600',      labelKey: 'account_status_suspended' },
   banned:    { dotCls: 'bg-eco-secondary', textCls: 'text-eco-secondary',  labelKey: 'account_status_banned' },
+  deleted:   { dotCls: 'bg-gray-400',      textCls: 'text-gray-400',       labelKey: 'account_status_deleted' },
 };
 
 // Admin SupportTab ticket-status chip styling. Status values are backend-owned;

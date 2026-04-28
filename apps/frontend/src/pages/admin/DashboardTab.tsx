@@ -62,7 +62,7 @@ export default function DashboardTab({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
                 <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} formatter={(v: number) => [`₺${Number(v).toFixed(2)}`, '']} />
                 <Area type="monotone" dataKey="revenue" stroke="#1B5E52" strokeWidth={2} fillOpacity={1} fill="url(#gr)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -77,7 +77,7 @@ export default function DashboardTab({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.12)" />
                 <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'rgba(0,0,0,0.5)' }} axisLine={false} tickLine={false} />
                 <YAxis hide />
-                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} formatter={(v: number) => [Math.round(v), '']} />
                 <Bar dataKey="orders" fill="#1B5E52" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

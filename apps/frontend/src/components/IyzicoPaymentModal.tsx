@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface IyzicoPaymentModalProps {
     isOpen: boolean;
@@ -31,6 +32,7 @@ const IyzicoPaymentModal: React.FC<IyzicoPaymentModalProps> = ({
     onClose,
     useFullPageRedirect = false,
 }) => {
+    const { t } = useTranslation();
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     // Tam sayfa yönlendirme modunda kullanıcıyı iyzico sayfasına gönder
@@ -113,9 +115,9 @@ const IyzicoPaymentModal: React.FC<IyzicoPaymentModalProps> = ({
                         </div>
                         <div>
                             <div style={{ color: "#fff", fontWeight: 600, fontSize: "14px" }}>
-                                Secure Payment
+                                {t('payment_secure_title')}
                             </div>
-                            <div style={{ color: "#aaa", fontSize: "11px" }}>Protected by iyzico</div>
+                            <div style={{ color: "#aaa", fontSize: "11px" }}>{t('payment_protected_by')}</div>
                         </div>
                     </div>
                     <button
@@ -160,7 +162,7 @@ const IyzicoPaymentModal: React.FC<IyzicoPaymentModalProps> = ({
                         }}
                     >
                         <div style={{ fontSize: "32px", marginBottom: "12px" }}>⏳</div>
-                        <p>Loading payment form...</p>
+                        <p>{t('payment_loading_form')}</p>
                     </div>
                 )}
 

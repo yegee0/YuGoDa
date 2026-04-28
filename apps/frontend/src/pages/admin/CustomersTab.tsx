@@ -121,7 +121,7 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
           <tbody className="divide-y divide-[#F5F0E8]">
             {visibleUsers.map(u => {
               const status: AccountStatus = (u.accountStatus ?? 'active');
-              const statusCfg = ACCOUNT_STATUS_CONFIG[status];
+              const statusCfg = ACCOUNT_STATUS_CONFIG[status] ?? ACCOUNT_STATUS_CONFIG['active'];
               const isInactive = status !== 'active';
               return (
                 <tr key={u.uid} className="hover:bg-[#F5F0E8] transition-colors">

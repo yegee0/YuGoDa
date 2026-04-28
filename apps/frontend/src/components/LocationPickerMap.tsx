@@ -8,6 +8,7 @@ import {
 import { MapPin, Loader2, LocateFixed, X, Home, Briefcase, Heart, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { useStore } from '@/app/store/useStore';
 import { reverseGeocodeNominatim, nominatimDisplayName } from '@/lib/geocoding';
@@ -175,6 +176,7 @@ function useReverseGeocoder() {
 interface PickerBodyProps extends Props {}
 
 function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = 'customer' }: PickerBodyProps) {
+    const { t } = useTranslation();
     const [isDragging, setIsDragging] = useState(false);
     const [address, setAddress] = useState(initialName || '');
     const [geocoding, setGeocoding] = useState(false);
@@ -381,7 +383,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Apartment</label>
                                         <input
                                             type="text"
-                                            placeholder="Building name"
+                                            placeholder={t('address_field_building_name')}
                                             value={form.apartment}
                                             onChange={e => setForm(f => ({ ...f, apartment: e.target.value }))}
                                             className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -391,7 +393,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Unit</label>
                                         <input
                                             type="text"
-                                            placeholder="No"
+                                            placeholder={t('address_field_building_no')}
                                             value={form.unit}
                                             onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
                                             className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -401,10 +403,10 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Floor</label>
+                                        <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('address_field_floor_label')}</label>
                                         <input
                                             type="text"
-                                            placeholder="Floor number"
+                                            placeholder={t('address_field_floor_placeholder')}
                                             value={form.floor}
                                             onChange={e => setForm(f => ({ ...f, floor: e.target.value }))}
                                             className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -414,7 +416,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Company</label>
                                         <input
                                             type="text"
-                                            placeholder="Optional"
+                                            placeholder={t('address_field_unit_optional')}
                                             value={form.company}
                                             onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
                                             className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -461,7 +463,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                         </div>
                                         <input
                                             type="tel"
-                                            placeholder="5XX XXX XX XX"
+                                            placeholder={t('address_field_phone_placeholder')}
                                             value={form.phone}
                                             onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                                             className="flex-1 px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -473,7 +475,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                     <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">Delivery Note</label>
                                     <textarea
                                         rows={3}
-                                        placeholder="Door code, directions for courier…"
+                                        placeholder={t('address_field_directions_placeholder')}
                                         value={form.deliveryNote}
                                         onChange={e => setForm(f => ({ ...f, deliveryNote: e.target.value }))}
                                         className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors resize-none"
@@ -511,7 +513,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                     {saving ? (
                                         <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
                                     ) : (
-                                        'Save & Continue'
+                                        t('address_save_continue')
                                     )}
                                 </button>
                             </div>
@@ -523,20 +525,23 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
     );
 }
 
+function MapsApiKeyMissing() {
+    const { t } = useTranslation();
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-[#f5f5f0] gap-6 p-8">
+            <div className="text-6xl">🗺️</div>
+            <div className="text-center max-w-md">
+                <h3 className="text-xl font-bold text-gray-800 mb-2">{t('address_maps_api_required')}</h3>
+                <p className="text-gray-500 text-sm mb-4">{t('address_maps_api_required_body')}</p>
+            </div>
+        </div>
+    );
+}
+
 export default function LocationPickerMap(props: Props) {
     // Gate render on API key; surface the same config error other map surfaces show.
     if (!GOOGLE_MAPS_API_KEY) {
-        return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#f5f5f0] gap-6 p-8">
-                <div className="text-6xl">🗺️</div>
-                <div className="text-center max-w-md">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Google Maps API Key Required</h3>
-                    <p className="text-gray-500 text-sm mb-4">
-                        Set <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">VITE_GOOGLE_MAPS_API_KEY</code> in your <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">.env.local</code> and restart the dev server.
-                    </p>
-                </div>
-            </div>
-        );
+        return <MapsApiKeyMissing />;
     }
 
     return (

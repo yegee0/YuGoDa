@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Suggestion {
   display_name: string;
@@ -15,6 +16,7 @@ interface AddressAutocompleteProps {
 }
 
 export default function AddressAutocomplete({ value, onChange, placeholder, className }: AddressAutocompleteProps) {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -75,7 +77,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
             searchAddress(e.target.value);
           }}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          placeholder={placeholder || 'Search address...'}
+          placeholder={placeholder || t('address_search_placeholder')}
           className={`w-full pl-9 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B5E52]/30 transition-all ${className || ''}`}
         />
         {loading && (
