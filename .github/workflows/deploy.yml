@@ -31,13 +31,19 @@ jobs:
       # ═══════════════════════════════════════════════════════════════
       # 1. BACKEND — Build, push, deploy to Cloud Run + Cloud SQL
       # ═══════════════════════════════════════════════════════════════
+      # Images are tagged with the commit SHA (immutable) AND :latest
+      # (rolling). Cloud Run revisions reference the SHA tag so they
+      # never break when :latest is overwritten or an Artifact Registry
+      # cleanup policy purges untagged digests.
       - name: Build and Push Backend Image
         run: |
+          IMAGE=${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend
           docker build \
-            -t ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
             ./apps/backend
-          docker push \
-            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
 
       - name: Deploy Backend to Cloud Run
         env:
@@ -53,7 +59,7 @@ jobs:
           FB_CUSTOMER_IMPERSONATE_SA: ${{ secrets.FIREBASE_CUSTOMER_IMPERSONATE_SA }}
         run: |
           gcloud run deploy backend-service \
-            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend \
+            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --platform managed \
             --port 4000 \
@@ -79,20 +85,22 @@ jobs:
           MAPS_ID: ${{ secrets.VITE_GOOGLE_MAPS_MAP_ID }}
           GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          IMAGE=${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend
           docker build \
             --build-arg "VITE_API_BASE_URL=${{ steps.backend-url.outputs.url }}/api" \
             --build-arg "VITE_GOOGLE_MAPS_API_KEY=${MAPS_KEY}" \
             --build-arg "VITE_GOOGLE_MAPS_MAP_ID=${MAPS_ID}" \
             --build-arg "GEMINI_API_KEY=${GEMINI_KEY}" \
-            -t ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend \
+            -t $IMAGE:${{ github.sha }} \
+            -t $IMAGE:latest \
             ./apps/frontend
-          docker push \
-            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
 
       - name: Deploy Frontend to Cloud Run
         run: |
           gcloud run deploy frontend-service \
-            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend \
+            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/frontend:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --platform managed \
             --port 80 \
@@ -101,6 +109,11 @@ jobs:
       # ═══════════════════════════════════════════════════════════════
       # 3. UPDATE BACKEND — Inject frontend URL for CORS + app URL
       # ═══════════════════════════════════════════════════════════════
+      # Use `gcloud run deploy` (not `services update`) with the same
+      # SHA-pinned image so the new revision references a digest that
+      # is guaranteed to exist in Artifact Registry. `services update`
+      # was failing here because it was inheriting an image reference
+      # whose digest had become unreachable across regions.
       - name: Update Backend with Frontend URL
         run: |
           FRONTEND_URL=$(gcloud run services describe frontend-service \
@@ -108,7 +121,8 @@ jobs:
             --format 'value(status.url)')
           echo "Frontend deployed at: $FRONTEND_URL"
 
-          gcloud run services update backend-service \
+          gcloud run deploy backend-service \
+            --image ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/backend:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --update-env-vars "FRONTEND_URL=${FRONTEND_URL},APP_URL=${{ steps.backend-url.outputs.url }}"
 
