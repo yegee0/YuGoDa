@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(pip3 list *)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d yugoda -c \"SELECT COUNT\\(*\\) AS bags FROM bags; SELECT COUNT\\(*\\) AS users FROM users; SELECT COUNT\\(*\\) AS stores FROM stores; SELECT COUNT\\(*\\) AS orders FROM orders; SELECT COUNT\\(*\\) AS reviews FROM reviews;\")",
+      "Bash(pip3 install *)"
+    ]
+  }
+}

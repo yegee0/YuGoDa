@@ -9,3 +9,10 @@ coverage/
 !apps/frontend/.env.production
 firebase-applet-config.json
 *.db
+
+# ML pipeline build artifacts — large binaries, regenerable from training notebook.
+# Backend bundles its own copy under apps/backend/src/main/resources/models/ for deploy.
+ml/models/
+ml/.venv/
+ml/**/__pycache__/
+ml/**/.ipynb_checkpoints/
