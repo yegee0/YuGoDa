@@ -149,6 +149,17 @@ public class RecommendationService {
             }
         }
 
+        // Cold-start fallback: real (Firebase) users won't be in synth-trained vocab.
+        // If neither user_idx nor any history bag matches vocab, ONNX inference
+        // would produce a constant zero user embedding → identical recs for every
+        // real user, never changing. Use rating-weighted shuffle seeded by latest
+        // order ID instead, so picks rotate when the user places new orders.
+        Integer userIdxBoxed = userIdToIdx.get(userId);
+        if (userIdxBoxed == null && historyIdx.isEmpty()) {
+            log.debug("Cold-start fallback for user={} (vocab miss + no history match)", userId);
+            return coldStartFallback(userOrders, topK, orderedBagIds, excludeOrdered);
+        }
+
         // 2. ONNX inputs (history padded; mask zeroes out padding slots)
         long[] history = new long[historyLen];
         float[] historyMask = new float[historyLen];
@@ -157,7 +168,6 @@ public class RecommendationService {
             historyMask[i] = 1.0f;
         }
         long nHistory = historyIdx.size();
-        Integer userIdxBoxed = userIdToIdx.get(userId);
         long userIdx = userIdxBoxed != null ? userIdxBoxed.longValue() : -1L;  // -1 → +1 = 0 (cold-start padding)
 
         // 3. Inference
@@ -207,6 +217,45 @@ public class RecommendationService {
             if (result.size() >= topK) break;
         }
         return result;
+    }
+
+    /**
+     * Rating-weighted shuffle for cold-start users. Seeded by the latest order ID
+     * (or zero for brand-new users) so that placing a new order produces a fresh
+     * permutation — that's how recs visibly change after each new purchase.
+     *
+     * <p>Higher-rated bags are exponentially more likely to appear early via the
+     * Efraimidis–Spirakis weighted reservoir sampling key: {@code -ln(U) / weight}.
+     */
+    private List<ScoredBag> coldStartFallback(List<Order> userOrders, int topK,
+                                              Set<String> orderedBagIds, boolean excludeOrdered) {
+        long seed = userOrders.isEmpty() ? 0L : userOrders.get(0).getId().hashCode();
+        Random rand = new Random(seed);
+
+        List<Bag> all = bagRepository.findAll();
+        List<Bag> candidates = new ArrayList<>(all.size());
+        for (Bag b : all) {
+            if (b.getAvailable() == null || b.getAvailable() <= 0) continue;
+            if (excludeOrdered && orderedBagIds.contains(b.getId())) continue;
+            candidates.add(b);
+        }
+        if (candidates.isEmpty()) return List.of();
+
+        record Keyed(Bag bag, double key) {}
+        List<Keyed> keyed = new ArrayList<>(candidates.size());
+        for (Bag b : candidates) {
+            double r = (b.getRating() != null) ? b.getRating() : 4.0;
+            double w = Math.pow(Math.max(0.0, r - 2.5), 2) + 0.1;  // 4.5★≈4.1, 3.0★=0.35, 2.0★=0.1
+            double u = Math.max(rand.nextDouble(), 1e-10);
+            keyed.add(new Keyed(b, -Math.log(u) / w));
+        }
+        keyed.sort(Comparator.comparingDouble(Keyed::key));
+
+        List<ScoredBag> picks = new ArrayList<>(Math.min(topK, keyed.size()));
+        for (int i = 0; i < Math.min(topK, keyed.size()); i++) {
+            picks.add(new ScoredBag(keyed.get(i).bag(), 0.0));  // score 0 marks cold-start
+        }
+        return picks;
     }
 
     public record ScoredBag(Bag bag, double score) {}
