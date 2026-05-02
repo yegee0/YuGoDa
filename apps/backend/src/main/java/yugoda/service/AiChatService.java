@@ -200,6 +200,7 @@ public class AiChatService {
         return new ChatResult(reply, recommendations);
     }
 
+
     // ── Ollama HTTP call ─────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
