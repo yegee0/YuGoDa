@@ -239,12 +239,22 @@ public class AiChatService {
         String url = String.format("%s/v1beta/models/%s:generateContent?key=%s",
                 geminiApiBase, geminiModel, geminiApiKey);
 
+        // Gemini requires `contents` to start with a user-role turn and
+        // alternate user/model. The frontend seeds a fake assistant greeting
+        // ("Hi! I'm your YuGoDa Assistant…") into the chat as soon as the
+        // widget opens — it ends up in `history` as role:assistant. If we
+        // forward it Gemini returns 400 ("First content should be with role
+        // 'user'"). Skip leading assistant turns until we see the first
+        // user message.
         List<Map<String, Object>> contents = new ArrayList<>();
         if (history != null) {
+            boolean seenUser = false;
             for (Map<String, String> turn : history) {
                 String role = "assistant".equalsIgnoreCase(turn.get("role")) ? "model" : "user";
                 String text = turn.get("content");
                 if (text == null || text.isBlank()) continue;
+                if (!seenUser && "model".equals(role)) continue;
+                seenUser = true;
                 contents.add(Map.of(
                         "role", role,
                         "parts", List.of(Map.of("text", text))
@@ -276,8 +286,16 @@ public class AiChatService {
             if (reply != null) return reply;
             log.warn("[AI] Gemini returned unexpected response: {}", response);
             return "I couldn't process that. Could you try rephrasing?";
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            // 4xx / 5xx with a response body — surface status + body so we can
+            // tell apart 'model not found' / 'API not enabled' / 'invalid key'
+            // / 'quota exceeded' from generic network failures.
+            log.error("[AI] Gemini HTTP {} on {}: {}",
+                    e.getRawStatusCode(), safeUrl, e.getResponseBodyAsString());
+            return "Sorry, I'm having trouble connecting right now. Please try again later!";
         } catch (Exception e) {
-            log.error("[AI] Gemini call to {} failed: {}", safeUrl, e.getMessage());
+            log.error("[AI] Gemini call to {} failed ({}): {}",
+                    safeUrl, e.getClass().getSimpleName(), e.getMessage());
             return "Sorry, I'm having trouble connecting right now. Please try again later!";
         }
     }
