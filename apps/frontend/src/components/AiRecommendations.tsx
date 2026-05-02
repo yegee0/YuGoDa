@@ -1,44 +1,67 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, MapPin, Clock, Tag, ChevronRight, Loader2 } from 'lucide-react';
+import { Sparkles, MapPin, Clock, Tag, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { TL } from '@/lib/formatters';
-import { COLORS } from '@/lib/constants';
-import type { ChatRecommendation } from '@/types';
 
-interface RecommendationsResponse {
-  success: boolean;
-  reply: string;
-  recommendations: ChatRecommendation[];
+/**
+ * Two-tower recommendation backend response (GET /api/recommendations/me).
+ * Each row is an enriched Bag (camelCase, parsed JSON fields) plus a `score`.
+ */
+interface MlRecommendation {
+  id: string;                 // bag id, used for keys
+  restaurantId: string;       // store id — used for navigation
+  restaurantName: string;
+  category?: string;
+  price: number;
+  originalPrice?: number;
+  pickupTime?: string;
+  dietaryType?: string;
+  rating?: number;
+  score: number;              // cosine similarity, 0..1 ish
 }
 
-export default function AiRecommendations() {
+interface MlRecommendationsResponse {
+  success: boolean;
+  count: number;
+  recommendations: MlRecommendation[];
+}
+
+interface AiRecommendationsProps {
+  /**
+   * Increment this from the parent (e.g. orders.length) to force a refetch
+   * after the user places a new order.
+   */
+  refreshKey?: number;
+}
+
+export default function AiRecommendations({ refreshKey = 0 }: AiRecommendationsProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [recommendations, setRecommendations] = useState<ChatRecommendation[]>([]);
-  const [aiMessage, setAiMessage] = useState('');
+  const [recommendations, setRecommendations] = useState<MlRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
-    api.get<RecommendationsResponse>('/chat/recommendations')
+    api.get<MlRecommendationsResponse>('/recommendations/me?limit=10')
       .then((data) => {
         if (cancelled) return;
         setRecommendations(data.recommendations ?? []);
-        setAiMessage(data.reply ?? '');
       })
       .catch(() => {
-        // Silently fail — section just won't show
+        // Silently fail — section just won't render. Backend may not be ready
+        // (model not loaded) or user has no recommendations yet.
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -69,19 +92,14 @@ export default function AiRecommendations() {
         </div>
       </div>
 
-      {/* AI Message */}
-      {aiMessage && (
-        <p className="text-xs text-white/70 mb-4 px-1 leading-relaxed line-clamp-2">{aiMessage}</p>
-      )}
-
       {/* Horizontal Scroll Cards */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {recommendations.slice(0, 5).map((rec) => (
+        {recommendations.slice(0, 10).map((rec) => (
           <motion.div
-            key={rec.bagId}
+            key={rec.id}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(`/store/${rec.bagId?.split('-').slice(0, -1).join('-') || ''}`)}
+            onClick={() => navigate(`/store/${rec.restaurantId}`)}
             className="flex-shrink-0 w-56 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 cursor-pointer hover:bg-white/15 transition-colors"
           >
             <div className="flex justify-between items-start mb-2">
@@ -100,11 +118,6 @@ export default function AiRecommendations() {
             </div>
 
             <div className="flex items-center gap-3 text-[10px] text-white/50">
-              {rec.distance && (
-                <span className="flex items-center gap-0.5">
-                  <MapPin className="w-3 h-3" /> {rec.distance}
-                </span>
-              )}
               {rec.pickupTime && (
                 <span className="flex items-center gap-0.5">
                   <Clock className="w-3 h-3" /> {rec.pickupTime}
@@ -113,6 +126,11 @@ export default function AiRecommendations() {
               {rec.dietaryType && (
                 <span className="flex items-center gap-0.5">
                   <Tag className="w-3 h-3" /> {rec.dietaryType}
+                </span>
+              )}
+              {rec.rating !== undefined && rec.rating > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <MapPin className="w-3 h-3" /> {rec.rating.toFixed(1)}★
                 </span>
               )}
             </div>
