@@ -28,21 +28,25 @@ public class AiChatService {
     private final StoreRepository storeRepository;
     private final BagRepository bagRepository;
 
-    @Value("${ollama.base-url}")
-    private String ollamaBaseUrl;
+    @Value("${gemini.api-base}")
+    private String geminiApiBase;
 
-    @Value("${ollama.model-name}")
-    private String ollamaModelName;
+    @Value("${gemini.model}")
+    private String geminiModel;
+
+    @Value("${gemini.api-key}")
+    private String geminiApiKey;
 
     /** JSON-defined identity / boundaries / response guidelines. */
     private String basePromptText;
 
-    /** Hard enforcement block with few-shot refusals — must be placed AFTER
-     *  the live context so it is the most recent text the model reads before
-     *  the user message (recency bias on small models). */
+    /** Hard enforcement block with few-shot refusals — placed AFTER the
+     *  live context so it is the last system text the model attends to.
+     *  Gemini follows long prompts well, but the recency-friendly layout
+     *  is preserved as defense-in-depth. */
     private String enforcementText;
 
-    public AiChatService(@Qualifier("ollamaRestTemplate") RestTemplate restTemplate,
+    public AiChatService(@Qualifier("geminiRestTemplate") RestTemplate restTemplate,
                          AiTools aiTools,
                          ObjectMapper objectMapper,
                          StoreRepository storeRepository,
@@ -58,17 +62,20 @@ public class AiChatService {
     public void init() {
         basePromptText = loadSystemPrompt();
         enforcementText = buildHardEnforcement();
-        log.info("[AI] System prompt loaded (base={} chars, enforcement={} chars). Ollama target: {}/api/chat (model: {})",
-                basePromptText.length(), enforcementText.length(), ollamaBaseUrl, ollamaModelName);
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            log.error("[AI] GEMINI_API_KEY is not set — chat endpoint will return the connection-error fallback for every request.");
+        }
+        log.info("[AI] System prompt loaded (base={} chars, enforcement={} chars). Gemini target: {}/v1beta/models/{}:generateContent",
+                basePromptText.length(), enforcementText.length(), geminiApiBase, geminiModel);
     }
 
     /**
      * Hard enforcement appended AFTER the live context so it is the very last
-     * text the model reads before the user message. Small Ollama models
-     * (Gemma 4B etc.) ignore long upfront instructions but follow the most
-     * recent text reliably (recency bias). Concrete few-shot examples are the
-     * strongest signal we can give a small model — they lock down off-topic
-     * refusals and identity disclosure.
+     * text the model reads before the user message. Originally written for
+     * small Ollama models that ignored long upfront prompts (recency bias);
+     * Gemini follows full prompts but the few-shot refusal examples and
+     * concrete templates remain the most effective defense against off-topic
+     * leakage and identity disclosure, so the structure is preserved.
      */
     private String buildHardEnforcement() {
         return String.join("\n",
@@ -137,7 +144,7 @@ public class AiChatService {
      */
     public ChatResult recommend(String userId, Double lat, Double lng) {
         String context = buildUserContext(userId, lat, lng);
-        String prompt = basePromptText
+        String systemContent = basePromptText
                 + "\n\n--- LIVE CONTEXT ---\n" + context
                 + "\n\n" + enforcementText
                 + "\n\n--- TASK ---\n"
@@ -146,12 +153,8 @@ public class AiChatService {
                 + "Format your response as a friendly, concise recommendation with bag names, prices, "
                 + "and why they'd like each one.";
 
-        List<Map<String, String>> messages = List.of(
-                Map.of("role", "system", "content", prompt),
-                Map.of("role", "user", "content", "What surprise bags do you recommend for me today?")
-        );
-
-        String reply = callOllama(messages);
+        String reply = callGemini(systemContent, List.of(),
+                "What surprise bags do you recommend for me today?");
 
         List<Map<String, Object>> recommendations = aiTools.getAvailableBags(null).stream()
                 .limit(5)
@@ -181,24 +184,18 @@ public class AiChatService {
         }
 
         // Order matters: base rules → live context → enforcement.
-        // The hard enforcement block (with refusal templates and few-shots)
-        // MUST be the last text in the system message so small models like
-        // Gemma 4B keep it in attention right before reading the user query.
+        // The hard enforcement block (refusal templates and few-shots)
+        // is the last system text the model reads before the user query.
         String contextBlock = (focusedStore != null)
                 ? buildStoreContext(focusedStore)
                 : "\n\n--- LIVE CONTEXT ---\n" + buildUserContext(userId, null, null);
         String systemContent = basePromptText + contextBlock + "\n\n" + enforcementText;
 
-        List<Map<String, String>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "system", "content", systemContent));
+        // Last 10 prior turns are passed to Gemini as conversation history.
+        List<Map<String, String>> recentHistory = (history == null) ? List.of()
+                : history.subList(Math.max(0, history.size() - 10), history.size());
 
-        if (history != null) {
-            int start = Math.max(0, history.size() - 10);
-            messages.addAll(history.subList(start, history.size()));
-        }
-        messages.add(Map.of("role", "user", "content", userMessage));
-
-        String reply = callOllama(messages);
+        String reply = callGemini(systemContent, recentHistory, userMessage);
 
         // Recommendations attached to response: store-scoped if focused, else global.
         List<Map<String, Object>> recommendations;
@@ -219,41 +216,82 @@ public class AiChatService {
     }
 
 
-    // ── Ollama HTTP call ─────────────────────────────────────────
+    // ── Gemini HTTP call ─────────────────────────────────────────
 
+    /**
+     * Calls the Gemini REST API. The system prompt goes in
+     * `systemInstruction`, prior turns and the new user message go in
+     * `contents`. Roles are mapped: frontend "assistant" → Gemini "model";
+     * "user" stays "user".
+     */
     @SuppressWarnings("unchecked")
-    private String callOllama(List<Map<String, String>> messages) {
-        String url = ollamaBaseUrl + "/api/chat";
-
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", ollamaModelName);
-        requestBody.put("stream", false);
-        requestBody.put("messages", messages);
-
-        // Lower temperature + top_p → deterministic answers; small Gemma models
-        // hallucinate a lot at the default 0.8/0.9. repeat_penalty discourages
-        // looping into off-topic ramblings.
-        Map<String, Object> options = new LinkedHashMap<>();
-        options.put("temperature", 0.2);
-        options.put("top_p", 0.5);
-        options.put("repeat_penalty", 1.15);
-        options.put("num_predict", 400);
-        requestBody.put("options", options);
-
-        try {
-            Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
-            if (response != null && response.get("message") instanceof Map<?, ?> msg) {
-                Object content = msg.get("content");
-                if (content instanceof String s && !s.isBlank()) {
-                    return s;
-                }
-            }
-            log.warn("[AI] Ollama returned unexpected response: {}", response);
-            return "I couldn't process that. Could you try rephrasing?";
-        } catch (Exception e) {
-            log.error("[AI] Ollama call to {} failed: {}", url, e.getMessage());
+    private String callGemini(String systemContent,
+                              List<Map<String, String>> history,
+                              String userMessage) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            // Fail fast and visibly — without a key Gemini returns 400 on
+            // every call, which would just look like a mysterious connection
+            // error to the user.
+            log.error("[AI] GEMINI_API_KEY missing; cannot call Gemini.");
             return "Sorry, I'm having trouble connecting right now. Please try again later!";
         }
+
+        String url = String.format("%s/v1beta/models/%s:generateContent?key=%s",
+                geminiApiBase, geminiModel, geminiApiKey);
+
+        List<Map<String, Object>> contents = new ArrayList<>();
+        if (history != null) {
+            for (Map<String, String> turn : history) {
+                String role = "assistant".equalsIgnoreCase(turn.get("role")) ? "model" : "user";
+                String text = turn.get("content");
+                if (text == null || text.isBlank()) continue;
+                contents.add(Map.of(
+                        "role", role,
+                        "parts", List.of(Map.of("text", text))
+                ));
+            }
+        }
+        contents.add(Map.of(
+                "role", "user",
+                "parts", List.of(Map.of("text", userMessage))
+        ));
+
+        Map<String, Object> generationConfig = new LinkedHashMap<>();
+        generationConfig.put("temperature", 0.2);
+        generationConfig.put("topP", 0.5);
+        generationConfig.put("maxOutputTokens", 800);
+
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("systemInstruction", Map.of(
+                "parts", List.of(Map.of("text", systemContent))
+        ));
+        requestBody.put("contents", contents);
+        requestBody.put("generationConfig", generationConfig);
+
+        // Logged URL strips the API key so it never lands in Cloud Logging.
+        String safeUrl = url.replace(geminiApiKey, "***");
+        try {
+            Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
+            String reply = extractGeminiText(response);
+            if (reply != null) return reply;
+            log.warn("[AI] Gemini returned unexpected response: {}", response);
+            return "I couldn't process that. Could you try rephrasing?";
+        } catch (Exception e) {
+            log.error("[AI] Gemini call to {} failed: {}", safeUrl, e.getMessage());
+            return "Sorry, I'm having trouble connecting right now. Please try again later!";
+        }
+    }
+
+    private String extractGeminiText(Map<String, Object> response) {
+        if (response == null) return null;
+        Object candidatesObj = response.get("candidates");
+        if (!(candidatesObj instanceof List<?> candidates) || candidates.isEmpty()) return null;
+        if (!(candidates.get(0) instanceof Map<?, ?> candidate)) return null;
+        if (!(candidate.get("content") instanceof Map<?, ?> content)) return null;
+        if (!(content.get("parts") instanceof List<?> parts) || parts.isEmpty()) return null;
+        if (!(parts.get(0) instanceof Map<?, ?> partMap)) return null;
+        Object text = partMap.get("text");
+        return (text instanceof String s && !s.isBlank()) ? s : null;
     }
 
     // ── Context builder ──────────────────────────────────────────

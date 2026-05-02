@@ -4,7 +4,7 @@
     "application": "YuGoDa Food Waste Reduction Platform",
     "component": "AI Assistant System Prompt",
     "lastUpdated": "2026-04-11",
-    "notes": "Hardened prompt with multi-layer injection defenses. Loaded by AiChatService.loadSystemPrompt(): all section values are concatenated in order, then the live context block (bags + stores) is appended, then buildHardEnforcement() is appended last so refusal templates and few-shots stay in the model's recency window. The full string is sent as a single 'system' role message to Ollama via Spring RestTemplate. No LangChain4j is used — orchestration is plain HTTP."
+    "notes": "Hardened prompt with multi-layer injection defenses. Loaded by AiChatService.loadSystemPrompt(): all section values are concatenated in order, then the live context block (bags + stores) is appended, then buildHardEnforcement() is appended last so refusal templates and few-shots stay in the model's recency window. The full string is sent as Gemini's 'systemInstruction' via Spring RestTemplate to generativelanguage.googleapis.com (default model: gemini-2.5-flash). No SDK / LangChain4j — plain HTTP."
   },
 
   "systemPrompt": {
