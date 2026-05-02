@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import type { Bag, StoreProfile, OperatingHours, Review } from '@/types';
 import { TL } from '@/lib/formatters';
 import { COLORS, DAY_NAMES, DELIVERY_FEE } from '@/lib/constants';
+import AiChatWidget from '@/components/AiChatWidget';
 
 function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefined): boolean {
   if (!operatingHours || !Array.isArray(operatingHours)) return true;
@@ -618,6 +619,9 @@ export default function StorePage() {
           </button>
         </div>
       </div>
+
+      {/* AI Chat — store-scoped via useLocation in the widget */}
+      <AiChatWidget />
     </div>
   );
 }

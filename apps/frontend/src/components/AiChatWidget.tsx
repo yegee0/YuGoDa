@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, X, Send, Loader2, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { api } from '@/lib/api';
 
 interface Message {
@@ -11,6 +12,13 @@ interface Message {
 
 export default function AiChatWidget() {
   const { t } = useTranslation();
+  const location = useLocation();
+
+  // Detect store context from URL (/store/{id}). Backend uses storeId to scope
+  // the system prompt to that store's bags and reject off-topic questions.
+  const storeMatch = location.pathname.match(/^\/store\/([^/?#]+)/);
+  const storeId = storeMatch ? storeMatch[1] : null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -28,7 +36,10 @@ export default function AiChatWidget() {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 120);
       if (messages.length === 0) {
-        setMessages([{ role: 'assistant', content: t('ai_chat_greeting') }]);
+        setMessages([{
+          role: 'assistant',
+          content: t(storeId ? 'ai_chat_greeting_store' : 'ai_chat_greeting'),
+        }]);
       }
     }
   }, [isOpen]);
@@ -43,9 +54,12 @@ export default function AiChatWidget() {
     setIsTyping(true);
 
     try {
-      // Send all prior turns as history so the model has context
+      // Send all prior turns as history so the model has context.
+      // If on a store page, send storeId so backend can scope the prompt.
       const history = updated.slice(0, -1).slice(-10);
-      const res = await api.post<{ reply: string }>('/chat/message', { message: text, history });
+      const body: { message: string; history: Message[]; storeId?: string } = { message: text, history };
+      if (storeId) body.storeId = storeId;
+      const res = await api.post<{ reply: string }>('/chat/message', body);
       setMessages(prev => [...prev, { role: 'assistant', content: res.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: t('ai_chat_error') }]);
@@ -150,7 +164,7 @@ export default function AiChatWidget() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-                placeholder={t('ai_chat_placeholder')}
+                placeholder={t(storeId ? 'ai_chat_placeholder_store' : 'ai_chat_placeholder')}
                 className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-[#1B1B1B] focus:outline-none transition-all"
                 style={{
                   backgroundColor: '#F5F0E8',

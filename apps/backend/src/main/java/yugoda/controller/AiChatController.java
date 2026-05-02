@@ -53,8 +53,10 @@ public class AiChatController extends BaseController {
         List<Map<String, String>> history = body.get("history") instanceof List<?> h
                 ? (List<Map<String, String>>) h
                 : List.of();
+        // Optional: when set, switches the assistant into STORE FOCUS MODE for that store.
+        String storeId = body.get("storeId") instanceof String s && !s.isBlank() ? s : null;
 
-        AiChatService.ChatResult result = aiChatService.chatMessage(userId, message, history);
+        AiChatService.ChatResult result = aiChatService.chatMessage(userId, message, history, storeId);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,

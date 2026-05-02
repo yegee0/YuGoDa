@@ -590,7 +590,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                           {r.category && (
                             <p className="text-[11px] text-[#8FA396] font-medium truncate mt-0.5">{r.category}</p>
                           )}
-                          <p className="text-xs font-bold text-[#FF9F1C] mt-1.5">{TL(r.minPrice)}'den başlıyor</p>
+                          <p className="text-xs font-bold text-[#FF9F1C] mt-1.5">{t('disc_from_price', { price: TL(r.minPrice) })}</p>
                         </div>
                       </Link>
                     ))}
@@ -600,8 +600,8 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                     <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-white/20" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
                       <Search className="w-10 h-10 text-white/60" />
                     </div>
-                    <h3 className="text-xl font-black text-white">Yakında uygun restoran bulunamadı</h3>
-                    <p className="font-medium max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>Filtreleri veya arama terimini ayarlayarak tekrar deneyin.</p>
+                    <h3 className="text-xl font-black text-white">{t('disc_no_restaurants_title')}</h3>
+                    <p className="font-medium max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('disc_no_restaurants_subtitle')}</p>
                   </div>
                 )
               )}

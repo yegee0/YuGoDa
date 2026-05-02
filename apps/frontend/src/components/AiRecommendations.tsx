@@ -47,7 +47,7 @@ export default function AiRecommendations({ refreshKey = 0 }: AiRecommendationsP
     let cancelled = false;
     setLoading(true);
 
-    api.get<MlRecommendationsResponse>('/recommendations/me?limit=10')
+    api.get<MlRecommendationsResponse>('/recommendations/me?limit=4')
       .then((data) => {
         if (cancelled) return;
         setRecommendations(data.recommendations ?? []);
@@ -94,7 +94,7 @@ export default function AiRecommendations({ refreshKey = 0 }: AiRecommendationsP
 
       {/* Horizontal Scroll Cards */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {recommendations.slice(0, 10).map((rec) => (
+        {recommendations.slice(0, 4).map((rec) => (
           <motion.div
             key={rec.id}
             whileHover={{ scale: 1.02 }}
