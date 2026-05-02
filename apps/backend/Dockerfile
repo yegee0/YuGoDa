@@ -16,12 +16,18 @@ RUN mvn package -DskipTests -B
 
 # ─────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
-# Uses a slim JRE image — no build tools, minimal attack surface.
+# Uses a glibc-based JRE image (NOT alpine/musl) — required by
+# ONNX Runtime's native libraries (com.microsoft.onnxruntime).
 # ─────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre AS runtime
+
+# curl for HEALTHCHECK (Debian-based image doesn't include wget by default)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for security
-RUN addgroup -S yugoda && adduser -S yugoda -G yugoda
+RUN groupadd -r yugoda && useradd -r -g yugoda yugoda
 
 WORKDIR /app
 
@@ -42,8 +48,8 @@ ENV DB_PASSWORD=postgres
 
 EXPOSE 4000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD wget -qO- http://localhost:4000/health || exit 1
+# Health check (Cloud Run also performs its own startup probe; this is for local docker)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fs http://localhost:4000/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
