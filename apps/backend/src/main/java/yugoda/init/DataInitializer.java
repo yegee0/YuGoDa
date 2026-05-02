@@ -46,7 +46,7 @@ public class DataInitializer implements ApplicationRunner {
         if (storeRepository.count() > 0 || bagRepository.count() > 0) {
             return;
         }
-        log.info("[DB] Empty database detected; loading seed data (15 stores, 15 users, 60 bags)...");
+        log.info("[DB] Empty database detected; loading seed data (17 stores, 17 users, 68 bags)...");
 
         List<Store> stores = buildStores();
         List<User> users = buildRestaurantUsers(stores);
@@ -124,7 +124,13 @@ public class DataInitializer implements ApplicationRunner {
                 "İçerenköy Mah. Sahil Yolu No:4, Ataşehir", 0.000, -0.005, 28),
             new StoreSpec("Yeditepe Vegan", "Restaurant",
                 "Tamamen bitki bazlı mutfak; günün menüsünden kalan sağlıklı öğünler.",
-                "Yeditepe Üniversitesi Karşısı, Ataşehir", -0.002, 0.004, 30)
+                "Yeditepe Üniversitesi Karşısı, Ataşehir", -0.002, 0.004, 30),
+            new StoreSpec("Yeşil Bahçe Salata", "Restaurant",
+                "Mevsim yeşillikleri, kinoa, ızgara tavuk ve glutensiz bowl seçenekleri. Gün sonu salata ve sağlıklı paketler.",
+                "Barbaros Mah. Yeşilbağ Sk. No:18, Ataşehir", 0.002, 0.002, 4),
+            new StoreSpec("Salata Köşesi", "Restaurant",
+                "Akdeniz tarzı salatalar, tahıl bowl'ları ve taze sıkılmış soslarla hazırlanan sağlıklı paketler.",
+                "İçerenköy Mah. Çiçek Cad. No:9, Ataşehir", -0.003, 0.001, 7)
         );
 
         List<Store> stores = new ArrayList<>(specs.size());
@@ -212,6 +218,7 @@ public class DataInitializer implements ApplicationRunner {
         String[] groceryBagNames = {"Meyve Kasası", "Sebze Karması", "Atıştırmalık Paketi", "Organik Seçki"};
         String[] cafeBagNames = {"Kahve & Tatlı", "Sandviç Paketi", "Kek & Kurabiye", "Brunch Paketi"};
         String[] restaurantBagNames = {"Günün Menüsü", "Chef Sürprizi", "Öğle Tabağı", "Akşam Sürprizi"};
+        String[] saladBagNames = {"Mevsim Salata Karması", "Tavuklu Salata Bowl", "Akdeniz Salata Tabağı", "Süperfood Salata Sürprizi"};
         String[] images = {
             "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800",
             "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800",
@@ -225,12 +232,20 @@ public class DataInitializer implements ApplicationRunner {
 
         for (int i = 0; i < stores.size(); i++) {
             Store store = stores.get(i);
-            String[] names = switch (store.getCategory()) {
-                case "Bakery" -> bakeryBagNames;
-                case "Grocery" -> groceryBagNames;
-                case "Cafe" -> cafeBagNames;
-                default -> restaurantBagNames;
-            };
+            // Salad-themed stores (detected by name) get salad-specific bag names so
+            // user queries like "salata var mı?" can match real entries instead of
+            // pushing the model to hallucinate generic dish names.
+            String[] names;
+            if (store.getName().toLowerCase(Locale.ROOT).contains("salata")) {
+                names = saladBagNames;
+            } else {
+                names = switch (store.getCategory()) {
+                    case "Bakery" -> bakeryBagNames;
+                    case "Grocery" -> groceryBagNames;
+                    case "Cafe" -> cafeBagNames;
+                    default -> restaurantBagNames;
+                };
+            }
             for (int j = 0; j < 4; j++) {
                 Bag b = new Bag();
                 b.setId(store.getId() + "-bag-" + (j + 1));
@@ -245,8 +260,18 @@ public class DataInitializer implements ApplicationRunner {
                 b.setAvailable(2 + ((i + j) % 5));
                 b.setPickupTime(pickupTimeFor(store.getCategory(), j));
                 b.setImage(images[(i * 4 + j) % images.length]);
-                b.setTags(tagsFor(store.getCategory()));
-                b.setDietaryType(dietaryFor(store.getCategory(), j));
+                boolean isSalad = names[j].toLowerCase(Locale.ROOT).contains("salata");
+                b.setTags(isSalad ? "[\"Healthy\",\"Fresh\",\"Salad\"]" : tagsFor(store.getCategory()));
+                // Salad bags: alternate Vegan / Vegetarian (most are plant-forward),
+                // except 'Tavuklu' (chicken) which stays non-vegan.
+                String dietary;
+                if (isSalad) {
+                    dietary = names[j].toLowerCase(Locale.ROOT).contains("tavuklu")
+                            ? "Non-Vegan" : (j % 2 == 0 ? "Vegan" : "Vegetarian");
+                } else {
+                    dietary = dietaryFor(store.getCategory(), j);
+                }
+                b.setDietaryType(dietary);
                 b.setCalories(280 + ((i + j) % 6) * 40);
                 b.setDistance(null);
                 b.setCoordinates(store.getLocation());
@@ -262,6 +287,9 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private String bagDescriptionFor(String category, String name) {
+        if (name.toLowerCase(Locale.ROOT).contains("salata")) {
+            return name + " — taze mevsim yeşillikleri, kinoa, ızgara protein ve tahıllarla hazırlanmış sağlıklı salata paketi.";
+        }
         return switch (category) {
             case "Bakery"  -> name + " — fırından taze çıkan ekmek, poğaça ve hamur işlerinden sürpriz seçki.";
             case "Grocery" -> name + " — günün taze meyve, sebze ve kuru gıdalarından özenle hazırlanmış paket.";

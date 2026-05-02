@@ -286,12 +286,19 @@ public class AiChatService {
                 ctx.append("Available Surprise Bags on the platform right now:\n");
             }
             for (AiTools.BagSummary b : bags) {
-                ctx.append(String.format("- [%s] %s from %s | %.2f TL (was %.2f TL) | %d available | Pickup: %s | Dietary: %s | Distance: %s | Rating: %s%n",
-                        b.id(), b.category() != null ? b.category() : "Surprise",
-                        b.restaurantName(), b.price(), b.originalPrice(),
+                // Description starts with the bag name (e.g. "Fırın Sürprizi — fırından...").
+                // Including it gives the model the actual identifying text for each bag,
+                // so it can match user queries like "salata var mı?" against real content
+                // instead of seeing only ("Bakery from Susam Fırın") and hallucinating.
+                String desc = (b.description() != null && !b.description().isBlank())
+                        ? b.description()
+                        : (b.category() != null ? b.category() + " bag" : "Surprise bag");
+                ctx.append(String.format("- %s | from %s (%s) | %.2f TL (was %.2f TL) | %d available | Pickup: %s | Dietary: %s | Rating: %s%n",
+                        desc, b.restaurantName(),
+                        b.category() != null ? b.category() : "Other",
+                        b.price(), b.originalPrice(),
                         b.available(), b.pickupTime() != null ? b.pickupTime() : "N/A",
                         b.dietaryType() != null ? b.dietaryType() : "N/A",
-                        b.distance() != null ? b.distance() : "N/A",
                         b.rating() != null ? String.format("%.1f", b.rating()) : "N/A"));
             }
         } else {
@@ -452,8 +459,11 @@ public class AiChatService {
         for (Bag b : bags) {
             if (b.getAvailable() == null || b.getAvailable() <= 0) continue;
             any = true;
+            String desc = (b.getDescription() != null && !b.getDescription().isBlank())
+                    ? b.getDescription()
+                    : (b.getCategory() != null ? b.getCategory() + " bag" : "Surprise bag");
             ctx.append(String.format("- %s | %.2f TL (was %.2f TL) | %d available | Pickup: %s | Dietary: %s | Rating: %s%n",
-                    b.getCategory() != null ? b.getCategory() : "Surprise",
+                    desc,
                     b.getPrice() != null ? b.getPrice() : 0.0,
                     b.getOriginalPrice() != null ? b.getOriginalPrice() : 0.0,
                     b.getAvailable() != null ? b.getAvailable() : 0,
