@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   MapPin,
   Filter,
@@ -41,6 +41,7 @@ import CartDrawer from '@/components/CartDrawer';
 import AiRecommendations from '@/components/AiRecommendations';
 import AiChatWidget from '@/components/AiChatWidget';
 import { api } from '@/lib/api';
+import { TL } from '@/lib/formatters';
 import type { Bag, MapSuggestion, CartItem } from '@/types';
 
 const GOOGLE_MAPS_API_KEY: string = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '';
@@ -262,6 +263,45 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
           }])
       ).values()]
     : ([] as Array<{ id: string; name: string; logo?: string; cover?: string }>);
+
+  // Discover grid artık restoran-bazlı: paketler yerine restoran kartları, kullanıcı
+  // tıklayınca o restoranın detay sayfasına gider ve oradaki paketleri görür.
+  // Aggregate metrikleri (kaç paket, en düşük fiyat, ortalama rating) bag listesinden türet.
+  const restaurantsList = useMemo(() => {
+    const m = new Map<string, {
+      id: string; name: string; logo?: string; cover?: string; category?: string;
+      bagCount: number; minPrice: number; avgRating: number;
+      _ratingSum: number; _ratingN: number;
+    }>();
+    for (const b of filteredBags) {
+      if (!b.restaurantId) continue;
+      const r = b.rating ?? 0;
+      const cur = m.get(b.restaurantId);
+      if (!cur) {
+        m.set(b.restaurantId, {
+          id: b.restaurantId,
+          name: b.restaurantName || '',
+          logo: b.storeLogo,
+          cover: b.storeCoverImage,
+          category: b.category,
+          bagCount: 1,
+          minPrice: b.price,
+          avgRating: r,
+          _ratingSum: r,
+          _ratingN: r > 0 ? 1 : 0,
+        });
+      } else {
+        cur.bagCount += 1;
+        cur.minPrice = Math.min(cur.minPrice, b.price);
+        if (r > 0) {
+          cur._ratingSum += r;
+          cur._ratingN += 1;
+          cur.avgRating = cur._ratingSum / cur._ratingN;
+        }
+      }
+    }
+    return Array.from(m.values());
+  }, [filteredBags]);
 
   const handleCheckout = async (data: { items: CartItem[]; tip: number; bookingFee: number; tax: number; total: number; deliveryType: string; paymentMethod: string; leaveAtDoor: boolean }) => {
     setCheckoutData(data);
@@ -497,20 +537,73 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                 </div>
               )}
 
-              {filteredBags.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {filteredBags.map(bag => (
-                    <BagCard key={bag.id} bag={bag} onClick={() => setSelectedBag(bag)} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-white/20" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
-                    <Search className="w-10 h-10 text-white/60" />
+              {activeTab === 'favorites' ? (
+                /* Favoriler tab'ında kullanıcı favori paketlerini görür — BagCard hâlâ kullanılır. */
+                filteredBags.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {filteredBags.map(bag => (
+                      <BagCard key={bag.id} bag={bag} onClick={() => setSelectedBag(bag)} />
+                    ))}
                   </div>
-                  <h3 className="text-xl font-black text-white">{t('No meals found')}</h3>
-                  <p className="font-medium max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('Try adjusting your filters or search terms to find what you\'re looking for.')}</p>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-white/20" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                      <Heart className="w-10 h-10 text-white/60" />
+                    </div>
+                    <h3 className="text-xl font-black text-white">{t('No meals found')}</h3>
+                    <p className="font-medium max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>{t('Try adjusting your filters or search terms to find what you\'re looking for.')}</p>
+                  </div>
+                )
+              ) : (
+                /* Discover tab'ı: paketler yerine restoran kartları. */
+                restaurantsList.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {restaurantsList.map(r => (
+                      <Link
+                        key={r.id}
+                        to={`/store/${r.id}`}
+                        className="bg-white rounded-2xl overflow-hidden border border-[#E8E0D5] hover:shadow-lg hover:border-[#1B5E52]/30 transition-all"
+                      >
+                        <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#1B5E52]/10 to-[#1B5E52]/5">
+                          {r.cover ? (
+                            <img src={r.cover} alt={r.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Store className="w-12 h-12 text-[#1B5E52]/30" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-xs font-bold text-[#1B1B1B] shadow-sm">
+                            <ShoppingBag className="w-3 h-3 text-[#1B5E52]" />
+                            {r.bagCount}
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-black text-[#1B1B1B] truncate flex-1">{r.name}</p>
+                            {r.avgRating > 0 && (
+                              <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#1B5E52] shrink-0">
+                                <Star className="w-3 h-3 fill-current" />
+                                {r.avgRating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                          {r.category && (
+                            <p className="text-[11px] text-[#8FA396] font-medium truncate mt-0.5">{r.category}</p>
+                          )}
+                          <p className="text-xs font-bold text-[#FF9F1C] mt-1.5">{TL(r.minPrice)}'den başlıyor</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-white/20" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                      <Search className="w-10 h-10 text-white/60" />
+                    </div>
+                    <h3 className="text-xl font-black text-white">Yakında uygun restoran bulunamadı</h3>
+                    <p className="font-medium max-w-xs mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>Filtreleri veya arama terimini ayarlayarak tekrar deneyin.</p>
+                  </div>
+                )
               )}
             </div>
           </div>
