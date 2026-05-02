@@ -4,7 +4,7 @@
     "application": "YuGoDa Food Waste Reduction Platform",
     "component": "AI Assistant System Prompt",
     "lastUpdated": "2026-04-11",
-    "notes": "Hardened prompt with multi-layer injection defenses. Load this as the system message via LangChain4j @SystemMessage or ChatMessage.systemMessage(). Concatenate all section values in order to build the final prompt."
+    "notes": "Hardened prompt with multi-layer injection defenses. Loaded by AiChatService.loadSystemPrompt(): all section values are concatenated in order, then the live context block (bags + stores) is appended, then buildHardEnforcement() is appended last so refusal templates and few-shots stay in the model's recency window. The full string is sent as a single 'system' role message to Ollama via Spring RestTemplate. No LangChain4j is used — orchestration is plain HTTP."
   },
 
   "systemPrompt": {
