@@ -220,40 +220,90 @@ public class RecommendationService {
     }
 
     /**
-     * Rating-weighted shuffle for cold-start users. Seeded by the latest order ID
-     * (or zero for brand-new users) so that placing a new order produces a fresh
-     * permutation — that's how recs visibly change after each new purchase.
+     * Content-based fallback for cold-start users (UID + history both absent
+     * from the synth-trained vocab). Reads the user's delivered order history,
+     * derives feature distributions (category, dietary type, average price),
+     * then scores every available bag against those preferences.
      *
-     * <p>Higher-rated bags are exponentially more likely to appear early via the
-     * Efraimidis–Spirakis weighted reservoir sampling key: {@code -ln(U) / weight}.
+     * <p>Score = weighted sum, higher is better:
+     * <ul>
+     *   <li>{@code categoryMatch} (×3.0) — fraction of history in this bag's category</li>
+     *   <li>{@code dietaryMatch}  (×2.0) — fraction of history matching dietary type</li>
+     *   <li>{@code priceMatch}    (×1.0) — sigmoid proximity to history avg price</li>
+     *   <li>{@code ratingScore}   (×0.5) — bag's own rating, normalized 3.0-5.0 → 0-1</li>
+     *   <li>{@code jitter}        (±0.01) — tie-breaker, seeded by latest order ID</li>
+     * </ul>
+     *
+     * <p>For brand-new users (no history), the match-terms collapse to 0 and
+     * ranking falls back to bag rating + per-user jitter (so different users
+     * still get different orderings).
+     *
+     * <p>The latest-order seed makes the picks rotate when the user places a new
+     * order — same content preference, slightly different shuffle.
      */
     private List<ScoredBag> coldStartFallback(List<Order> userOrders, int topK,
                                               Set<String> orderedBagIds, boolean excludeOrdered) {
+        // Step 1: collect history bag features (delivered orders only)
+        List<String> historyBagIds = userOrders.stream()
+                .filter(o -> "delivered".equals(o.getStatus()))
+                .map(Order::getBagId)
+                .distinct()
+                .toList();
+
+        List<Bag> historyBags = historyBagIds.isEmpty()
+                ? List.of()
+                : bagRepository.findAllById(historyBagIds);
+
+        Map<String, Long> categoryFreq = new HashMap<>();
+        Map<String, Long> dietaryFreq = new HashMap<>();
+        double priceSum = 0.0;
+        int priceN = 0;
+        for (Bag b : historyBags) {
+            if (b.getCategory() != null) categoryFreq.merge(b.getCategory(), 1L, Long::sum);
+            if (b.getDietaryType() != null) dietaryFreq.merge(b.getDietaryType(), 1L, Long::sum);
+            if (b.getPrice() != null) { priceSum += b.getPrice(); priceN++; }
+        }
+        double avgPrice = (priceN > 0) ? (priceSum / priceN) : 100.0;  // fallback for empty history
+        int historySize = historyBags.size();
+
+        // Step 2: score all candidates, sort, take top-K
         long seed = userOrders.isEmpty() ? 0L : userOrders.get(0).getId().hashCode();
         Random rand = new Random(seed);
 
         List<Bag> all = bagRepository.findAll();
-        List<Bag> candidates = new ArrayList<>(all.size());
+        record ScoredCandidate(Bag bag, double score) {}
+        List<ScoredCandidate> scored = new ArrayList<>(all.size());
+
         for (Bag b : all) {
             if (b.getAvailable() == null || b.getAvailable() <= 0) continue;
             if (excludeOrdered && orderedBagIds.contains(b.getId())) continue;
-            candidates.add(b);
-        }
-        if (candidates.isEmpty()) return List.of();
 
-        record Keyed(Bag bag, double key) {}
-        List<Keyed> keyed = new ArrayList<>(candidates.size());
-        for (Bag b : candidates) {
-            double r = (b.getRating() != null) ? b.getRating() : 4.0;
-            double w = Math.pow(Math.max(0.0, r - 2.5), 2) + 0.1;  // 4.5★≈4.1, 3.0★=0.35, 2.0★=0.1
-            double u = Math.max(rand.nextDouble(), 1e-10);
-            keyed.add(new Keyed(b, -Math.log(u) / w));
-        }
-        keyed.sort(Comparator.comparingDouble(Keyed::key));
+            double catMatch = (historySize > 0 && b.getCategory() != null)
+                    ? categoryFreq.getOrDefault(b.getCategory(), 0L) / (double) historySize
+                    : 0.0;
+            double dietMatch = (historySize > 0 && b.getDietaryType() != null)
+                    ? dietaryFreq.getOrDefault(b.getDietaryType(), 0L) / (double) historySize
+                    : 0.0;
+            double priceMatch = (b.getPrice() != null)
+                    ? 1.0 / (1.0 + Math.abs(b.getPrice() - avgPrice) / 50.0)
+                    : 0.5;
+            double ratingScore = (b.getRating() != null)
+                    ? Math.max(0.0, (b.getRating() - 3.0) / 2.0)
+                    : 0.0;
 
-        List<ScoredBag> picks = new ArrayList<>(Math.min(topK, keyed.size()));
-        for (int i = 0; i < Math.min(topK, keyed.size()); i++) {
-            picks.add(new ScoredBag(keyed.get(i).bag(), 0.0));  // score 0 marks cold-start
+            double jitter = rand.nextDouble() * 0.01;
+            double score = catMatch * 3.0 + dietMatch * 2.0 + priceMatch * 1.0 + ratingScore * 0.5 + jitter;
+            scored.add(new ScoredCandidate(b, score));
+        }
+        if (scored.isEmpty()) return List.of();
+
+        scored.sort((a, c) -> Double.compare(c.score(), a.score()));
+
+        int n = Math.min(topK, scored.size());
+        List<ScoredBag> picks = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            ScoredCandidate c = scored.get(i);
+            picks.add(new ScoredBag(c.bag(), c.score()));
         }
         return picks;
     }
