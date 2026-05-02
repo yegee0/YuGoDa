@@ -54,9 +54,11 @@ export default function AiChatWidget() {
     setIsTyping(true);
 
     try {
-      // Send all prior turns as history so the model has context.
-      // If on a store page, send storeId so backend can scope the prompt.
-      const history = updated.slice(0, -1).slice(-10);
+      // Send last 5 prior turns as history so the model has context.
+      // Backend also caps to 5 — kept in sync to avoid sending tokens that
+      // get trimmed server-side and waste bandwidth on slow connections.
+      // 10 → 5 was forced by Gemini free-tier 250k input-TPM ceiling.
+      const history = updated.slice(0, -1).slice(-5);
       const body: { message: string; history: Message[]; storeId?: string } = { message: text, history };
       if (storeId) body.storeId = storeId;
       const res = await api.post<{ reply: string }>('/chat/message', body);

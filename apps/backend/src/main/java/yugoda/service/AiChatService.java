@@ -191,9 +191,13 @@ public class AiChatService {
                 : "\n\n--- LIVE CONTEXT ---\n" + buildUserContext(userId, null, null);
         String systemContent = basePromptText + contextBlock + "\n\n" + enforcementText;
 
-        // Last 10 prior turns are passed to Gemini as conversation history.
+        // Last 5 prior turns are passed to Gemini as conversation history.
+        // Was 10; halved to keep per-call input tokens under the free-tier
+        // 250k TPM limit. 5 turns is enough context for follow-up questions
+        // ("ya vegan olanı?") without dragging the input cost up by ~250
+        // tokens per extra turn.
         List<Map<String, String>> recentHistory = (history == null) ? List.of()
-                : history.subList(Math.max(0, history.size() - 10), history.size());
+                : history.subList(Math.max(0, history.size() - 5), history.size());
 
         String reply = callGemini(systemContent, recentHistory, userMessage);
 
@@ -329,11 +333,14 @@ public class AiChatService {
 
     // ── Context builder ──────────────────────────────────────────
 
-    /** Cap bag/store lists fed into the prompt — Gemma 4B's context window
-     *  drowns at 500+ bags and the model starts hallucinating or ignoring
-     *  the system prompt. 30 bags × ~30 tokens ≈ 900 tokens (manageable). */
-    private static final int CONTEXT_BAG_LIMIT = 30;
-    private static final int CONTEXT_STORE_LIMIT = 20;
+    /** Cap bag/store lists fed into the prompt. Originally sized for Gemma
+     *  4B (which drowned at 500+ bags); since migrating to Gemini the limit
+     *  exists for cost, not capability. Each bag line is ~80–120 input
+     *  tokens; the free-tier 250k TPM is consumed quickly when this is
+     *  large, so the cap is set conservatively. The dedicated store list
+     *  was removed because every bag line already includes its store name —
+     *  duplicating it just burnt tokens. */
+    private static final int CONTEXT_BAG_LIMIT = 12;
 
     private String buildUserContext(String userId, Double lat, Double lng) {
         StringBuilder ctx = new StringBuilder();
@@ -390,29 +397,11 @@ public class AiChatService {
             }
         }
 
-        List<AiTools.StoreSummary> allStores = aiTools.getActiveStores();
-        if (!allStores.isEmpty()) {
-            int totalStores = allStores.size();
-            List<AiTools.StoreSummary> stores = allStores.stream()
-                    .sorted((a, b) -> {
-                        double ar = a.rating() != null ? a.rating() : 0.0;
-                        double br = b.rating() != null ? b.rating() : 0.0;
-                        return Double.compare(br, ar);
-                    })
-                    .limit(CONTEXT_STORE_LIMIT)
-                    .collect(Collectors.toList());
-            if (totalStores > CONTEXT_STORE_LIMIT) {
-                ctx.append(String.format("%nRestaurants (showing top %d of %d):%n", CONTEXT_STORE_LIMIT, totalStores));
-            } else {
-                ctx.append("\nRestaurants on the platform:\n");
-            }
-            for (AiTools.StoreSummary s : stores) {
-                ctx.append(String.format("- %s (%s) at %s | Rating: %s%n",
-                        s.name(), s.category() != null ? s.category() : "N/A",
-                        s.address() != null ? s.address() : "N/A",
-                        s.rating() != null ? String.format("%.1f", s.rating()) : "N/A"));
-            }
-        }
+        // Dedicated restaurant list intentionally omitted — every bag line
+        // above already names its store, so a separate "Restaurants on the
+        // platform" block was duplicate context that cost ~600 tokens/call
+        // for no extra signal. If a user asks store-only questions outside
+        // STORE FOCUS MODE, the bag-line store names + rating are enough.
 
         if (lat != null && lng != null) {
             ctx.append(String.format("\nUser's current location: lat=%.4f, lng=%.4f\n", lat, lng));
