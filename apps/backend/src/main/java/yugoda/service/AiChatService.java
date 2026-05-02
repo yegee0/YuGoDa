@@ -270,6 +270,15 @@ public class AiChatService {
         generationConfig.put("temperature", 0.2);
         generationConfig.put("topP", 0.5);
         generationConfig.put("maxOutputTokens", 800);
+        // Gemini 2.5 Flash enables "thinking" by default with an unbounded budget,
+        // which adds 10–20s of latency to every reply (even a "hi") and consumes
+        // thousands of output tokens — the latter blows through the free-tier
+        // 250k TPM quota and 250 RPD limit after only a handful of turns,
+        // surfacing as "Sorry, I'm having trouble connecting right now."
+        // Setting thinkingBudget=0 disables thinking entirely; for this assistant
+        // the system prompt + live context already encodes everything the model
+        // needs, so chain-of-thought adds no quality.
+        generationConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
 
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("systemInstruction", Map.of(
@@ -292,6 +301,12 @@ public class AiChatService {
             // / 'quota exceeded' from generic network failures.
             log.error("[AI] Gemini HTTP {} on {}: {}",
                     e.getRawStatusCode(), safeUrl, e.getResponseBodyAsString());
+            // 429 = free-tier RPM/TPM/RPD exhausted. The window resets in <60s
+            // for RPM; the user-visible message tells them to wait briefly so
+            // they don't think the assistant is broken.
+            if (e.getRawStatusCode() == 429) {
+                return "Çok fazla istek geldi, biraz beklersen tekrar yardımcı olabilirim. (Too many requests — please wait a moment and try again.)";
+            }
             return "Sorry, I'm having trouble connecting right now. Please try again later!";
         } catch (Exception e) {
             log.error("[AI] Gemini call to {} failed ({}): {}",
