@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleMapsView from '@/components/GoogleMapsView';
 import LocationPickerMap from '@/components/LocationPickerMap';
+import { reverseGeocodeNominatim } from '@/lib/geocoding';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useStore } from '@/app/store/useStore';
 import { useBags } from '@/hooks/useBags';
@@ -161,7 +162,9 @@ function BagCard({ bag, onClick }: { bag: Bag; onClick: () => void }) {
                 name: `${bag.category} Magic Bag`,
                 price: bag.price,
                 quantity: 1,
-                image: bag.image || bag.storeCoverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80'
+                image: bag.image || bag.storeCoverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
+                available: bag.available ?? 0,
+                isCurrentlyOpen: bag.isCurrentlyOpen ?? true,
               });
             }}
             className={`px-4 py-2 rounded-full text-xs font-black transition-all ${
@@ -199,7 +202,6 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const { user, userProfile, filters, cart, clearCart } = useStore();
 
   // Extracted hooks
-  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab);
   const {
     userLocation, setUserLocation,
     locationName, setLocationName,
@@ -207,6 +209,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     mapSuggestions, showMapSuggestions, setShowMapSuggestions,
     mapSearchLoading, mapSearchRef,
   } = useLocationManager();
+  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab);
 
   // Build autocomplete suggestions from bags data
   useEffect(() => {
@@ -669,10 +672,12 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
             <LocationPickerMap
               initialLocation={userLocation}
               initialName={locationName}
-              onConfirm={(coords, name) => {
+              onConfirm={async (coords, name) => {
                 setUserLocation(coords);
                 setLocationName(name);
-                localStorage.setItem('yugoda_location', JSON.stringify({ coords, name }));
+                const geoData = await reverseGeocodeNominatim(coords.lat, coords.lng);
+                const city = geoData?.address?.city || geoData?.address?.town || geoData?.address?.village || null;
+                localStorage.setItem('yugoda_location', JSON.stringify({ coords, name, city }));
                 setActiveTab('discover');
               }}
               onClose={() => setActiveTab('discover')}

@@ -162,8 +162,13 @@ export default function RestaurantAuth() {
         setMsg(t('auth_restaurant_account_created'));
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_generic'));
+      const code = (err as { code?: string })?.code || '';
+      if (code === 'auth/email-already-in-use') {
+        setError(t('auth_error_email_in_use'));
+      } else {
+        const message = err instanceof Error ? err.message : '';
+        setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_generic'));
+      }
     } finally {
       setLoading(false);
     }

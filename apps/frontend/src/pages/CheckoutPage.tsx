@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/app/store/useStore';
@@ -33,6 +33,9 @@ export default function CheckoutPage() {
   const [cardErrors, setCardErrors] = useState({ number: '', expiry: '', cvv: '' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [show3DSecure, setShow3DSecure] = useState(false);
+  const [cartError, setCartError] = useState('');
+
+  useEffect(() => { setCartError(''); }, [cart]);
 
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const deliveryFee = deliveryOption === 'delivery' ? 15.00 : 0;
@@ -58,6 +61,13 @@ export default function CheckoutPage() {
 
   const handleConfirmOrder = async () => {
     if (paymentMethod === 'card' && !validateCard()) return;
+    if (paymentMethod === 'wallet') {
+      const balance = userProfile?.walletBalance ?? 0;
+      if (balance < total) {
+        toast.error(t('checkout_error_wallet_insufficient'));
+        return;
+      }
+    }
     setIsProcessing(true);
     try {
       const restaurantGroups = cart.reduce((acc, item) => {
@@ -96,13 +106,14 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('Order creation failed:', error);
+      toast.error(error instanceof Error ? error.message : t('order_error_generic'));
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#1b5e52' }}>
+    <div className="h-full overflow-y-auto" style={{ backgroundColor: '#1b5e52' }}>
       {/* Top bar */}
       <div className="border-b sticky top-0 z-10" style={{ backgroundColor: '#1b5e52', borderColor: 'rgba(0,0,0,0.12)' }}>
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -157,6 +168,11 @@ export default function CheckoutPage() {
             {step === 'Cart' && (
               <>
                 <h2 className="text-sm font-bold text-[#8FA396] uppercase tracking-widest px-1">{t('Your Items')}</h2>
+                {cartError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+                    {cartError}
+                  </div>
+                )}
                 {cart.length === 0 ? (
                   <div className="bg-white rounded-2xl p-12 text-center">
                     <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
@@ -188,7 +204,7 @@ export default function CheckoutPage() {
                           </button>
                           <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
                           <button
-                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            onClick={() => { if (!item.available || item.quantity < item.available) updateCartQuantity(item.id, item.quantity + 1); }}
                             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white transition-colors text-[#8FA396]"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -449,6 +465,14 @@ export default function CheckoutPage() {
             {stepIndex < STEPS.length - 1 ? (
               <button
                 onClick={() => {
+                  if (step === 'Cart') {
+                    const closedItem = cart.find(i => i.isCurrentlyOpen === false);
+                    if (closedItem) {
+                      setCartError(t('checkout_error_closed_restaurant', { name: closedItem.restaurantName }));
+                      return;
+                    }
+                    setCartError('');
+                  }
                   if (step === 'Payment' && paymentMethod === 'card' && !validateCard()) return;
                   setStep(STEPS[stepIndex + 1].key);
                 }}

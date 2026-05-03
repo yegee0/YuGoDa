@@ -88,6 +88,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  available?: number;
+  isCurrentlyOpen?: boolean;
 }
 
 // ── Stores ───────────────────────────────────────────────

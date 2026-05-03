@@ -37,11 +37,12 @@ public class BagController extends BaseController {
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String restaurantId,
+            @RequestParam(required = false) String city,
             @RequestParam(defaultValue = "false") String showAll) {
 
         boolean showAllBool = "true".equals(showAll);
         List<Bag> bags = bagService.listBags(dietaryType, merchantType, minPrice, maxPrice,
-                minRating, sortBy, search, restaurantId, showAllBool);
+                minRating, sortBy, search, restaurantId, city, showAllBool);
 
         // Cache full Store objects to avoid N+1 queries
         Map<String, Store> storeCache = new HashMap<>();
@@ -59,6 +60,7 @@ public class BagController extends BaseController {
                 try { dietaryTags = objectMapper.readValue(store.getDietaryTags(), List.class); } catch (Exception ignored) {}
             }
             map.put("dietaryTags", dietaryTags);
+            map.put("isCurrentlyOpen", bagService.isStoreCurrentlyOpen(store != null ? store.getOperatingHours() : null));
             return map;
         }).toList();
         return ResponseEntity.ok(Map.of("success", true, "bags", enriched));

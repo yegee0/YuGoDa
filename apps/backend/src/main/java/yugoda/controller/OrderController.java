@@ -35,6 +35,8 @@ public class OrderController extends BaseController {
         try {
             Order order = orderService.createOrder(user.getUid(), body);
             return ResponseEntity.status(201).body(Map.of("success", true, "order", enrichOrder(order)));
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
         } catch (Exception e) {
             return serverError("Sipariş oluşturulamadı.");
         }

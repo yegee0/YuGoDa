@@ -182,6 +182,8 @@ export default function Auth() {
       const code = (err as { code?: string })?.code || '';
       if (code === 'auth/user-disabled') {
         setError(t('auth_user_disabled'));
+      } else if (code === 'auth/email-already-in-use') {
+        setError(t('auth_error_email_in_use'));
       } else {
         const message = err instanceof Error ? err.message : '';
         setError(message?.replace('Firebase: ', '')?.replace(/\(auth\/.*?\)\.?/, '').trim() || t('auth_error_generic'));
@@ -342,7 +344,7 @@ export default function Auth() {
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
               color: C.lime,
-            }}>Food rescue marketplace</span>
+            }}>{t('auth_hero_pill')}</span>
           </div>
 
           {/* headline */}
@@ -355,9 +357,9 @@ export default function Auth() {
               margin: 0,
               fontWeight: 600,
             }}>
-              Save food.<br/>
-              <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>Spend less.</em><br/>
-              Feel good.
+              {t('auth_hero_headline_1')}<br/>
+              <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>{t('auth_hero_headline_2')}</em><br/>
+              {t('auth_hero_headline_3')}
             </h1>
 
             <p style={{
@@ -369,7 +371,7 @@ export default function Auth() {
               lineHeight: 1.65,
               maxWidth: '340px',
             }}>
-              Join thousands rescuing surplus meals from top restaurants — at up to 70% off. Good for you, great for the planet.
+              {t('auth_hero_subtitle')}
             </p>
           </div>
 
@@ -383,8 +385,8 @@ export default function Auth() {
             marginBottom: '8px',
             lineHeight: 1.3,
           }}>
-            Making a Difference,{' '}
-            <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>One Meal at a Time</em>
+            {t('auth_hero_impact_heading_1')}{' '}
+            <em style={{ color: C.lime, fontStyle: 'italic', fontWeight: 400 }}>{t('auth_hero_impact_heading_2')}</em>
           </h2>
           <p style={{
             ...dm,
@@ -395,7 +397,7 @@ export default function Auth() {
             color: 'rgba(197,241,53,0.5)',
             marginBottom: '16px',
           }}>
-            Our impact so far
+            {t('auth_hero_impact_label')}
           </p>
           <div style={{
             display: 'flex',

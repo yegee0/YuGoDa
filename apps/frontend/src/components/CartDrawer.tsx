@@ -91,7 +91,7 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }: Car
                             </button>
                             <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
                             <button
-                              onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                              onClick={() => { if (!item.available || item.quantity < item.available) updateCartQuantity(item.id, item.quantity + 1); }}
                               className="p-1 hover:bg-[#F5F0E8] rounded-md transition-colors text-[#8FA396]"
                             >
                               <Plus className="w-3 h-3" />

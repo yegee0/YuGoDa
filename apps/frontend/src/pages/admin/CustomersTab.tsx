@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, type ReactNode } from 'react';
-import { Users, Search, MoreVertical, Eye, Pause, Ban, Check, Mail, Phone } from 'lucide-react';
+import { Users, Search, MoreVertical, Eye, Pause, Ban, Check, Mail, Phone, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,8 @@ const ROLE_I18N_KEY: Record<RoleFilter, string> = {
   driver:     'role_driver',
 };
 
+const ITEMS_PER_PAGE = 5;
+
 export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,6 +34,8 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [contactTarget, setContactTarget] = useState<AdminUser | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,14 +46,28 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const visibleUsers = useMemo(() => {
+  const filteredAndSortedUsers = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return users.filter(u => {
+    const filtered = users.filter(u => {
       const matchesSearch = (u.displayName || u.email || '').toLowerCase().includes(q);
       const matchesRole = roleFilter === 'all' ? true : (u.role || 'customer') === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [users, searchQuery, roleFilter]);
+    const sorted = filtered.sort((a, b) => {
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return sortDir === 'desc' ? db - da : da - db;
+    });
+    return sorted;
+  }, [users, searchQuery, roleFilter, sortDir]);
+
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, roleFilter, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedUsers.length / ITEMS_PER_PAGE));
+  const paginatedUsers = filteredAndSortedUsers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const performStatusChange = async (uid: string, action: 'suspend' | 'ban' | 'reinstate', confirmKey: string) => {
     if (!window.confirm(t(confirmKey))) return;
@@ -83,7 +101,7 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
 
       <div className="bg-white rounded-2xl border border-[#E8E0D5] shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-[#E8E0D5] flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-bold text-[#1B1B1B]">{t('admin_customers_heading', { count: visibleUsers.length })}</h3>
+          <h3 className="font-bold text-[#1B1B1B]">{t('admin_customers_heading', { count: filteredAndSortedUsers.length })}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <select
               aria-label={t('admin_role_filter_label')}
@@ -114,12 +132,23 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
               <th className="px-6 py-4">{t('admin_col_customer')}</th>
               <th className="px-6 py-4">{t('admin_col_role')}</th>
               <th className="px-6 py-4">{t('admin_col_status')}</th>
-              <th className="px-6 py-4">{t('admin_col_joined')}</th>
+              <th
+                className="px-6 py-4 cursor-pointer select-none hover:text-[#1B5E52] transition-colors group"
+                onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+              >
+                <span className="flex items-center gap-1">
+                  {t('admin_col_joined')}
+                  {sortDir === 'desc'
+                    ? <ChevronDown className="w-3.5 h-3.5 text-[#1B5E52]" />
+                    : <ChevronUp className="w-3.5 h-3.5 text-[#1B5E52]" />
+                  }
+                </span>
+              </th>
               <th className="px-6 py-4 text-right">{t('admin_col_actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F5F0E8]">
-            {visibleUsers.map(u => {
+            {paginatedUsers.map(u => {
               const status: AccountStatus = (u.accountStatus ?? 'active');
               const statusCfg = ACCOUNT_STATUS_CONFIG[status] ?? ACCOUNT_STATUS_CONFIG['active'];
               const isInactive = status !== 'active';
@@ -170,11 +199,13 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
                           transition={{ duration: 0.12 }}
                           className="absolute right-4 top-10 w-52 bg-white rounded-2xl border border-[#E8E0D5] shadow-xl z-30 overflow-hidden"
                         >
-                          <MenuItem
-                            icon={<Eye className="w-3.5 h-3.5" />}
-                            label={t('admin_action_view_orders')}
-                            onClick={() => { setOpenMenuId(null); navigate(`/admin/orders?userId=${u.uid}`); }}
-                          />
+                          {(u.role === 'customer' || !u.role) && (
+                            <MenuItem
+                              icon={<Eye className="w-3.5 h-3.5" />}
+                              label={t('admin_action_view_orders')}
+                              onClick={() => { setOpenMenuId(null); navigate(`/admin/customers/${u.uid}/orders`); }}
+                            />
+                          )}
                           <MenuItem
                             icon={<Mail className="w-3.5 h-3.5" />}
                             label={t('admin_action_contact_info')}
@@ -213,6 +244,27 @@ export default function CustomersTab({ users, onUpdateUser }: CustomersTabProps)
             })}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-[#E8E0D5] flex items-center justify-between">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[#1B5E52] bg-[#F5F0E8] hover:bg-[#E8E0D5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {t('admin_pagination_prev')}
+            </button>
+            <span className="text-xs font-bold text-[#8FA396]">
+              {t('admin_pagination_page', { current: currentPage, total: totalPages })}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-[#1B5E52] bg-[#F5F0E8] hover:bg-[#E8E0D5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {t('admin_pagination_next')}
+            </button>
+          </div>
+        )}
         </div>
       </div>
 

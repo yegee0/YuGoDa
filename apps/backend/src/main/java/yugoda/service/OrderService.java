@@ -1,6 +1,7 @@
 package yugoda.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import yugoda.model.Bag;
 import yugoda.model.Notification;
 import yugoda.model.Order;
 import yugoda.model.Store;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.TextStyle;
 import java.util.*;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -70,21 +73,73 @@ public class OrderService {
         if (body.get("deliveryLat") instanceof Number lat) order.setDeliveryLat(lat.doubleValue());
         if (body.get("deliveryLng") instanceof Number lng) order.setDeliveryLng(lng.doubleValue());
 
+        // Determine requested quantity from items list (sum of quantities for matching bagId, default 1)
+        int qty = 1;
+        Object itemsRaw = body.get("items");
+        if (itemsRaw instanceof List<?> itemsList) {
+            int matched = 0;
+            for (Object item : itemsList) {
+                if (item instanceof Map<?, ?> m) {
+                    Object id = m.get("id");
+                    if (id != null && id.equals(bagId)) {
+                        Object q = m.get("quantity");
+                        if (q instanceof Number n) {
+                            matched += n.intValue();
+                        }
+                    }
+                }
+            }
+            if (matched > 0) qty = matched;
+        }
+
+        // Validate stock availability
+        Bag orderBag = bagRepository.findById(bagId)
+                .orElseThrow(() -> new IllegalArgumentException("Paket bulunamadı."));
+        int avail = orderBag.getAvailable() != null ? orderBag.getAvailable() : 0;
+        if (avail < qty) {
+            if (avail == 0) {
+                throw new IllegalArgumentException("Bu paket tükendi.");
+            }
+            throw new IllegalArgumentException("Yeterli stok yok. Yalnızca " + avail + " adet kaldı.");
+        }
+
+        // Validate that the store is currently open
+        Store orderStore = storeRepository.findById(restaurantId).orElse(null);
+        if (orderStore != null && !isStoreCurrentlyOpen(orderStore.getOperatingHours())) {
+            throw new IllegalArgumentException("Restoran şu anda kapalı.");
+        }
+
+        // Wallet payment: validate balance and prepare deduction
+        User walletUser = null;
+        if ("wallet".equals(order.getPaymentMethod())) {
+            walletUser = userRepository.findById(uid)
+                    .orElseThrow(() -> new IllegalArgumentException("Kullanıcı bulunamadı."));
+            double currentBalance = walletUser.getWalletBalance() != null ? walletUser.getWalletBalance() : 0.0;
+            double chargeAmount = total > 0 ? total : price;
+            if (currentBalance < chargeAmount) {
+                throw new IllegalArgumentException("Yetersiz bakiye. Lütfen YuGoPay cüzdanınıza bakiye yükleyiniz.");
+            }
+        }
+
         orderRepository.save(order);
 
-        // Decrease bag availability
-        bagRepository.findById(bagId).ifPresent(bag -> {
-            int avail = bag.getAvailable() != null ? bag.getAvailable() : 0;
-            bag.setAvailable(Math.max(avail - 1, 0));
-            bagRepository.save(bag);
-        });
+        // Decrease bag availability by the requested quantity
+        orderBag.setAvailable(Math.max(avail - qty, 0));
+        bagRepository.save(orderBag);
+
+        // Deduct wallet balance after order is successfully saved
+        if (walletUser != null && "wallet".equals(order.getPaymentMethod())) {
+            double chargeAmount = total > 0 ? total : price;
+            double newBalance = (walletUser.getWalletBalance() != null ? walletUser.getWalletBalance() : 0.0) - chargeAmount;
+            walletUser.setWalletBalance(Math.max(newBalance, 0.0));
+            userRepository.save(walletUser);
+        }
 
         // Create transaction record with commission split
         double baseAmount = total > 0 ? total : price;
         double rate = 15.0;
-        Store store = storeRepository.findById(restaurantId).orElse(null);
-        if (store != null && store.getCommissionRate() != null) {
-            rate = store.getCommissionRate();
+        if (orderStore != null && orderStore.getCommissionRate() != null) {
+            rate = orderStore.getCommissionRate();
         }
         double commissionAmt = baseAmount * (rate / 100.0);
 
@@ -244,5 +299,26 @@ public class OrderService {
     private double toDouble(Object v) {
         if (v == null) return 0;
         return ((Number) v).doubleValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean isStoreCurrentlyOpen(String operatingHoursJson) {
+        if (operatingHoursJson == null) return true;
+        try {
+            List<Map<String, Object>> schedule = objectMapper.readValue(operatingHoursJson, List.class);
+            String dayName = LocalDateTime.now().getDayOfWeek()
+                    .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+            Map<String, Object> slot = schedule.stream()
+                    .filter(s -> dayName.equals(s.get("day")))
+                    .findFirst().orElse(null);
+            if (slot == null || !Boolean.TRUE.equals(slot.get("isOpen"))) return false;
+            LocalDateTime now = LocalDateTime.now();
+            String currentTime = String.format("%02d:%02d", now.getHour(), now.getMinute());
+            String open = (String) slot.get("open");
+            String close = (String) slot.get("close");
+            return currentTime.compareTo(open) >= 0 && currentTime.compareTo(close) <= 0;
+        } catch (Exception e) {
+            return true;
+        }
     }
 }

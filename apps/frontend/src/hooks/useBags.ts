@@ -3,6 +3,17 @@ import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import type { Bag } from '@/types';
 
+function getSavedCity(): string | null {
+  try {
+    const saved = localStorage.getItem('yugoda_location');
+    if (saved) {
+      const parsed = JSON.parse(saved) as { city?: string };
+      return parsed.city || null;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 'favorites') {
   const [bags, setBags] = useState<Bag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +25,9 @@ export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 
 
     async function fetchBags() {
       try {
-        const data = await api.get('/bags');
+        const city = getSavedCity();
+        const url = city ? `/bags?city=${encodeURIComponent(city)}` : '/bags';
+        const data = await api.get(url);
         if (!cancelled) {
           setBags(data.bags || []);
         }

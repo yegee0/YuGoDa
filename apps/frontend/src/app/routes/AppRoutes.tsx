@@ -15,6 +15,7 @@ import CheckoutPage from '@/pages/CheckoutPage';
 import ProfileView from '@/pages/ProfileView';
 import RestaurantPortal from '@/pages/StorePanel';
 import AdminDashboard from '@/pages/AdminPanel';
+import CustomerOrdersPage from '@/pages/admin/CustomerOrdersPage';
 import AboutPage from '@/pages/legal/AboutPage';
 import PrivacyPage from '@/pages/legal/PrivacyPage';
 import TermsPage from '@/pages/legal/TermsPage';
@@ -87,6 +88,7 @@ export default function AppRoutes() {
           <Route path="/admin/support" element={<AdminDashboard />} />
           <Route path="/admin/live-chat" element={<AdminDashboard />} />
           <Route path="/admin/settings" element={<AdminDashboard />} />
+          <Route path="/admin/customers/:customerId/orders" element={<CustomerOrdersPage />} />
         </Route>
       </Route>
 

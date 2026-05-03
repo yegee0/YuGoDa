@@ -25,12 +25,13 @@ function isStoreCurrentlyOpen(operatingHours: OperatingHours[] | null | undefine
   return t >= slot.open && t <= slot.close;
 }
 
-function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
+function BagCard({ bag, store, onAdd, cartQty, onInc, onDec, isOpen = true }: {
   bag: Bag; store: StoreProfile;
   onAdd: () => void;
   cartQty: number;
   onInc: () => void;
   onDec: () => void;
+  isOpen?: boolean;
 }) {
   const { t } = useTranslation();
   const discount = bag.originalPrice > bag.price
@@ -69,6 +70,11 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
             </span>
           )}
         </div>
+        {!isOpen && (
+          <div className="absolute inset-0 bg-[#1B1B1B]/60 flex items-center justify-center">
+            <span className="text-white font-black text-sm bg-[#1B1B1B]/70 px-3 py-1 rounded-full">{t('Closed')}</span>
+          </div>
+        )}
         {bag.available === 0 && (
           <div className="absolute inset-0 bg-[#1B1B1B]/60 flex items-center justify-center">
             <span className="text-white font-black text-sm bg-[#1B1B1B]/70 px-3 py-1 rounded-full">{t('Sold Out')}</span>
@@ -99,8 +105,8 @@ function BagCard({ bag, store, onAdd, cartQty, onInc, onDec }: {
             )}
           </div>
 
-          {bag.available === 0 ? (
-            <span className="text-xs text-[#8FA396] font-bold">{t('Unavailable')}</span>
+          {bag.available === 0 || !isOpen ? (
+            <span className="text-xs text-[#8FA396] font-bold">{!isOpen ? t('Closed') : t('Unavailable')}</span>
           ) : cartQty === 0 ? (
             <button
               onClick={onAdd}
@@ -363,6 +369,7 @@ export default function StorePage() {
                           bag={bag}
                           store={store}
                           cartQty={qty}
+                          isOpen={isOpen}
                           onAdd={() => addToCart({
                             id: bag.id,
                             restaurantId: bag.restaurantId,
@@ -370,9 +377,11 @@ export default function StorePage() {
                             name: `${bag.category} Magic Bag`,
                             price: bag.price,
                             quantity: 1,
+                            available: bag.available ?? 0,
+                            isCurrentlyOpen: isOpen,
                             image: bag.image || store.coverImage || 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&q=80',
                           })}
-                          onInc={() => updateCartQuantity(bag.id, qty + 1)}
+                          onInc={() => { if (qty < (bag.available ?? 0)) updateCartQuantity(bag.id, qty + 1); }}
                           onDec={() => qty > 1 ? updateCartQuantity(bag.id, qty - 1) : removeFromCart(bag.id)}
                         />
                       );
@@ -577,7 +586,7 @@ export default function StorePage() {
                     </button>
                     <span className="text-xs font-black w-4 text-center text-[#1B1B1B]">{item.quantity}</span>
                     <button
-                      onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                      onClick={() => { if (!item.available || item.quantity < item.available) updateCartQuantity(item.id, item.quantity + 1); }}
                       className="w-6 h-6 bg-[#1B5E52] rounded-lg flex items-center justify-center hover:bg-[#164d43] transition-colors"
                     >
                       <Plus className="w-3 h-3 text-white" />

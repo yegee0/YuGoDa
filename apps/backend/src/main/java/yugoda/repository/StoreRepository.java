@@ -10,4 +10,5 @@ import java.util.List;
 public interface StoreRepository extends JpaRepository<Store, String> {
     List<Store> findByStatusOrderByCreatedAtDesc(String status);
     List<Store> findAllByOrderByCreatedAtDesc();
+    List<Store> findByAddressContainingIgnoreCase(String city);
 }

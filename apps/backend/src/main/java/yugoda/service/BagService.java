@@ -27,7 +27,8 @@ public class BagService {
     private final ObjectMapper objectMapper;
 
     public List<Bag> listBags(String dietaryType, String merchantType, Double minPrice, Double maxPrice,
-                               Double minRating, String sortBy, String search, String restaurantId, boolean showAll) {
+                               Double minRating, String sortBy, String search, String restaurantId,
+                               String city, boolean showAll) {
 
         boolean skipAvailableFilter = showAll && restaurantId != null;
         Stream<Bag> stream = bagRepository.findAll().stream();
@@ -47,6 +48,13 @@ public class BagService {
         if (minPrice != null) stream = stream.filter(b -> b.getPrice() != null && b.getPrice() >= minPrice);
         if (maxPrice != null) stream = stream.filter(b -> b.getPrice() != null && b.getPrice() <= maxPrice);
         if (minRating != null) stream = stream.filter(b -> b.getRating() != null && b.getRating() >= minRating);
+        if (city != null && !city.isBlank()) {
+            Set<String> cityStoreIds = storeRepository.findByAddressContainingIgnoreCase(city)
+                    .stream()
+                    .map(Store::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+            stream = stream.filter(b -> cityStoreIds.contains(b.getRestaurantId()));
+        }
         if (restaurantId != null) stream = stream.filter(b -> restaurantId.equals(b.getRestaurantId()));
         if (search != null && !search.isBlank()) {
             String q = search.toLowerCase();

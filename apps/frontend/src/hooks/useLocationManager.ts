@@ -59,8 +59,9 @@ export function useLocationManager() {
         setUserLocation({ lat, lng });
         const data = await reverseGeocodeNominatim(lat, lng);
         const name = nominatimDisplayName(data, 'Current Location');
+        const city = data?.address?.city || data?.address?.town || data?.address?.village || null;
         setLocationName(name);
-        localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name }));
+        localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name, city }));
         setLocationLoading(false);
         setShowSetLocation(false);
       },

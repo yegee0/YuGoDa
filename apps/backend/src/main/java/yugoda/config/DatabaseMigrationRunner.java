@@ -99,6 +99,7 @@ public class DatabaseMigrationRunner implements ApplicationRunner {
 
     private void migrateStores() {
         alterToTextIfNeeded("stores", "logo");
+        addColumnIfMissing("stores", "city", "VARCHAR(100)");
     }
 
     private void migrateUniqueEmailRoleIndex() {

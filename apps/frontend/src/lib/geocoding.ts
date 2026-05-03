@@ -114,3 +114,4 @@ export function formatNominatimAddress(
   const parts = [city, district, neighbourhood].filter(Boolean) as string[];
   return parts.length > 0 ? parts.join(' › ') : null;
 }
+
