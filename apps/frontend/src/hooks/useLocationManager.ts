@@ -11,9 +11,18 @@ interface Coords {
   lng: number;
 }
 
+function readCityFromStorage(): string | null {
+  try {
+    const saved = localStorage.getItem('yugoda_location');
+    if (saved) return (JSON.parse(saved) as { city?: string }).city || null;
+  } catch { /* ignore */ }
+  return null;
+}
+
 export function useLocationManager() {
   const [userLocation, setUserLocation] = useState<Coords>({ lat: 47.6062, lng: -122.3321 });
   const [locationName, setLocationName] = useState('');
+  const [locationCity, setLocationCity] = useState<string | null>(readCityFromStorage);
   const [locationLoading, setLocationLoading] = useState(false);
   const [showSetLocation, setShowSetLocation] = useState(false);
 
@@ -33,6 +42,7 @@ export function useLocationManager() {
         const parsed = JSON.parse(saved);
         setUserLocation(parsed.coords);
         setLocationName(parsed.name || '');
+        setLocationCity(parsed.city || null);
         return;
       } catch { }
     }
@@ -61,6 +71,7 @@ export function useLocationManager() {
         const name = nominatimDisplayName(data, 'Current Location');
         const city = data?.address?.city || data?.address?.town || data?.address?.village || null;
         setLocationName(name);
+        setLocationCity(city);
         localStorage.setItem('yugoda_location', JSON.stringify({ coords: { lat, lng }, name, city }));
         setLocationLoading(false);
         setShowSetLocation(false);
@@ -124,6 +135,8 @@ export function useLocationManager() {
     setUserLocation,
     locationName,
     setLocationName,
+    locationCity,
+    setLocationCity,
     locationLoading,
     showSetLocation,
     setShowSetLocation,

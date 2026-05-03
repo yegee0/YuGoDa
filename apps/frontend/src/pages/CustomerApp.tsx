@@ -207,11 +207,12 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const {
     userLocation, setUserLocation,
     locationName, setLocationName,
+    locationCity, setLocationCity,
     mapSearch, setMapSearch: searchMapFn,
     mapSuggestions, showMapSuggestions, setShowMapSuggestions,
     mapSearchLoading, mapSearchRef,
   } = useLocationManager();
-  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab);
+  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab, locationCity);
 
   // Build autocomplete suggestions from bags data
   useEffect(() => {
@@ -717,6 +718,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                 setLocationName(name);
                 const geoData = await reverseGeocodeNominatim(coords.lat, coords.lng);
                 const city = geoData?.address?.city || geoData?.address?.town || geoData?.address?.village || null;
+                setLocationCity(city);
                 localStorage.setItem('yugoda_location', JSON.stringify({ coords, name, city }));
                 setActiveTab('discover');
               }}

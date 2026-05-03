@@ -202,13 +202,16 @@ export default function ProfileView() {
     setEditingAddr(null);
   };
 
+  const MAX_TOPUP = 5000;
+
   const handleTopUp = async () => {
     if (!userProfile) return;
-    const newBalance = (userProfile.walletBalance || 0) + topUpAmount;
+    const clamped = Math.min(topUpAmount, MAX_TOPUP);
+    const newBalance = (userProfile.walletBalance || 0) + clamped;
     setUserProfile({ ...userProfile, walletBalance: newBalance });
     api.put('/users/me', { walletBalance: newBalance }).catch(() => {});
     setShowWalletModal(false);
-    toast.success(t('profile_wallet_topup_success', { amount: topUpAmount }));
+    toast.success(t('profile_wallet_topup_success', { amount: clamped }));
   };
 
   const handleDeleteAccount = async () => {
@@ -968,9 +971,9 @@ export default function ProfileView() {
               <div className="mb-5">
                 <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('profile_wallet_custom')}</label>
                 <input
-                  type="number" min={1}
+                  type="number" min={1} max={MAX_TOPUP}
                   value={topUpAmount}
-                  onChange={e => setTopUpAmount(Number(e.target.value))}
+                  onChange={e => setTopUpAmount(Math.min(Number(e.target.value), MAX_TOPUP))}
                   className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] focus:outline-none focus:border-[#1B5E52]"
                 />
               </div>
