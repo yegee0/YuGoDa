@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { useStore } from '@/app/store/useStore';
 import { reverseGeocodeNominatim, nominatimDisplayName } from '@/lib/geocoding';
+import { validatePhoneNumber } from '@/lib/phoneValidation';
 import i18n from '@/lib/i18n';
 
 const ISTANBUL = { lat: 41.0082, lng: 28.9784 };
@@ -233,6 +234,10 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
             toast.error('Please enter your phone number.');
             return;
         }
+        if (!validatePhoneNumber(form.countryCode, form.phone)) {
+            toast.error('Please enter a valid phone number for the selected country.');
+            return;
+        }
         setSaving(true);
         try {
             const newAddress = {
@@ -405,10 +410,10 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                     <div>
                                         <label className="text-xs font-bold text-[#8FA396] uppercase tracking-wide mb-1.5 block">{t('address_field_floor_label')}</label>
                                         <input
-                                            type="text"
+                                            type="number"
                                             placeholder={t('address_field_floor_placeholder')}
                                             value={form.floor}
-                                            onChange={e => setForm(f => ({ ...f, floor: e.target.value }))}
+                                            onChange={e => setForm(f => ({ ...f, floor: e.target.value.replace(/[^0-9]/g, '') }))}
                                             className="w-full px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
                                         />
                                     </div>
@@ -465,7 +470,7 @@ function PickerBody({ initialLocation, initialName, onConfirm, onClose, mode = '
                                             type="tel"
                                             placeholder={t('address_field_phone_placeholder')}
                                             value={form.phone}
-                                            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                                            onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9]/g, '') }))}
                                             className="flex-1 px-4 py-3 rounded-xl bg-[#F5F0E8] border border-[#E8E0D5] text-sm text-[#1B1B1B] placeholder-gray-300 focus:outline-none focus:border-[#1B5E52] transition-colors"
                                         />
                                     </div>

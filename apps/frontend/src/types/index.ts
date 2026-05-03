@@ -50,6 +50,7 @@ export interface Address {
   deliveryNote?: string;
   phone?: string;
   company?: string;
+  isActive?: boolean;
 }
 
 // ── Orders ───────────────────────────────────────────────

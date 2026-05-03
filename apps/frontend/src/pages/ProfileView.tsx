@@ -15,11 +15,65 @@ import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Address, Order, CartItem, StoreProfile, UserProfile } from '@/types';
 import { reverseGeocodeNominatim, formatNominatimAddress } from '@/lib/geocoding';
+import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 
 /** Matches the coordinate fallback label stored by LocationPickerMap ("41.0052, 29.0353"). */
 const COORD_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+
+/**
+ * PlacesInput — Google Places Autocomplete-backed text input.
+ * Must be rendered inside an `<APIProvider>`. On selection emits the formatted
+ * address along with the selected place's lat/lng so callers can persist coords.
+ */
+function PlacesInput({
+  initialValue,
+  onChange,
+  placeholder,
+  className,
+  inputKey,
+}: {
+  initialValue: string;
+  onChange: (val: string, lat?: number, lng?: number) => void;
+  placeholder?: string;
+  className?: string;
+  inputKey?: string | number;
+}) {
+  const placesLib = useMapsLibrary('places');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!placesLib || !inputRef.current) return;
+    const ac = new placesLib.Autocomplete(inputRef.current, {
+      types: ['geocode'],
+      fields: ['formatted_address', 'geometry'],
+    });
+    const listener = ac.addListener('place_changed', () => {
+      const place = ac.getPlace();
+      onChange(
+        place.formatted_address || inputRef.current?.value || '',
+        place.geometry?.location?.lat(),
+        place.geometry?.location?.lng(),
+      );
+    });
+    return () => { google.maps.event.removeListener(listener); };
+  }, [placesLib]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <input
+      key={inputKey}
+      ref={inputRef}
+      type="text"
+      defaultValue={initialValue}
+      onBlur={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
 
 const TAG_ICON: Record<string, React.ReactNode> = {
   home:    <Home      className="w-4 h-4" />,
@@ -520,7 +574,15 @@ export default function ProfileView() {
                     <p className="text-xs text-[#B0BDB7] mt-1">{t('profile_add_address_hint')}</p>
                   </div>
                 ) : (
-                  userProfile.addresses.map((addr: Address, i: number) => {
+                  (() => {
+                    const getActiveIndex = (addrs: Address[]): number => {
+                      const explicit = addrs.findIndex(a => a.isActive);
+                      if (explicit >= 0) return explicit;
+                      const home = addrs.findIndex(a => a.tag === 'home');
+                      return home >= 0 ? home : 0;
+                    };
+                    const activeIdx = getActiveIndex(userProfile.addresses);
+                    return userProfile.addresses.map((addr: Address, i: number) => {
                     const tag = addr.tag || 'other';
                     const label = addr.addressLabel || addr.label || t('profile_saved_address');
                     const details = [addr.apartment, addr.floor && `${t('profile_floor_prefix')} ${addr.floor}`, addr.unit && `${t('profile_unit_prefix')} ${addr.unit}`]
@@ -550,6 +612,11 @@ export default function ProfileView() {
                               <span className="text-[10px] font-bold uppercase tracking-wide text-[#8FA396] bg-[#F5F0E8] px-2 py-0.5 rounded-full">
                                 {t(`profile_tag_${tag}`)}
                               </span>
+                              {i === activeIdx && (
+                                <span className="text-[10px] font-bold text-white bg-[#1B5E52] px-2 py-0.5 rounded-full">
+                                  {t('profile_addr_active')}
+                                </span>
+                              )}
                             </div>
                             {details && <p className="text-xs text-[#8FA396]">{details}</p>}
                             {addr.phone && (
@@ -566,8 +633,25 @@ export default function ProfileView() {
                               <p className="text-xs text-[#8FA396] mt-1 italic">"{addr.deliveryNote}"</p>
                             )}
                           </div>
-                          {/* Change + Delete buttons */}
+                          {/* Use + Change + Delete buttons */}
                           <div className="flex items-center gap-1 flex-shrink-0">
+                            {i !== activeIdx && (
+                              <button
+                                onClick={() => {
+                                  if (!userProfile) return;
+                                  const updated = userProfile.addresses.map((a: Address, idx: number) => ({
+                                    ...a,
+                                    isActive: idx === i,
+                                  }));
+                                  setUserProfile({ ...userProfile, addresses: updated });
+                                  api.put('/users/me', { addresses: updated }).catch(() => {});
+                                  toast.success(t('profile_addr_set_active'));
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#FF9F1C]/10 text-[#FF9F1C] hover:bg-[#FF9F1C]/20 transition-colors"
+                              >
+                                {t('profile_addr_use')}
+                              </button>
+                            )}
                             <button
                               onClick={() => isEditingThis ? (setEditingAddrIndex(null), setEditingAddr(null)) : openEditAddress(i)}
                               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
@@ -600,19 +684,48 @@ export default function ProfileView() {
                             >
                               <div className="p-4 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
+                                  {/* Address label — Places Autocomplete */}
+                                  <div className="col-span-2">
+                                    <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{t('profile_addr_label_field')}</label>
+                                    {GOOGLE_MAPS_API_KEY ? (
+                                      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                                        <PlacesInput
+                                          inputKey={editingAddrIndex ?? -1}
+                                          initialValue={editingAddr.addressLabel || ''}
+                                          onChange={(val, lat, lng) => setEditingAddr(a => a ? {
+                                            ...a,
+                                            addressLabel: val,
+                                            ...(lat != null ? { latitude: lat } : {}),
+                                            ...(lng != null ? { longitude: lng } : {}),
+                                          } : a)}
+                                          placeholder={t('profile_addr_neighbourhood_ph')}
+                                          className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
+                                        />
+                                      </APIProvider>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        value={editingAddr.addressLabel || ''}
+                                        onChange={e => setEditingAddr(a => a ? { ...a, addressLabel: e.target.value } : a)}
+                                        placeholder={t('profile_addr_neighbourhood_ph')}
+                                        className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
+                                      />
+                                    )}
+                                  </div>
+
+                                  {/* Remaining fields */}
                                   {[
-                                    { key: 'addressLabel', label: t('profile_addr_label_field'), placeholder: t('profile_addr_neighbourhood_ph') },
-                                    { key: 'apartment',    label: t('profile_addr_apartment'),   placeholder: t('profile_addr_building_ph') },
-                                    { key: 'unit',         label: t('profile_addr_unit'),        placeholder: t('profile_addr_no_ph') },
-                                    { key: 'floor',        label: t('profile_addr_floor'),       placeholder: t('profile_addr_floor_ph') },
-                                    { key: 'company',      label: t('profile_addr_company'),     placeholder: t('profile_addr_optional_ph') },
-                                    { key: 'phone',        label: t('profile_addr_phone'),       placeholder: '+90 5XX…' },
+                                    { key: 'apartment', label: t('profile_addr_apartment'),   placeholder: t('profile_addr_building_ph') },
+                                    { key: 'unit',      label: t('profile_addr_unit'),        placeholder: t('profile_addr_no_ph') },
+                                    { key: 'floor',     label: t('profile_addr_floor'),       placeholder: t('profile_addr_floor_ph') },
+                                    { key: 'company',   label: t('profile_addr_company'),     placeholder: t('profile_addr_optional_ph') },
+                                    { key: 'phone',     label: t('profile_addr_phone'),       placeholder: '+90 5XX…' },
                                   ].map(({ key, label, placeholder }) => (
                                     <div key={key}>
                                       <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{label}</label>
                                       <input
                                         type="text"
-                                        value={editingAddr[key] || ''}
+                                        value={editingAddr[key as keyof typeof editingAddr] as string || ''}
                                         onChange={e => setEditingAddr(a => a ? { ...a, [key]: e.target.value } : a)}
                                         placeholder={placeholder}
                                         className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
@@ -660,7 +773,8 @@ export default function ProfileView() {
                         </AnimatePresence>
                       </motion.div>
                     );
-                  })
+                  });
+                  })()
                 )}
               </div>
             )}
