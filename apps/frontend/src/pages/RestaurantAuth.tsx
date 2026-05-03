@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import AddressAutocomplete from '@/components/shared/AddressAutocomplete';
+import { validatePhoneNumber } from '@/lib/phoneValidation';
 
 // ── palette ────────────────────────────────────────────────────
 const C = {
@@ -122,9 +123,14 @@ export default function RestaurantAuth() {
     address: '', businessType: 'Restaurant',
     lat: 0, lng: 0,
   });
+  const [countryCode, setCountryCode] = useState('+90');
   const set = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(p => ({ ...p, [field]: e.target.value }));
+  const setPhoneDigitsOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9\s\-().]/g, '');
+    setForm(p => ({ ...p, phone: val }));
+  };
 
   // Redirect only if already logged in as the SAME role (restaurant).
   // A different-role session does NOT redirect; the user can sign in to switch.
@@ -148,6 +154,8 @@ export default function RestaurantAuth() {
       } else {
         if (!form.email || !form.password || !form.businessName)
           throw new Error(t('auth_restaurant_required_fields_error'));
+        if (form.phone && !validatePhoneNumber(countryCode, form.phone))
+          throw new Error(t('auth_phone_invalid'));
         await createUserWithEmailAndPassword(authPartner, form.email, form.password);
         const displayName = `${form.firstName} ${form.lastName}`.trim() || form.email;
         await api.post('/users/register', {
@@ -338,6 +346,8 @@ export default function RestaurantAuth() {
                     <label style={lbl}>{t('auth_field_phone')}</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <select
+                        value={countryCode}
+                        onChange={e => setCountryCode(e.target.value)}
                         style={{
                           background: 'rgba(255,255,255,0.07)',
                           border: '1.5px solid rgba(255,255,255,0.14)',
@@ -350,13 +360,15 @@ export default function RestaurantAuth() {
                           flexShrink: 0,
                         }}
                       >
-                        <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>TR +90</option>
-                        <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>US +1</option>
-                        <option style={{ background: '#0e2e1e', color: '#f5f0e8' }}>UK +44</option>
+                        <option value="+90" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>TR +90</option>
+                        <option value="+1"  style={{ background: '#0e2e1e', color: '#f5f0e8' }}>US +1</option>
+                        <option value="+44" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>UK +44</option>
+                        <option value="+49" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>DE +49</option>
+                        <option value="+33" style={{ background: '#0e2e1e', color: '#f5f0e8' }}>FR +33</option>
                       </select>
                       <div style={{ position: 'relative', flex: 1 }}>
                         <span style={iconWrap}><PhoneIcon /></span>
-                        <input type="tel" value={form.phone} onChange={set('phone')}
+                        <input type="tel" value={form.phone} onChange={setPhoneDigitsOnly}
                           onFocus={() => setFocused('phone')} onBlur={() => setFocused('')}
                           placeholder="555 123 4567" style={inp('phone')} />
                       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   MapPin,
   Filter,
@@ -199,26 +199,22 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [visibleCount, setVisibleCount] = useState(16);
   const searchRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Callback ref — creates/destroys the IntersectionObserver whenever the
-  // sentinel element mounts or unmounts (works in production unlike useEffect + ref.current dep).
-  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (!node) return;
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => prev + 16);
-        }
-      },
-      { rootMargin: '300px' },
-    );
-    observerRef.current.observe(node);
-  }, []);
+  // Infinite scroll via scroll event on the overflow container (IntersectionObserver
+  // with root:null doesn't fire for elements inside overflow-y-auto divs).
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      if (scrollHeight - scrollTop - clientHeight < 400) {
+        setVisibleCount(prev => prev + 16);
+      }
+    };
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [activeTab]);
 
   const { user, userProfile, filters, cart, clearCart } = useStore();
 
@@ -518,7 +514,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#1B5E52]/30 border-t-[#748f2b]"></div>
           </div>
         ) : (activeTab === 'discover' || activeTab === 'favorites' ? (
-          <div className="h-full overflow-y-auto p-4 md:p-8">
+          <div ref={scrollContainerRef} className="h-full overflow-y-auto p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-between items-center mb-6 md:mb-8">
                 <div>
@@ -628,9 +624,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                       ))}
                     </div>
 
-                    {/* Infinite scroll sentinel */}
+                    {/* Infinite scroll loading indicator */}
                     {visibleCount < restaurantsList.length && (
-                      <div ref={sentinelRef} className="flex justify-center items-center py-8 mt-4">
+                      <div className="flex justify-center items-center py-8 mt-4">
                         <div className="flex gap-1.5">
                           {[0, 1, 2].map(i => (
                             <span
