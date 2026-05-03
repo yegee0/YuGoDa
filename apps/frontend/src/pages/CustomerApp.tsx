@@ -197,7 +197,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const [checkoutData, setCheckoutData] = useState<{ items: CartItem[]; tip: number; bookingFee: number; tax: number; total: number; deliveryType: string; paymentMethod: string; leaveAtDoor: boolean } | null>(null);
   const [searchSuggestions, setSearchSuggestions] = useState<{ type: string; label: string; sublabel: string; bag?: Bag }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(16);
   const searchRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { user, userProfile, filters, cart, clearCart } = useStore();
 
@@ -252,6 +254,27 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  // Infinite scroll: reset count when list changes (new filter/search/tab)
+  useEffect(() => {
+    setVisibleCount(16);
+  }, [filteredBags, activeTab, searchQuery]);
+
+  // Infinite scroll: observe sentinel and load 16 more when visible
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => prev + 16);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sentinelRef.current]);
 
   // Unique restaurants matching the current search query (for restaurant result cards)
   const matchingRestaurants = searchQuery.trim()
@@ -560,44 +583,61 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
               ) : (
                 /* Discover tab'ı: paketler yerine restoran kartları. */
                 restaurantsList.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    {restaurantsList.map(r => (
-                      <Link
-                        key={r.id}
-                        to={`/store/${r.id}`}
-                        className="bg-white rounded-2xl overflow-hidden border border-[#E8E0D5] hover:shadow-lg hover:border-[#1B5E52]/30 transition-all"
-                      >
-                        <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#1B5E52]/10 to-[#1B5E52]/5">
-                          {r.cover ? (
-                            <img src={r.cover} alt={r.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Store className="w-12 h-12 text-[#1B5E52]/30" />
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-xs font-bold text-[#1B1B1B] shadow-sm">
-                            <ShoppingBag className="w-3 h-3 text-[#1B5E52]" />
-                            {r.bagCount}
-                          </div>
-                        </div>
-                        <div className="p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-black text-[#1B1B1B] truncate flex-1">{r.name}</p>
-                            {r.avgRating > 0 && (
-                              <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#1B5E52] shrink-0">
-                                <Star className="w-3 h-3 fill-current" />
-                                {r.avgRating.toFixed(1)}
-                              </span>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                      {restaurantsList.slice(0, visibleCount).map(r => (
+                        <Link
+                          key={r.id}
+                          to={`/store/${r.id}`}
+                          className="bg-white rounded-2xl overflow-hidden border border-[#E8E0D5] hover:shadow-lg hover:border-[#1B5E52]/30 transition-all"
+                        >
+                          <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#1B5E52]/10 to-[#1B5E52]/5">
+                            {r.cover ? (
+                              <img src={r.cover} alt={r.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Store className="w-12 h-12 text-[#1B5E52]/30" />
+                              </div>
                             )}
+                            <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-xs font-bold text-[#1B1B1B] shadow-sm">
+                              <ShoppingBag className="w-3 h-3 text-[#1B5E52]" />
+                              {r.bagCount}
+                            </div>
                           </div>
-                          {r.category && (
-                            <p className="text-[11px] text-[#8FA396] font-medium truncate mt-0.5">{r.category}</p>
-                          )}
-                          <p className="text-xs font-bold text-[#FF9F1C] mt-1.5">{t('disc_from_price', { price: TL(r.minPrice) })}</p>
+                          <div className="p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-black text-[#1B1B1B] truncate flex-1">{r.name}</p>
+                              {r.avgRating > 0 && (
+                                <span className="flex items-center gap-0.5 text-[11px] font-bold text-[#1B5E52] shrink-0">
+                                  <Star className="w-3 h-3 fill-current" />
+                                  {r.avgRating.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                            {r.category && (
+                              <p className="text-[11px] text-[#8FA396] font-medium truncate mt-0.5">{r.category}</p>
+                            )}
+                            <p className="text-xs font-bold text-[#FF9F1C] mt-1.5">{t('disc_from_price', { price: TL(r.minPrice) })}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+
+                    {/* Infinite scroll sentinel */}
+                    {visibleCount < restaurantsList.length && (
+                      <div ref={sentinelRef} className="flex justify-center items-center py-8 mt-4">
+                        <div className="flex gap-1.5">
+                          {[0, 1, 2].map(i => (
+                            <span
+                              key={i}
+                              className="w-2 h-2 rounded-full animate-bounce"
+                              style={{ backgroundColor: 'rgba(255,255,255,0.5)', animationDelay: `${i * 0.15}s` }}
+                            />
+                          ))}
                         </div>
-                      </Link>
-                    ))}
-                  </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 border border-white/20" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
