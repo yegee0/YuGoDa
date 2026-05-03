@@ -197,24 +197,10 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const [checkoutData, setCheckoutData] = useState<{ items: CartItem[]; tip: number; bookingFee: number; tax: number; total: number; deliveryType: string; paymentMethod: string; leaveAtDoor: boolean } | null>(null);
   const [searchSuggestions, setSearchSuggestions] = useState<{ type: string; label: string; sublabel: string; bag?: Bag }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(16);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 16;
   const searchRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Infinite scroll via scroll event on the overflow container (IntersectionObserver
-  // with root:null doesn't fire for elements inside overflow-y-auto divs).
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      if (scrollHeight - scrollTop - clientHeight < 400) {
-        setVisibleCount(prev => prev + 16);
-      }
-    };
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [activeTab]);
 
   const { user, userProfile, filters, cart, clearCart } = useStore();
 
@@ -271,9 +257,9 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     setActiveTab(initialTab);
   }, [initialTab]);
 
-  // Infinite scroll: reset count when list changes (new filter/search/tab)
+  // Reset to page 1 when list changes (new filter/search/tab)
   useEffect(() => {
-    setVisibleCount(16);
+    setCurrentPage(1);
   }, [filteredBags, activeTab, searchQuery]);
 
 
@@ -586,7 +572,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                 restaurantsList.length > 0 ? (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                      {restaurantsList.slice(0, visibleCount).map(r => (
+                      {restaurantsList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(r => (
                         <Link
                           key={r.id}
                           to={`/store/${r.id}`}
@@ -624,18 +610,28 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
                       ))}
                     </div>
 
-                    {/* Infinite scroll loading indicator */}
-                    {visibleCount < restaurantsList.length && (
-                      <div className="flex justify-center items-center py-8 mt-4">
-                        <div className="flex gap-1.5">
-                          {[0, 1, 2].map(i => (
-                            <span
-                              key={i}
-                              className="w-2 h-2 rounded-full animate-bounce"
-                              style={{ backgroundColor: 'rgba(255,255,255,0.5)', animationDelay: `${i * 0.15}s` }}
-                            />
-                          ))}
-                        </div>
+                    {/* Pagination controls */}
+                    {restaurantsList.length > PAGE_SIZE && (
+                      <div className="flex justify-center items-center gap-3 py-8 mt-4">
+                        <button
+                          onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          style={{ background: currentPage === 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.25)' }}
+                        >
+                          ← {t('pagination_prev')}
+                        </button>
+                        <span className="text-sm font-bold px-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                          {currentPage} / {Math.ceil(restaurantsList.length / PAGE_SIZE)}
+                        </span>
+                        <button
+                          onClick={() => { setCurrentPage(p => Math.min(Math.ceil(restaurantsList.length / PAGE_SIZE), p + 1)); scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          disabled={currentPage === Math.ceil(restaurantsList.length / PAGE_SIZE)}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          style={{ background: currentPage === Math.ceil(restaurantsList.length / PAGE_SIZE) ? 'rgba(255,255,255,0.1)' : 'rgba(197,241,53,0.2)', color: '#c5f135', border: '1.5px solid rgba(197,241,53,0.35)' }}
+                        >
+                          {t('pagination_next')} →
+                        </button>
                       </div>
                     )}
                   </>
