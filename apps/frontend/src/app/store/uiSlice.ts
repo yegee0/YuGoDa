@@ -18,6 +18,9 @@ export interface UiSlice {
   resetFilters: () => void;
   notifications: Notification[];
   setNotifications: (notifications: Notification[]) => void;
+  /** City used for restaurant discovery — updated by map picker and "Use" address button */
+  locationCity: string | null;
+  setLocationCity: (city: string | null) => void;
 }
 
 const initialFilters: Filters = {
@@ -28,6 +31,14 @@ const initialFilters: Filters = {
   minRating: 0,
   pickupTime: null,
 };
+
+function readCityFromStorage(): string | null {
+  try {
+    const saved = localStorage.getItem('yugoda_location');
+    if (saved) return (JSON.parse(saved) as { city?: string }).city || null;
+  } catch { /* ignore */ }
+  return null;
+}
 
 export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   isDarkMode: localStorage.getItem('theme') === 'dark',
@@ -47,4 +58,6 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   resetFilters: () => set({ filters: initialFilters }),
   notifications: [],
   setNotifications: (notifications) => set({ notifications }),
+  locationCity: readCityFromStorage(),
+  setLocationCity: (city) => set({ locationCity: city }),
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   MapPin,
   Filter,
@@ -199,7 +199,26 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [visibleCount, setVisibleCount] = useState(16);
   const searchRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Callback ref — creates/destroys the IntersectionObserver whenever the
+  // sentinel element mounts or unmounts (works in production unlike useEffect + ref.current dep).
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (!node) return;
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => prev + 16);
+        }
+      },
+      { rootMargin: '300px' },
+    );
+    observerRef.current.observe(node);
+  }, []);
 
   const { user, userProfile, filters, cart, clearCart } = useStore();
 
@@ -212,7 +231,7 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     mapSuggestions, showMapSuggestions, setShowMapSuggestions,
     mapSearchLoading, mapSearchRef,
   } = useLocationManager();
-  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab, locationCity);
+  const { bags, filteredBags, loading } = useBags(searchQuery, activeTab);
 
   // Build autocomplete suggestions from bags data
   useEffect(() => {
@@ -261,21 +280,6 @@ export default function CustomerApp({ initialTab = 'discover' }: { initialTab?: 
     setVisibleCount(16);
   }, [filteredBags, activeTab, searchQuery]);
 
-  // Infinite scroll: observe sentinel and load 16 more when visible
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => prev + 16);
-        }
-      },
-      { rootMargin: '200px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [sentinelRef.current]);
 
   // Unique restaurants matching the current search query (for restaurant result cards)
   const matchingRestaurants = searchQuery.trim()

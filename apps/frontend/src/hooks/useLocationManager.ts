@@ -5,6 +5,7 @@ import {
   searchGeocodeNominatim,
   nominatimDisplayName,
 } from '@/lib/geocoding';
+import { useStore } from '@/app/store/useStore';
 
 interface Coords {
   lat: number;
@@ -22,8 +23,14 @@ function readCityFromStorage(): string | null {
 export function useLocationManager() {
   const [userLocation, setUserLocation] = useState<Coords>({ lat: 47.6062, lng: -122.3321 });
   const [locationName, setLocationName] = useState('');
-  const [locationCity, setLocationCity] = useState<string | null>(readCityFromStorage);
+  const [locationCity, setLocationCityLocal] = useState<string | null>(readCityFromStorage);
   const [locationLoading, setLocationLoading] = useState(false);
+  const { setLocationCity: setLocationCityStore } = useStore();
+
+  const setLocationCity = (city: string | null) => {
+    setLocationCityLocal(city);
+    setLocationCityStore(city);
+  };
   const [showSetLocation, setShowSetLocation] = useState(false);
 
   // Map search state

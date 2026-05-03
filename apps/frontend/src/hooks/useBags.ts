@@ -3,18 +3,18 @@ import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import type { Bag } from '@/types';
 
-export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 'favorites', city: string | null = null) {
+export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 'favorites') {
   const [bags, setBags] = useState<Bag[]>([]);
   const [loading, setLoading] = useState(true);
-  const { favorites, filters } = useStore();
+  const { favorites, filters, locationCity } = useStore();
 
-  // Backend API'den bag'leri yükle; city değişince yeniden çek
+  // Backend API'den bag'leri yükle; Zustand locationCity değişince yeniden çek
   useEffect(() => {
     let cancelled = false;
 
     async function fetchBags() {
       try {
-        const url = city ? `/bags?city=${encodeURIComponent(city)}` : '/bags';
+        const url = locationCity ? `/bags?city=${encodeURIComponent(locationCity)}` : '/bags';
         const data = await api.get(url);
         if (!cancelled) {
           setBags(data.bags || []);
@@ -28,7 +28,7 @@ export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 
 
     fetchBags();
     return () => { cancelled = true; };
-  }, [city]);
+  }, [locationCity]);
 
   const filteredBags = bags
     .filter(bag => {

@@ -14,64 +14,112 @@ import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Address, Order, CartItem, StoreProfile, UserProfile } from '@/types';
-import { reverseGeocodeNominatim, formatNominatimAddress } from '@/lib/geocoding';
-import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
+import {
+  reverseGeocodeNominatim,
+  formatNominatimAddress,
+  searchGeocodeNominatim,
+  type NominatimSearchResult,
+} from '@/lib/geocoding';
 
 /** Matches the coordinate fallback label stored by LocationPickerMap ("41.0052, 29.0353"). */
 const COORD_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
 type Tab = 'profile' | 'addresses' | 'orders' | 'settings';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-
 /**
- * PlacesInput — Google Places Autocomplete-backed text input.
- * Must be rendered inside an `<APIProvider>`. On selection emits the formatted
- * address along with the selected place's lat/lng so callers can persist coords.
+ * NominatimAddressInput — Nominatim (OpenStreetMap) tabanlı adres autocomplete.
+ * Haritadaki arama kutusuyla aynı mantıkta çalışır; Google API key gerektirmez.
  */
-function PlacesInput({
-  initialValue,
+function NominatimAddressInput({
+  value,
   onChange,
   placeholder,
   className,
-  inputKey,
 }: {
-  initialValue: string;
+  value: string;
   onChange: (val: string, lat?: number, lng?: number) => void;
   placeholder?: string;
   className?: string;
-  inputKey?: string | number;
 }) {
-  const placesLib = useMapsLibrary('places');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [inputVal, setInputVal] = useState(value);
+  const [suggestions, setSuggestions] = useState<NominatimSearchResult[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sync when parent switches to a different address
+  useEffect(() => { setInputVal(value); setSuggestions([]); setShowSuggestions(false); }, [value]);
+
+  // Close on outside click
   useEffect(() => {
-    if (!placesLib || !inputRef.current) return;
-    const ac = new placesLib.Autocomplete(inputRef.current, {
-      types: ['geocode'],
-      fields: ['formatted_address', 'geometry'],
-    });
-    const listener = ac.addListener('place_changed', () => {
-      const place = ac.getPlace();
-      onChange(
-        place.formatted_address || inputRef.current?.value || '',
-        place.geometry?.location?.lat(),
-        place.geometry?.location?.lng(),
-      );
-    });
-    return () => { google.maps.event.removeListener(listener); };
-  }, [placesLib]); // eslint-disable-line react-hooks/exhaustive-deps
+    const h = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
+        setShowSuggestions(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputVal(val);
+    onChange(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!val.trim()) { setSuggestions([]); setShowSuggestions(false); return; }
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      const results = await searchGeocodeNominatim(val, 5, 'tr,en');
+      setSuggestions(results);
+      setShowSuggestions(results.length > 0);
+      setLoading(false);
+    }, 350);
+  };
+
+  const handleSelect = (item: NominatimSearchResult) => {
+    const parts = (item.display_name || '').split(',');
+    const label = parts.slice(0, 3).join(',').trim();
+    setInputVal(label);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    onChange(label, parseFloat(item.lat), parseFloat(item.lon));
+  };
 
   return (
-    <input
-      key={inputKey}
-      ref={inputRef}
-      type="text"
-      defaultValue={initialValue}
-      onBlur={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={inputVal}
+        onChange={handleChange}
+        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+        placeholder={placeholder}
+        className={className}
+      />
+      {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-[#8FA396]" />}
+      {showSuggestions && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-[#E8E0D5] z-50 overflow-hidden max-h-48 overflow-y-auto">
+          {suggestions.map((item, idx) => {
+            const parts = (item.display_name || '').split(',');
+            const label = parts.slice(0, 2).join(',').trim();
+            const sub = parts.slice(2, 4).join(',').trim();
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSelect(item)}
+                className="w-full flex items-start gap-2 px-3 py-2.5 hover:bg-[#F5F0E8] transition-colors text-left"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#1B5E52] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-[#1B1B1B]">{label}</p>
+                  {sub && <p className="text-[10px] text-[#8FA396]">{sub}</p>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -88,7 +136,7 @@ const TAG_LABEL: Record<string, string> = {
 
 export default function ProfileView() {
   const { t, i18n } = useTranslation();
-  const { userProfile, setUserProfile, setUser, orders, setOrders, isAuthReady } = useStore();
+  const { userProfile, setUserProfile, setUser, orders, setOrders, isAuthReady, setLocationCity } = useStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialTab = (['profile', 'addresses', 'orders', 'settings'] as Tab[])
@@ -637,7 +685,7 @@ export default function ProfileView() {
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {i !== activeIdx && (
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   if (!userProfile) return;
                                   const updated = userProfile.addresses.map((a: Address, idx: number) => ({
                                     ...a,
@@ -646,6 +694,19 @@ export default function ProfileView() {
                                   setUserProfile({ ...userProfile, addresses: updated });
                                   api.put('/users/me', { addresses: updated }).catch(() => {});
                                   toast.success(t('profile_addr_set_active'));
+
+                                  // Update discovery city from selected address coordinates
+                                  const selectedAddr = userProfile.addresses[i];
+                                  if (selectedAddr.latitude != null && selectedAddr.longitude != null) {
+                                    const geoData = await reverseGeocodeNominatim(selectedAddr.latitude, selectedAddr.longitude);
+                                    const city = geoData?.address?.city || geoData?.address?.town || geoData?.address?.village || null;
+                                    setLocationCity(city);
+                                    try {
+                                      const saved = localStorage.getItem('yugoda_location');
+                                      const existing = saved ? JSON.parse(saved) : {};
+                                      localStorage.setItem('yugoda_location', JSON.stringify({ ...existing, city }));
+                                    } catch { /* ignore */ }
+                                  }
                                 }}
                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-[#FF9F1C]/10 text-[#FF9F1C] hover:bg-[#FF9F1C]/20 transition-colors"
                               >
@@ -684,33 +745,20 @@ export default function ProfileView() {
                             >
                               <div className="p-4 space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
-                                  {/* Address label — Places Autocomplete */}
+                                  {/* Address label — Nominatim Autocomplete */}
                                   <div className="col-span-2">
                                     <label className="text-[10px] font-bold text-[#8FA396] uppercase tracking-wide mb-1 block">{t('profile_addr_label_field')}</label>
-                                    {GOOGLE_MAPS_API_KEY ? (
-                                      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                                        <PlacesInput
-                                          inputKey={editingAddrIndex ?? -1}
-                                          initialValue={editingAddr.addressLabel || ''}
-                                          onChange={(val, lat, lng) => setEditingAddr(a => a ? {
-                                            ...a,
-                                            addressLabel: val,
-                                            ...(lat != null ? { latitude: lat } : {}),
-                                            ...(lng != null ? { longitude: lng } : {}),
-                                          } : a)}
-                                          placeholder={t('profile_addr_neighbourhood_ph')}
-                                          className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
-                                        />
-                                      </APIProvider>
-                                    ) : (
-                                      <input
-                                        type="text"
-                                        value={editingAddr.addressLabel || ''}
-                                        onChange={e => setEditingAddr(a => a ? { ...a, addressLabel: e.target.value } : a)}
-                                        placeholder={t('profile_addr_neighbourhood_ph')}
-                                        className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
-                                      />
-                                    )}
+                                    <NominatimAddressInput
+                                      value={editingAddr.addressLabel || ''}
+                                      onChange={(val, lat, lng) => setEditingAddr(a => a ? {
+                                        ...a,
+                                        addressLabel: val,
+                                        ...(lat != null ? { latitude: lat } : {}),
+                                        ...(lng != null ? { longitude: lng } : {}),
+                                      } : a)}
+                                      placeholder={t('profile_addr_neighbourhood_ph')}
+                                      className="w-full px-3 py-2 rounded-lg bg-[#F5F0E8] border border-[#E8E0D5] text-xs text-[#1B1B1B] placeholder-[#B0BDB7] focus:outline-none focus:border-[#1B5E52] transition-colors"
+                                    />
                                   </div>
 
                                   {/* Remaining fields */}
