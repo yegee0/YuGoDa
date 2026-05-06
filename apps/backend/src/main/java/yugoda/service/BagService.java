@@ -11,8 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Stream;
@@ -185,13 +185,12 @@ public class BagService {
         if (operatingHoursJson == null) return true;
         try {
             List<Map<String, Object>> schedule = objectMapper.readValue(operatingHoursJson, List.class);
-            String dayName = LocalDateTime.now().getDayOfWeek()
-                    .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Istanbul"));
+            String dayName = now.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
             Map<String, Object> slot = schedule.stream()
                     .filter(s -> dayName.equals(s.get("day")))
                     .findFirst().orElse(null);
             if (slot == null || !Boolean.TRUE.equals(slot.get("isOpen"))) return false;
-            LocalDateTime now = LocalDateTime.now();
             String currentTime = String.format("%02d:%02d", now.getHour(), now.getMinute());
             String open = (String) slot.get("open");
             String close = (String) slot.get("close");
