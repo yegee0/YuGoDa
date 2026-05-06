@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/app/store/useStore';
 import { api } from '@/lib/api';
 import type { Bag } from '@/types';
@@ -30,7 +30,7 @@ export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 
     return () => { cancelled = true; };
   }, [locationCity]);
 
-  const filteredBags = bags
+  const filteredBags = useMemo(() => bags
     .filter(bag => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !q ||
@@ -51,7 +51,7 @@ export function useBags(searchQuery: string, activeTab: 'discover' | 'browse' | 
       if (filters.sortBy === 'nearest') return (parseFloat(a.distance) || 0) - (parseFloat(b.distance) || 0);
       if (filters.sortBy === 'fastest') return (a.prepTime || 30) - (b.prepTime || 30);
       return 0;
-    });
+    }), [bags, searchQuery, activeTab, favorites, filters]);
 
   return { bags, filteredBags, loading };
 }
