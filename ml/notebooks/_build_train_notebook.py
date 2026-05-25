@@ -232,9 +232,6 @@ if bag_text_embs is None:
             bag_texts, batch_size=64, show_progress_bar=True,
             convert_to_tensor=True, normalize_embeddings=False,
         ).cpu()
-    # ST.encode returns an inference tensor (inference_mode internally) -> clone to a
-    # normal tensor, else model.load_state_dict copy_ fails on torch>=2.x.
-    bag_text_embs = bag_text_embs.clone()
     torch.save(bag_text_embs, EMB_CACHE)
     print(f'Saved to {EMB_CACHE}')
     del text_encoder

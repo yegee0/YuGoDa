@@ -91,48 +91,42 @@ NEIGHBORHOODS = [
 ]
 
 # ─── Kategori-spesifik konfigürasyon ──────────────────────────────────────
-# Kanonik kategoriler — apps/frontend/src/lib/constants.ts BAG_CATEGORIES ile AYNI
-# (food-type). Vegan bir kategori DEĞİL; vegan-luk dietary_type ile gelir.
 CATEGORIES = {
-    "Bakery":    {"merchant": "Bakery",     "orig_price": (60, 150),  "dietary": [("Vegan", 0.2), ("Vegetarian", 0.5), ("Non-Vegan", 0.3)],   "calories": (180, 400)},
-    "Cafe":      {"merchant": "Cafe",       "orig_price": (70, 160),  "dietary": [("Vegan", 0.15), ("Vegetarian", 0.5), ("Non-Vegan", 0.35)], "calories": (200, 450)},
-    "Desserts":  {"merchant": "Bakery",     "orig_price": (70, 160),  "dietary": [("Vegetarian", 0.8), ("Vegan", 0.2)],                       "calories": (350, 700)},
-    "Groceries": {"merchant": "Grocery",    "orig_price": (90, 200),  "dietary": [("Vegan", 0.3), ("Vegetarian", 0.4), ("Non-Vegan", 0.3)],   "calories": (200, 500)},
-    "Hot Meals": {"merchant": "Restaurant", "orig_price": (140, 300), "dietary": [("Vegetarian", 0.2), ("Non-Vegan", 0.8)],                   "calories": (500, 850)},
-    "Salad":     {"merchant": "Restaurant", "orig_price": (80, 170),  "dietary": [("Vegan", 0.4), ("Vegetarian", 0.4), ("Non-Vegan", 0.2)],   "calories": (180, 380)},
-    "Pizza":     {"merchant": "Restaurant", "orig_price": (120, 250), "dietary": [("Vegetarian", 0.4), ("Non-Vegan", 0.6)],                   "calories": (500, 850)},
-    "Burger":    {"merchant": "Restaurant", "orig_price": (110, 230), "dietary": [("Vegetarian", 0.2), ("Non-Vegan", 0.8)],                   "calories": (550, 900)},
-    "Sushi":     {"merchant": "Restaurant", "orig_price": (150, 320), "dietary": [("Vegetarian", 0.1), ("Non-Vegan", 0.9)],                   "calories": (350, 600)},
-    "Deli":      {"merchant": "Deli",       "orig_price": (110, 240), "dietary": [("Vegetarian", 0.3), ("Non-Vegan", 0.7)],                   "calories": (250, 550)},
-    "Pasta":     {"merchant": "Restaurant", "orig_price": (80, 180),  "dietary": [("Vegetarian", 0.7), ("Non-Vegan", 0.3)],                   "calories": (300, 600)},
-    "Kebab":     {"merchant": "Restaurant", "orig_price": (130, 280), "dietary": [("Non-Vegan", 1.0)],                                        "calories": (550, 900)},
-    "Chinese":   {"merchant": "Restaurant", "orig_price": (110, 250), "dietary": [("Vegan", 0.15), ("Vegetarian", 0.25), ("Non-Vegan", 0.6)], "calories": (400, 750)},
-    "Indian":    {"merchant": "Restaurant", "orig_price": (110, 250), "dietary": [("Vegan", 0.25), ("Vegetarian", 0.4), ("Non-Vegan", 0.35)], "calories": (400, 750)},
-    "Mexican":   {"merchant": "Restaurant", "orig_price": (100, 220), "dietary": [("Vegetarian", 0.3), ("Non-Vegan", 0.7)],                   "calories": (450, 800)},
-    "Bowls":     {"merchant": "Restaurant", "orig_price": (90, 190),  "dietary": [("Vegan", 0.4), ("Vegetarian", 0.4), ("Non-Vegan", 0.2)],   "calories": (300, 550)},
+    "Fırın":      {"merchant": "Bakery",     "orig_price": (60, 150),  "dietary": [("Vegan", 0.2), ("Vegetarian", 0.5), ("Non-Vegan", 0.3)],   "calories": (180, 400)},
+    "Pasta":      {"merchant": "Bakery",     "orig_price": (80, 180),  "dietary": [("Vegetarian", 0.7), ("Non-Vegan", 0.3)],                   "calories": (300, 600)},
+    "Kafe":       {"merchant": "Cafe",       "orig_price": (70, 160),  "dietary": [("Vegan", 0.15), ("Vegetarian", 0.5), ("Non-Vegan", 0.35)], "calories": (200, 450)},
+    "Sushi":      {"merchant": "Restaurant", "orig_price": (150, 320), "dietary": [("Non-Vegan", 1.0)],                                        "calories": (350, 600)},
+    "Pizza":      {"merchant": "Restaurant", "orig_price": (120, 250), "dietary": [("Vegetarian", 0.4), ("Non-Vegan", 0.6)],                   "calories": (500, 850)},
+    "Kebap":      {"merchant": "Restaurant", "orig_price": (130, 280), "dietary": [("Non-Vegan", 1.0)],                                        "calories": (550, 900)},
+    "Et & Tavuk": {"merchant": "Restaurant", "orig_price": (140, 300), "dietary": [("Non-Vegan", 1.0)],                                        "calories": (500, 850)},
+    "Burger":     {"merchant": "Restaurant", "orig_price": (110, 230), "dietary": [("Vegetarian", 0.2), ("Non-Vegan", 0.8)],                   "calories": (550, 900)},
+    "Vegan":      {"merchant": "Restaurant", "orig_price": (100, 220), "dietary": [("Vegan", 1.0)],                                            "calories": (300, 550)},
+    "Salata":     {"merchant": "Restaurant", "orig_price": (80, 170),  "dietary": [("Vegan", 0.4), ("Vegetarian", 0.4), ("Non-Vegan", 0.2)],   "calories": (180, 380)},
+    "Tatlı":      {"merchant": "Bakery",     "orig_price": (70, 160),  "dietary": [("Vegetarian", 0.8), ("Vegan", 0.2)],                       "calories": (350, 700)},
+    "Bakkal":     {"merchant": "Grocery",    "orig_price": (90, 200),  "dietary": [("Vegan", 0.3), ("Vegetarian", 0.4), ("Non-Vegan", 0.3)],   "calories": (200, 500)},
+    "Deli":       {"merchant": "Deli",       "orig_price": (110, 240), "dietary": [("Vegetarian", 0.3), ("Non-Vegan", 0.7)],                   "calories": (250, 550)},
+    "Thai":       {"merchant": "Restaurant", "orig_price": (130, 270), "dietary": [("Vegan", 0.15), ("Non-Vegan", 0.85)],                      "calories": (400, 700)},
 }
 
 CATEGORY_TAGS = {
-    "Bakery": ["Taze", "Sıcak", "Klasik"],
-    "Cafe": ["Atıştırmalık", "Kahve", "Eşlik Eden"],
-    "Desserts": ["Tatlı", "Şerbetli", "İkram"],
-    "Groceries": ["Karışık", "Günlük", "Mevsim"],
-    "Hot Meals": ["Etli", "Doyurucu", "Protein"],
-    "Salad": ["Hafif", "Taze", "Sağlıklı"],
-    "Pizza": ["İtalyan", "Sıcak", "Konfor"],
-    "Burger": ["Amerikan", "Konfor", "Etli"],
+    "Fırın": ["Taze", "Sıcak", "Klasik"],
+    "Pasta": ["Tatlı", "Kremalı", "Şenlik"],
+    "Kafe": ["Atıştırmalık", "Kahve", "Eşlik Eden"],
     "Sushi": ["Japon", "Deniz Ürünü", "Premium"],
+    "Pizza": ["İtalyan", "Sıcak", "Konfor"],
+    "Kebap": ["Türk", "Etli", "Baharatlı"],
+    "Et & Tavuk": ["Etli", "Doyurucu", "Protein"],
+    "Burger": ["Amerikan", "Konfor", "Etli"],
+    "Vegan": ["Vegan", "Sağlıklı", "Bitkisel"],
+    "Salata": ["Hafif", "Taze", "Sağlıklı"],
+    "Tatlı": ["Tatlı", "Şerbetli", "İkram"],
+    "Bakkal": ["Karışık", "Günlük", "Mevsim"],
     "Deli": ["Şarküteri", "Peynir", "Premium"],
-    "Pasta": ["İtalyan", "Kremalı", "Doyurucu"],
-    "Kebab": ["Türk", "Etli", "Baharatlı"],
-    "Chinese": ["Asya", "Wok", "Baharatlı"],
-    "Indian": ["Asya", "Köri", "Baharatlı"],
-    "Mexican": ["Acılı", "Tortilla", "Baharatlı"],
-    "Bowls": ["Sağlıklı", "Tahıl", "Dengeli"],
+    "Thai": ["Asya", "Baharatlı", "Egzotik"],
 }
 
-PREMIUM_CATEGORIES = ["Sushi", "Hot Meals", "Deli"]
-HEALTHY_CATEGORIES = ["Salad", "Bowls"]
+PREMIUM_CATEGORIES = ["Sushi", "Et & Tavuk", "Deli", "Thai"]
+HEALTHY_CATEGORIES = ["Vegan", "Salata"]
 
 # ─── User segmentleri ─────────────────────────────────────────────────────
 SEGMENTS = ["loyal", "explorer", "budget", "premium", "healthy"]
@@ -175,22 +169,20 @@ BAG_NAME_TEMPLATES = [
 ]
 
 BAG_DESCRIPTIONS = {
-    "Bakery":    "Günün taze ekmek, simit, poğaça ve hamur işlerinden oluşan sürpriz paket.",
-    "Cafe":      "Sandviç, atıştırmalık ve sıcak içecek eşliği için hazırlanmış sürpriz paket.",
-    "Desserts":  "Şerbetli ve sütlü tatlılardan oluşan günün şenliği.",
-    "Groceries": "Mevsim sebze, meyve ve günlük temel ürünlerden oluşan karma paket.",
-    "Hot Meals": "Izgara, sote veya fırın et/tavuk ürünlerinden oluşan doyurucu seçki.",
-    "Salad":     "Mevsim sebzeleri ve sağlıklı içeriklerden oluşan taze salata paketi.",
-    "Pizza":     "Akşam fırınından kalan pizza dilimleri ve kalzone karışımı.",
-    "Burger":    "Burger, patates ve eşlik eden atıştırmalıklardan günün karışımı.",
-    "Sushi":     "Günün hazır kalan suşi çeşitleri, taze ve özenle paketlenmiş.",
-    "Deli":      "Şarküteri ürünleri, peynir ve charcuterie atıştırmalıklarından oluşan paket.",
-    "Pasta":     "Makarna ve İtalyan lezzetlerinden oluşan günün doyurucu seçkisi.",
-    "Kebab":     "Günün döner, kebap ve mezelerinden oluşan doyurucu paket.",
-    "Chinese":   "Wok soteleri, noodle ve Çin mutfağından günün karışık sürprizi.",
-    "Indian":    "Köri, baharatlı sebze ve Hint mutfağından günün sürprizi.",
-    "Mexican":   "Burrito, taco ve Meksika mutfağından baharatlı günün karışımı.",
-    "Bowls":     "Tahıl, sebze ve protein dengeli sağlıklı bowl çeşitleri.",
+    "Fırın":      "Günün taze ekmek, simit, poğaça ve hamur işlerinden oluşan sürpriz paket.",
+    "Pasta":      "Pasta, kek ve tatlı çeşitlerinden oluşan günün artık seçkisi.",
+    "Kafe":       "Sandviç, atıştırmalık ve sıcak içecek eşliği için hazırlanmış sürpriz paket.",
+    "Sushi":      "Günün hazır kalan suşi çeşitleri, taze ve özenle paketlenmiş.",
+    "Pizza":      "Akşam fırınından kalan pizza dilimleri ve kalzone karışımı.",
+    "Kebap":      "Günün döner, kebap ve mezelerinden oluşan doyurucu paket.",
+    "Et & Tavuk": "Izgara, sote veya fırın et/tavuk ürünlerinden seçki.",
+    "Burger":     "Burger, patates ve eşlik eden atıştırmalıklardan günün karışımı.",
+    "Vegan":      "100% bitkisel, taze sebze ve tahıl bazlı sürpriz menü.",
+    "Salata":     "Mevsim sebzeleri ve sağlıklı içeriklerden oluşan taze salata paketi.",
+    "Tatlı":      "Şerbetli ve sütlü tatlılardan oluşan günün şenliği.",
+    "Bakkal":     "Mevsim sebze, meyve ve günlük temel ürünlerden oluşan karma paket.",
+    "Deli":       "Şarküteri ürünleri, peynir ve charcuterie atıştırmalıklarından oluşan paket.",
+    "Thai":       "Tay mutfağından kalan çeşitlerle günün baharatlı sürprizi.",
 }
 
 PICKUP_TIME_SLOTS = [
@@ -299,12 +291,14 @@ def gen_stores():
         s_lat, s_lng = jitter(nbh["lat"], nbh["lng"], max_km=1.5)
         merchant = CATEGORIES[cat]["merchant"]
 
-        if cat in ("Bakery", "Desserts"):
+        if cat in ("Fırın", "Pasta"):
             name = f"{random.choice(BAKERY_NAMES)} {random.choice(STORE_NAME_SUFFIXES)}"
-        elif cat == "Cafe":
-            name = f"{random.choice(CAFE_NAMES)} Cafe"
+        elif cat == "Kafe":
+            name = f"{random.choice(CAFE_NAMES)} Kafe"
         elif cat == "Sushi":
             name = f"{random.choice(SUSHI_NAMES)} Sushi"
+        elif cat == "Thai":
+            name = f"{random.choice(THAI_NAMES)} Thai"
         else:
             name = f"{random.choice(STORE_NAME_PREFIXES)} {random.choice(STORE_NAME_SUFFIXES)}"
 

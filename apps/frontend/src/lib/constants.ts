@@ -106,21 +106,6 @@ export const LANDING_STATS: readonly LandingStat[] = [
 // ── Restaurant Signup ─────────────────────────────────────────
 export const BUSINESS_TYPES = ['Restaurant', 'Bakery & Patisserie', 'Grocery Store', 'Cafe'] as const;
 
-// ── Bag taxonomy (SINGLE SOURCE OF TRUTH) ─────────────────────
-// Canonical food-type categories. Used by the store inventory form and the
-// discovery filter, and mirrored in ml/scripts/seed_data.py so synth + real
-// bags share one vocabulary (otherwise recommendations can't category-match).
-export const BAG_CATEGORIES = [
-  'Bakery', 'Cafe', 'Desserts', 'Groceries', 'Hot Meals', 'Salad',
-  'Pizza', 'Burger', 'Sushi', 'Deli', 'Pasta', 'Kebab',
-  'Chinese', 'Indian', 'Mexican', 'Bowls',
-] as const;
-
-// Dietary attribute — SEPARATE from category. The recommender weights this
-// above category (a vegan should get vegan items across cuisines, never
-// non-vegan). Vegan ⊆ Vegetarian ⊆ Non-Vegan in terms of what each can eat.
-export const DIETARY_TYPES = ['Vegan', 'Vegetarian', 'Non-Vegan'] as const;
-
 // ── Font Helpers ──────────────────────────────────────────────
 export const FONT_PLAYFAIR: React.CSSProperties = { fontFamily: '"Playfair Display", Georgia, serif' };
 export const FONT_DM: React.CSSProperties = { fontFamily: '"DM Sans", system-ui, sans-serif' };
