@@ -202,21 +202,96 @@ public class RecommendationService {
             scores[i] = s;
         }
 
-        // 5. Top-K via index sort (filter ordered bags + skip missing entities)
+        // 5. Sort candidate indices by model score (descending)
         Integer[] idxs = new Integer[n];
         for (int i = 0; i < n; i++) idxs[i] = i;
         Arrays.sort(idxs, (a, b) -> Float.compare(scores[b], scores[a]));
 
-        List<ScoredBag> result = new ArrayList<>(topK);
-        for (int idx : idxs) {
-            String bagId = bagIdsByIdx[idx];
+        // Pull the top model-scored candidates (one DB round-trip), then re-rank so
+        // DIETARY compatibility dominates the model's category/personalization score:
+        // a vegan gets vegan items across cuisines and never non-vegan. Finally apply
+        // store diversity so the topK slots aren't all one store.
+        String userDiet = inferDietaryPreference(orderedBagIds);
+        int cand = Math.min(n, Math.max(topK * 20, 150));
+        List<String> candIds = new ArrayList<>(cand);
+        Map<String, Integer> idxByBagId = new HashMap<>(cand * 2);
+        for (int c = 0; c < idxs.length && candIds.size() < cand; c++) {
+            String bagId = bagIdsByIdx[idxs[c]];
             if (excludeOrdered && orderedBagIds.contains(bagId)) continue;
-            Bag bag = bagRepository.findById(bagId).orElse(null);
-            if (bag == null) continue;  // bag deleted from DB after training
-            result.add(new ScoredBag(bag, scores[idx]));
+            candIds.add(bagId);
+            idxByBagId.put(bagId, idxs[c]);
+        }
+        List<ScoredBag> cands = new ArrayList<>(candIds.size());
+        for (Bag bag : bagRepository.findAllById(candIds)) {  // skips bags deleted after training
+            Integer idx = idxByBagId.get(bag.getId());
+            if (idx == null) continue;
+            double score = scores[idx] + dietaryAdjustment(bag.getDietaryType(), userDiet);
+            cands.add(new ScoredBag(bag, score));
+        }
+        cands.sort((a, b) -> Double.compare(b.score(), a.score()));
+
+        List<ScoredBag> result = new ArrayList<>(topK);
+        List<ScoredBag> overflow = new ArrayList<>();
+        Set<String> seenStores = new HashSet<>();
+        for (ScoredBag sb : cands) {
+            String storeKey = sb.bag().getRestaurantId() != null ? sb.bag().getRestaurantId() : sb.bag().getId();
+            if (seenStores.add(storeKey)) {
+                result.add(sb);
+                if (result.size() >= topK) break;
+            } else if (overflow.size() < topK) {
+                overflow.add(sb);
+            }
+        }
+        for (ScoredBag sb : overflow) {  // backfill if fewer distinct stores than topK
             if (result.size() >= topK) break;
+            result.add(sb);
         }
         return result;
+    }
+
+    /** Dietary weight — large enough to dominate the cosine score range (~[-0.4, 0.4])
+     *  so dietary compatibility always outranks category similarity. */
+    private static final double DIET_WEIGHT = 1.0;
+
+    /**
+     * Infer the user's dietary preference from delivered history. Returns "Vegan" or
+     * "Vegetarian" only when that diet clearly dominates the history; otherwise null
+     * (no restriction → the model ranks freely).
+     */
+    private String inferDietaryPreference(Set<String> historyBagIds) {
+        if (historyBagIds.isEmpty()) return null;
+        return inferDietaryFromBags(bagRepository.findAllById(historyBagIds));
+    }
+
+    private String inferDietaryFromBags(Iterable<Bag> bags) {
+        long total = 0, vegan = 0, veg = 0;
+        for (Bag b : bags) {
+            String d = b.getDietaryType();
+            if (d == null) continue;
+            total++;
+            if ("Vegan".equals(d)) vegan++;
+            else if ("Vegetarian".equals(d)) veg++;
+        }
+        if (total == 0) return null;
+        if (vegan >= total * 0.5) return "Vegan";
+        if (vegan + veg >= total * 0.6) return "Vegetarian";
+        return null;
+    }
+
+    /**
+     * Dietary-dominant score adjustment. A vegan must stay vegan across cuisines
+     * (vegan +, anything else −); a vegetarian accepts vegan or vegetarian. Unknown
+     * preference or unknown bag dietary → neutral.
+     */
+    private double dietaryAdjustment(String bagDiet, String userDiet) {
+        if (userDiet == null || bagDiet == null) return 0.0;
+        if ("Vegan".equals(userDiet)) {
+            return "Vegan".equals(bagDiet) ? DIET_WEIGHT : -DIET_WEIGHT;
+        }
+        if ("Vegetarian".equals(userDiet)) {
+            return ("Vegan".equals(bagDiet) || "Vegetarian".equals(bagDiet)) ? DIET_WEIGHT : -DIET_WEIGHT;
+        }
+        return 0.0;
     }
 
     /**
@@ -265,6 +340,8 @@ public class RecommendationService {
         }
         double avgPrice = (priceN > 0) ? (priceSum / priceN) : 100.0;  // fallback for empty history
         int historySize = historyBags.size();
+        // Dominant dietary preference (vegan/vegetarian) — weighted to outrank category.
+        String userDiet = inferDietaryFromBags(historyBags);
 
         // Step 2: score all candidates, sort, take top-K
         long seed = userOrders.isEmpty() ? 0L : userOrders.get(0).getId().hashCode();
@@ -292,18 +369,33 @@ public class RecommendationService {
                     : 0.0;
 
             double jitter = rand.nextDouble() * 0.01;
-            double score = catMatch * 3.0 + dietMatch * 2.0 + priceMatch * 1.0 + ratingScore * 0.5 + jitter;
+            // Dietary compatibility dominates category (×5 > catMatch's ×3): a vegan
+            // never gets non-vegan, across cuisines.
+            double dietCompat = dietaryAdjustment(b.getDietaryType(), userDiet) * 5.0;
+            double score = dietCompat + catMatch * 3.0 + dietMatch * 2.0 + priceMatch * 1.0 + ratingScore * 0.5 + jitter;
             scored.add(new ScoredCandidate(b, score));
         }
         if (scored.isEmpty()) return List.of();
 
         scored.sort((a, c) -> Double.compare(c.score(), a.score()));
 
-        int n = Math.min(topK, scored.size());
-        List<ScoredBag> picks = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            ScoredCandidate c = scored.get(i);
-            picks.add(new ScoredBag(c.bag(), c.score()));
+        // Store diversity (same rule as the model path): one bag per store, with
+        // backfill from already-picked stores only if distinct stores < topK.
+        List<ScoredBag> picks = new ArrayList<>(Math.min(topK, scored.size()));
+        List<ScoredBag> overflow = new ArrayList<>();
+        Set<String> seenStores = new HashSet<>();
+        for (ScoredCandidate c : scored) {
+            String storeKey = c.bag().getRestaurantId() != null ? c.bag().getRestaurantId() : c.bag().getId();
+            if (seenStores.add(storeKey)) {
+                picks.add(new ScoredBag(c.bag(), c.score()));
+                if (picks.size() >= topK) break;
+            } else if (overflow.size() < topK) {
+                overflow.add(new ScoredBag(c.bag(), c.score()));
+            }
+        }
+        for (ScoredBag sb : overflow) {
+            if (picks.size() >= topK) break;
+            picks.add(sb);
         }
         return picks;
     }

@@ -9,6 +9,7 @@ import type { Bag } from '@/types';
 import { StatCard, TL } from './StorePanel';
 import { api } from '@/lib/api';
 import { useStore } from '@/app/store/useStore';
+import { BAG_CATEGORIES, DIETARY_TYPES } from '@/lib/constants';
 
 // Parse "HH:MM - HH:MM" to { start, end }
 function parsePickup(t: string) {
@@ -26,6 +27,7 @@ interface NewPackage {
   available: number;
   pickupTime: string;
   image: string;
+  dietaryType: string;
 }
 
 export interface InventoryTabProps {
@@ -50,7 +52,7 @@ export default function InventoryTab({
 
   const [editingBag, setEditingBag] = useState<Bag | null>(null);
   const [newPackage, setNewPackage] = useState<NewPackage>({
-    name: '', description: '', category: 'Bakery',
+    name: '', description: '', category: 'Bakery', dietaryType: 'Non-Vegan',
     price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00', image: '',
   });
   const [addPackageStatus, setAddPackageStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -79,6 +81,7 @@ export default function InventoryTab({
         available: newPackage.available,
         pickupTime: newPackage.pickupTime,
         merchantType: newPackage.category,
+        dietaryType: newPackage.dietaryType,
         ...(newPackage.image.trim() ? { image: newPackage.image.trim() } : {}),
       }) as { bag?: Bag };
       if (data.bag) setInventory(prev => [data.bag!, ...prev]);
@@ -86,7 +89,7 @@ export default function InventoryTab({
       setTimeout(() => {
         setShowAddPackage(false);
         setAddPackageStatus('idle');
-        setNewPackage({ name: '', description: '', category: 'Bakery', price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00', image: '' });
+        setNewPackage({ name: '', description: '', category: 'Bakery', dietaryType: 'Non-Vegan', price: 5.99, discount: 0, available: 5, pickupTime: '18:00 - 19:00', image: '' });
       }, 1200);
     } catch (error: unknown) {
       setAddPackageStatus('error');
@@ -199,7 +202,13 @@ export default function InventoryTab({
                 <div>
                   <label className={labelCls}>{t('rest_inv_label_category')}</label>
                   <select value={editingBag.category || ''} onChange={e => setEditingBag({ ...editingBag, category: e.target.value })} className={selectCls}>
-                    {['Bakery','Vegan','Groceries','Hot Meals','Cafe','Halal','Gluten-Free','Desserts'].map(c => <option key={c}>{c}</option>)}
+                    {BAG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>{t('rest_inv_label_dietary')}</label>
+                  <select value={editingBag.dietaryType || 'Non-Vegan'} onChange={e => setEditingBag({ ...editingBag, dietaryType: e.target.value })} className={selectCls}>
+                    {DIETARY_TYPES.map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -283,7 +292,13 @@ export default function InventoryTab({
                 <div>
                   <label className={labelCls}>{t('rest_inv_label_category')}</label>
                   <select value={newPackage.category} onChange={e => setNewPackage({ ...newPackage, category: e.target.value })} className={selectCls}>
-                    {['Bakery','Vegan','Groceries','Hot Meals','Cafe','Halal','Gluten-Free','Desserts'].map(c => <option key={c}>{c}</option>)}
+                    {BAG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>{t('rest_inv_label_dietary')}</label>
+                  <select value={newPackage.dietaryType} onChange={e => setNewPackage({ ...newPackage, dietaryType: e.target.value })} className={selectCls}>
+                    {DIETARY_TYPES.map(d => <option key={d}>{d}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
