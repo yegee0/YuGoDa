@@ -11,7 +11,9 @@ import sys
 import traceback
 from pathlib import Path
 
-ROOT = Path("/mnt/c/Projects/YuGoDa")
+# Repo koku script konumundan turetilir (ml/scripts/_execute_notebook.py -> parents[2]),
+# boylece farkli makinelerde / Windows-native Python'da da calisir.
+ROOT = Path(__file__).resolve().parents[2]
 NB = ROOT / "ml" / "notebooks" / "train_two_tower.ipynb"
 
 os.chdir(ROOT)

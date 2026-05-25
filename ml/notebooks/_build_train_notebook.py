@@ -192,10 +192,18 @@ from sentence_transformers import SentenceTransformer
 
 EMB_CACHE = MODELS_DIR / 'bag_text_embeddings.pt'
 
+# Cache yalnizca satir sayisi mevcut bag sayisiyla eslesirse kullanilir
+# (katalog degisirse bayat cache item tower'da index-out-of-bounds verir).
+bag_text_embs = None
 if EMB_CACHE.exists():
-    bag_text_embs = torch.load(EMB_CACHE, map_location='cpu')
-    print(f'Loaded cached bag embeddings: {bag_text_embs.shape}')
-else:
+    cached = torch.load(EMB_CACHE, map_location='cpu')
+    if cached.shape[0] == len(bags_df):
+        bag_text_embs = cached
+        print(f'Loaded cached bag embeddings: {bag_text_embs.shape}')
+    else:
+        print(f'Cache stale ({cached.shape[0]} satir != {len(bags_df)} bag) -- yeniden hesaplaniyor')
+
+if bag_text_embs is None:
     print('Loading multilingual MiniLM (first time may take a minute)...')
     text_encoder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=DEVICE)
     text_encoder.eval()
@@ -211,6 +219,9 @@ else:
             bag_texts, batch_size=64, show_progress_bar=True,
             convert_to_tensor=True, normalize_embeddings=False,
         ).cpu()
+    # ST.encode returns an inference tensor (inference_mode internally) -> clone to a
+    # normal tensor, else model.load_state_dict copy_ fails on torch>=2.x.
+    bag_text_embs = bag_text_embs.clone()
     torch.save(bag_text_embs, EMB_CACHE)
     print(f'Saved to {EMB_CACHE}')
     del text_encoder
@@ -245,6 +256,12 @@ print(f'bag_cat range: [{bag_cat_idx.min()}, {bag_cat_idx.max()}]')
 cells.append(md("## 4. User History (Sequential Features)"))
 
 cells.append(code("""# Her user'ın bag history'sini zaman sırasına göre topla
+# Orphan temizligi: silinmis bag/user'a referans veren order'lari at (Dataset KeyError onler).
+_before = len(orders_df)
+orders_df = orders_df[orders_df['bag_id'].isin(bag2idx) & orders_df['user_id'].isin(user2idx)].copy()
+if len(orders_df) < _before:
+    print(f'Dropped {_before - len(orders_df)} orphan order(s) referencing missing bag/user')
+
 orders_df = orders_df.sort_values('created_at').reset_index(drop=True)
 
 user_history = defaultdict(list)
@@ -624,6 +641,7 @@ torch.onnx.export(
         'user_emb': {0: 'batch'},
     },
     opset_version=14,
+    dynamo=False,  # legacy TorchScript exporter -> IR7/opset14 (onnxruntime 1.18 uyumlu); torch>=2.9 varsayilani dynamo+onnxscript
     do_constant_folding=True,
 )
 sz = (MODELS_DIR / 'user_tower.onnx').stat().st_size / 1e6
@@ -639,6 +657,7 @@ torch.onnx.export(
     output_names=['bag_emb'],
     dynamic_axes={'bag_idx': {0: 'batch'}, 'bag_emb': {0: 'batch'}},
     opset_version=14,
+    dynamo=False,  # legacy TorchScript exporter -> IR7/opset14 (onnxruntime 1.18 uyumlu); torch>=2.9 varsayilani dynamo+onnxscript
     do_constant_folding=True,
 )
 sz = (MODELS_DIR / 'item_tower.onnx').stat().st_size / 1e6
