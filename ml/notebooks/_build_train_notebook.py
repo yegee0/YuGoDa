@@ -130,16 +130,18 @@ def fetch_df(query):
         conn.close()
     return pd.DataFrame(rows, columns=cols)
 
-# Sadece synthetic data eğitim için kullanılır (real test data karıştırılmaz)
+# Tum katalog: synthetic + gercek/demo paketler dahil edilir, ki model
+# uygulamanin gercekten satigi bag'leri tanisin (yoksa gercek kullanici hep
+# cold-start fallback'e duser). Eskiden sadece synth_ cekiliyordu.
 users_df = fetch_df(\"\"\"
     SELECT uid, location, addresses, created_at
-    FROM users WHERE uid LIKE 'synth_%'
+    FROM users
 \"\"\")
 print(f'Users: {len(users_df)}')
 
 stores_df = fetch_df(\"\"\"
     SELECT id, name, category, location, rating, created_at
-    FROM stores WHERE id LIKE 'synth_%'
+    FROM stores
 \"\"\")
 print(f'Stores: {len(stores_df)}')
 
@@ -147,15 +149,25 @@ bags_df = fetch_df(\"\"\"
     SELECT id, restaurant_id, restaurant_name, category, merchant_type,
            description, price, original_price, dietary_type, calories,
            coordinates, rating, tags, created_at
-    FROM bags WHERE id LIKE 'synth_%'
+    FROM bags
 \"\"\")
 print(f'Bags: {len(bags_df)}')
+
+# Gercek/demo paketlerde, synth'te hep dolu olan alanlar bos (NaN) olabilir.
+# Vocab kurma ve feature hesabi NaN'da patlamasin diye doldur:
+for _c, _d in [('category', 'Unknown'), ('merchant_type', 'Unknown'),
+               ('dietary_type', 'Unknown'), ('restaurant_name', 'Unknown'),
+               ('description', '')]:
+    if _c in bags_df.columns:
+        bags_df[_c] = bags_df[_c].fillna(_d)
+for _c in ['price', 'original_price', 'calories', 'rating']:
+    bags_df[_c] = pd.to_numeric(bags_df[_c], errors='coerce')
 
 orders_df = fetch_df(\"\"\"
     SELECT id, user_id, restaurant_id, bag_id, status, total,
            created_at, delivered_at
     FROM orders
-    WHERE id LIKE 'synth_%' AND status = 'delivered'
+    WHERE status = 'delivered'
     ORDER BY created_at
 \"\"\")
 orders_df['created_at'] = pd.to_datetime(orders_df['created_at'])
@@ -192,10 +204,19 @@ from sentence_transformers import SentenceTransformer
 
 EMB_CACHE = MODELS_DIR / 'bag_text_embeddings.pt'
 
+# Cache yalnizca satir sayisi mevcut bag sayisiyla eslesirse kullanilir.
+# Aksi halde (katalog buyudu / synth filtresi kaldirildi) bayat cache item
+# tower'da index-out-of-bounds verir -> yeniden hesapla.
+bag_text_embs = None
 if EMB_CACHE.exists():
-    bag_text_embs = torch.load(EMB_CACHE, map_location='cpu')
-    print(f'Loaded cached bag embeddings: {bag_text_embs.shape}')
-else:
+    cached = torch.load(EMB_CACHE, map_location='cpu')
+    if cached.shape[0] == len(bags_df):
+        bag_text_embs = cached
+        print(f'Loaded cached bag embeddings: {bag_text_embs.shape}')
+    else:
+        print(f'Cache stale ({cached.shape[0]} satir != {len(bags_df)} bag) -- yeniden hesaplaniyor')
+
+if bag_text_embs is None:
     print('Loading multilingual MiniLM (first time may take a minute)...')
     text_encoder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=DEVICE)
     text_encoder.eval()
@@ -215,19 +236,27 @@ else:
     print(f'Saved to {EMB_CACHE}')
     del text_encoder
 
-print(f'Bag text embeddings: {bag_text_embs.shape}')  # (500, 384)
+print(f'Bag text embeddings: {bag_text_embs.shape}')  # (n_bags, 384)
 """))
 
 cells.append(md("### 3.2 Bag Numeric & Categorical Features"))
 
 cells.append(code("""# Numeric features
 bag_numeric_raw = bags_df[['price', 'original_price', 'calories', 'rating']].values.astype(np.float32)
+# Eksik (NaN) sayisal degerleri kolon ortalamasiyla doldur (gercek/demo paketler):
+_cm = np.nanmean(bag_numeric_raw, axis=0)
+_cm = np.where(np.isnan(_cm), 0.0, _cm)
+_nanmask = np.isnan(bag_numeric_raw)
+bag_numeric_raw[_nanmask] = np.take(_cm, np.where(_nanmask)[1])
 bag_num_mean = bag_numeric_raw.mean(axis=0)
 bag_num_std = bag_numeric_raw.std(axis=0) + 1e-6
 bag_numeric = (bag_numeric_raw - bag_num_mean) / bag_num_std
 
 # Discount ratio (engineered feature)
-discount = (1 - bags_df['price'].values / bags_df['original_price'].values).astype(np.float32)
+_op = pd.to_numeric(bags_df['original_price'], errors='coerce').values.astype(np.float32)
+_pr = pd.to_numeric(bags_df['price'], errors='coerce').values.astype(np.float32)
+discount = np.where(_op > 0, 1.0 - _pr / np.where(_op > 0, _op, 1.0), 0.0).astype(np.float32)
+discount = np.nan_to_num(discount, nan=0.0)
 discount_norm = ((discount - discount.mean()) / (discount.std() + 1e-6)).astype(np.float32)
 bag_numeric = np.column_stack([bag_numeric, discount_norm.reshape(-1, 1)])
 
@@ -235,7 +264,7 @@ bag_numeric = np.column_stack([bag_numeric, discount_norm.reshape(-1, 1)])
 bag_cat_idx = bags_df['category'].map(cat2idx).values.astype(np.int64)
 bag_merchant_idx = bags_df['merchant_type'].map(merchant2idx).values.astype(np.int64)
 bag_dietary_idx = bags_df['dietary_type'].map(dietary2idx).values.astype(np.int64)
-bag_store_idx = bags_df['restaurant_id'].map(store2idx).values.astype(np.int64)
+bag_store_idx = bags_df['restaurant_id'].map(store2idx).fillna(0).astype(np.int64).values
 
 print(f'bag_numeric shape: {bag_numeric.shape}')
 print(f'bag_cat range: [{bag_cat_idx.min()}, {bag_cat_idx.max()}]')
@@ -245,6 +274,14 @@ print(f'bag_cat range: [{bag_cat_idx.min()}, {bag_cat_idx.max()}]')
 cells.append(md("## 4. User History (Sequential Features)"))
 
 cells.append(code("""# Her user'ın bag history'sini zaman sırasına göre topla
+# Orphan temizligi: silinmis bag/user'a referans veren delivered order'lari at.
+# (Gercek veride birkac order silinmis bag_id'ye isaret ediyor; Dataset
+#  __getitem__ guard'siz bag2idx[bag_id] yaptigi icin KeyError verirdi.)
+_before = len(orders_df)
+orders_df = orders_df[orders_df['bag_id'].isin(bag2idx) & orders_df['user_id'].isin(user2idx)].copy()
+if len(orders_df) < _before:
+    print(f'Dropped {_before - len(orders_df)} orphan order(s) referencing missing bag/user')
+
 orders_df = orders_df.sort_values('created_at').reset_index(drop=True)
 
 user_history = defaultdict(list)
@@ -624,6 +661,7 @@ torch.onnx.export(
         'user_emb': {0: 'batch'},
     },
     opset_version=14,
+    dynamo=False,  # legacy TorchScript exporter -> IR7/opset14 (backend onnxruntime 1.18 uyumlu); torch>=2.9 varsayilani dynamo+onnxscript
     do_constant_folding=True,
 )
 sz = (MODELS_DIR / 'user_tower.onnx').stat().st_size / 1e6
@@ -639,6 +677,7 @@ torch.onnx.export(
     output_names=['bag_emb'],
     dynamic_axes={'bag_idx': {0: 'batch'}, 'bag_emb': {0: 'batch'}},
     opset_version=14,
+    dynamo=False,  # legacy TorchScript exporter -> IR7/opset14 (backend onnxruntime 1.18 uyumlu); torch>=2.9 varsayilani dynamo+onnxscript
     do_constant_folding=True,
 )
 sz = (MODELS_DIR / 'item_tower.onnx').stat().st_size / 1e6
