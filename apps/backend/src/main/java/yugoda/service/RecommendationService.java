@@ -28,10 +28,12 @@ import java.util.*;
  * precomputed offline and held in memory. Cosine similarity is computed
  * directly via dot product since both vectors are L2-normalized.
  *
- * <p>Cold-start handling: a user not present in {@code user2idx} (e.g. real
- * Firebase user, or user trained with no synthetic data) maps to user_idx=-1.
- * The ONNX graph adds +1 internally → falls onto the padding embedding (0),
- * so the recommendation collapses to history-only signal — safe fallback.
+ * <p><b>The content-based scorer is the PRIMARY path for real users, not ONNX.</b>
+ * The trained vocab is fully synthetic ({@code synth_u_*} / {@code synth_b_*});
+ * real Firebase users and DB-seeded bags are never in it, so ONNX inference would
+ * emit a constant zero user embedding (identical, never-changing recs). Those
+ * users are routed to {@link #contentBasedRecommend} — a recency-weighted content
+ * scorer. The ONNX branch only serves in-vocab (synthetic/eval) users.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,6 +43,14 @@ public class RecommendationService {
     private static final String MODEL_PATH = "models/user_tower.onnx";
     private static final String BAG_EMB_PATH = "models/bag_embeddings.json";
     private static final String VOCAB_PATH = "models/vocab.json";
+
+    // Content-based scorer tuning (primary path for real users — see recommend()).
+    private static final double RECENCY_DECAY = 0.75;         // r-th newest order weighs 0.75^r (within-category ranking)
+    private static final double DIETARY_WEIGHT = 2.0;
+    private static final double PRICE_WEIGHT = 1.0;
+    private static final double RATING_WEIGHT = 0.5;
+    private static final int MAX_PREF_CATEGORIES = 3;         // at most this many recent categories share the row
+    private static final int TOP_CATEGORY_SLOTS = 2;          // most-recent category gets two cards; others one
 
     private final OrderRepository orderRepository;
     private final BagRepository bagRepository;
@@ -136,12 +146,15 @@ public class RecommendationService {
     public List<ScoredBag> recommend(String userId, int topK, boolean excludeOrdered) throws OrtException {
         if (!isReady()) throw new IllegalStateException("Recommendation model not loaded");
 
-        // 1. User history: delivered orders, newest first
+        // 1. Preference signal: delivered orders only (newest first). An order
+        //    counts once it has been physically delivered (verification code entered).
         List<Order> userOrders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<Order> signalOrders = new ArrayList<>();
         List<Integer> historyIdx = new ArrayList<>(historyLen);
         Set<String> orderedBagIds = new HashSet<>();
         for (Order o : userOrders) {
-            if (!"delivered".equals(o.getStatus())) continue;
+            if (!isSignalOrder(o)) continue;
+            signalOrders.add(o);
             orderedBagIds.add(o.getBagId());
             Integer idx = bagIdToIdx.get(o.getBagId());
             if (idx != null && historyIdx.size() < historyLen) {
@@ -149,15 +162,14 @@ public class RecommendationService {
             }
         }
 
-        // Cold-start fallback: real (Firebase) users won't be in synth-trained vocab.
-        // If neither user_idx nor any history bag matches vocab, ONNX inference
-        // would produce a constant zero user embedding → identical recs for every
-        // real user, never changing. Use rating-weighted shuffle seeded by latest
-        // order ID instead, so picks rotate when the user places new orders.
+        // Real (Firebase) users are never in the synth-trained vocab, and DB-seeded
+        // bags aren't either, so ONNX would emit a constant zero user embedding
+        // (identical, never-changing recs). Route them to the content-based scorer,
+        // which is the PRIMARY path in practice. The ONNX branch below only serves
+        // in-vocab (synthetic/eval) users.
         Integer userIdxBoxed = userIdToIdx.get(userId);
         if (userIdxBoxed == null && historyIdx.isEmpty()) {
-            log.debug("Cold-start fallback for user={} (vocab miss + no history match)", userId);
-            return coldStartFallback(userOrders, topK, orderedBagIds, excludeOrdered);
+            return contentBasedRecommend(signalOrders, topK, orderedBagIds, excludeOrdered);
         }
 
         // 2. ONNX inputs (history padded; mask zeroes out padding slots)
@@ -219,92 +231,147 @@ public class RecommendationService {
         return result;
     }
 
+    /** Only delivered orders count as a preference signal — an order reflects a
+     *  realised purchase once it has been physically delivered (delivery verification
+     *  code entered). Pending/confirmed/preparing/.../cancelled orders are ignored. */
+    private static boolean isSignalOrder(Order o) {
+        return "delivered".equals(o.getStatus());
+    }
+
     /**
-     * Content-based fallback for cold-start users (UID + history both absent
-     * from the synth-trained vocab). Reads the user's delivered order history,
-     * derives feature distributions (category, dietary type, average price),
-     * then scores every available bag against those preferences.
+     * Content-based recommender — the PRIMARY path for real users (see {@link #recommend}).
      *
-     * <p>Score = weighted sum, higher is better:
+     * <p>Instead of letting one category flood the row, it builds a <b>recency-ranked
+     * blend</b>: the most-recent category gets {@value #TOP_CATEGORY_SLOTS} cards, each
+     * further recent category one card (up to {@value #MAX_PREF_CATEGORIES} distinct
+     * categories), and any leftover cards become diverse "discovery" picks. On the 4-card UI:
      * <ul>
-     *   <li>{@code categoryMatch} (×3.0) — fraction of history in this bag's category</li>
-     *   <li>{@code dietaryMatch}  (×2.0) — fraction of history matching dietary type</li>
-     *   <li>{@code priceMatch}    (×1.0) — sigmoid proximity to history avg price</li>
-     *   <li>{@code ratingScore}   (×0.5) — bag's own rating, normalized 3.0-5.0 → 0-1</li>
-     *   <li>{@code jitter}        (±0.01) — tie-breaker, seeded by latest order ID</li>
+     *   <li>1 ordered category   → 2 of it + 2 discovery</li>
+     *   <li>2 ordered categories → 2 newest + 1 older + 1 discovery</li>
+     *   <li>3 ordered categories → 2 newest + 1 + 1 (all three stay visible)</li>
      * </ul>
+     * A 4th, different category pushes out the least-recently-ordered one; re-ordering a
+     * category moves it back to the front. So the row tracks recent taste while older
+     * categories fade gradually instead of vanishing on the next order.
      *
-     * <p>For brand-new users (no history), the match-terms collapse to 0 and
-     * ranking falls back to bag rating + per-user jitter (so different users
-     * still get different orderings).
+     * <p>Within a category's cards (category fixed there), bags rank by dietary fit, price
+     * proximity to the recency-weighted average, rating, and a deterministic per-bag jitter.
+     * Brand-new users (no history) get a pure diverse discovery row.
      *
-     * <p>The latest-order seed makes the picks rotate when the user places a new
-     * order — same content preference, slightly different shuffle.
+     * @param signalOrdersNewestFirst delivered orders, newest first
      */
-    private List<ScoredBag> coldStartFallback(List<Order> userOrders, int topK,
-                                              Set<String> orderedBagIds, boolean excludeOrdered) {
-        // Step 1: collect history bag features (delivered orders only)
-        List<String> historyBagIds = userOrders.stream()
-                .filter(o -> "delivered".equals(o.getStatus()))
-                .map(Order::getBagId)
-                .distinct()
-                .toList();
-
-        List<Bag> historyBags = historyBagIds.isEmpty()
-                ? List.of()
-                : bagRepository.findAllById(historyBagIds);
-
-        Map<String, Long> categoryFreq = new HashMap<>();
-        Map<String, Long> dietaryFreq = new HashMap<>();
-        double priceSum = 0.0;
-        int priceN = 0;
-        for (Bag b : historyBags) {
-            if (b.getCategory() != null) categoryFreq.merge(b.getCategory(), 1L, Long::sum);
-            if (b.getDietaryType() != null) dietaryFreq.merge(b.getDietaryType(), 1L, Long::sum);
-            if (b.getPrice() != null) { priceSum += b.getPrice(); priceN++; }
+    private List<ScoredBag> contentBasedRecommend(List<Order> signalOrdersNewestFirst, int topK,
+                                                  Set<String> orderedBagIds, boolean excludeOrdered) {
+        // Step 1: recency-ranked categories + recency-weighted dietary/price preference.
+        // Distinct categories in order of first appearance (newest→oldest) form the recency
+        // ranking; a re-ordered category jumps back to the front.
+        List<String> distinctBagIds = signalOrdersNewestFirst.stream()
+                .map(Order::getBagId).distinct().toList();
+        Map<String, Bag> bagById = new HashMap<>();
+        if (!distinctBagIds.isEmpty()) {
+            for (Bag b : bagRepository.findAllById(distinctBagIds)) bagById.put(b.getId(), b);
         }
-        double avgPrice = (priceN > 0) ? (priceSum / priceN) : 100.0;  // fallback for empty history
-        int historySize = historyBags.size();
 
-        // Step 2: score all candidates, sort, take top-K
-        long seed = userOrders.isEmpty() ? 0L : userOrders.get(0).getId().hashCode();
-        Random rand = new Random(seed);
+        List<String> recencyCats = new ArrayList<>();   // most-recent category first
+        Map<String, Double> dietaryW = new HashMap<>();
+        double totalDietW = 0.0, priceWSum = 0.0, priceW = 0.0;
+        int r = 0;
+        for (Order o : signalOrdersNewestFirst) {
+            Bag b = bagById.get(o.getBagId());
+            if (b == null) continue;  // bag deleted since the order
+            double w = Math.pow(RECENCY_DECAY, r++);
+            if (b.getCategory() != null && !recencyCats.contains(b.getCategory())) {
+                recencyCats.add(b.getCategory());
+            }
+            if (b.getDietaryType() != null) { dietaryW.merge(b.getDietaryType(), w, Double::sum); totalDietW += w; }
+            if (b.getPrice() != null) { priceWSum += w * b.getPrice(); priceW += w; }
+        }
+        double avgPrice = (priceW > 0) ? (priceWSum / priceW) : 100.0;
+        final double dietNorm = totalDietW;
 
-        List<Bag> all = bagRepository.findAll();
-        record ScoredCandidate(Bag bag, double score) {}
-        List<ScoredCandidate> scored = new ArrayList<>(all.size());
+        // Step 2: recency-priority slot allocation. Most-recent category → TOP_CATEGORY_SLOTS
+        // cards, each further category → 1, capped at MAX_PREF_CATEGORIES; the rest discovery.
+        LinkedHashMap<String, Integer> catSlots = new LinkedHashMap<>();
+        int used = 0;
+        for (int i = 0; i < recencyCats.size() && i < MAX_PREF_CATEGORIES && used < topK; i++) {
+            int give = Math.min(i == 0 ? TOP_CATEGORY_SLOTS : 1, topK - used);
+            catSlots.put(recencyCats.get(i), give);
+            used += give;
+        }
 
-        for (Bag b : all) {
+        // Per-bag affinity for ranking *within* a slot group, plus a deterministic jitter
+        // seeded by the latest order (stable tie-break, independent of DB row order).
+        final long seed = signalOrdersNewestFirst.isEmpty() ? 0L
+                : signalOrdersNewestFirst.get(0).getId().hashCode();
+        java.util.function.ToDoubleFunction<Bag> affinity = b -> {
+            double dietMatch = (dietNorm > 0 && b.getDietaryType() != null)
+                    ? dietaryW.getOrDefault(b.getDietaryType(), 0.0) / dietNorm : 0.0;
+            double priceMatch = (b.getPrice() != null)
+                    ? 1.0 / (1.0 + Math.abs(b.getPrice() - avgPrice) / 50.0) : 0.5;
+            double ratingScore = (b.getRating() != null)
+                    ? Math.max(0.0, (b.getRating() - 3.0) / 2.0) : 0.0;
+            double jitter = ((seed ^ b.getId().hashCode()) & 0xffffL) / 65535.0 * 0.01;
+            return dietMatch * DIETARY_WEIGHT + priceMatch * PRICE_WEIGHT + ratingScore * RATING_WEIGHT + jitter;
+        };
+
+        // Step 3: candidate pool — available, not-already-ordered bags, grouped by category.
+        Map<String, List<Bag>> byCategory = new HashMap<>();
+        List<Bag> pool = new ArrayList<>();
+        for (Bag b : bagRepository.findAll()) {
             if (b.getAvailable() == null || b.getAvailable() <= 0) continue;
             if (excludeOrdered && orderedBagIds.contains(b.getId())) continue;
-
-            double catMatch = (historySize > 0 && b.getCategory() != null)
-                    ? categoryFreq.getOrDefault(b.getCategory(), 0L) / (double) historySize
-                    : 0.0;
-            double dietMatch = (historySize > 0 && b.getDietaryType() != null)
-                    ? dietaryFreq.getOrDefault(b.getDietaryType(), 0L) / (double) historySize
-                    : 0.0;
-            double priceMatch = (b.getPrice() != null)
-                    ? 1.0 / (1.0 + Math.abs(b.getPrice() - avgPrice) / 50.0)
-                    : 0.5;
-            double ratingScore = (b.getRating() != null)
-                    ? Math.max(0.0, (b.getRating() - 3.0) / 2.0)
-                    : 0.0;
-
-            double jitter = rand.nextDouble() * 0.01;
-            double score = catMatch * 3.0 + dietMatch * 2.0 + priceMatch * 1.0 + ratingScore * 0.5 + jitter;
-            scored.add(new ScoredCandidate(b, score));
+            pool.add(b);
+            if (b.getCategory() != null) {
+                byCategory.computeIfAbsent(b.getCategory(), k -> new ArrayList<>()).add(b);
+            }
         }
-        if (scored.isEmpty()) return List.of();
+        if (pool.isEmpty()) return List.of();
 
-        scored.sort((a, c) -> Double.compare(c.score(), a.score()));
+        // Step 4: fill category slots (recency order first), then diverse discovery slots.
+        List<ScoredBag> picks = new ArrayList<>(topK);
+        Set<String> chosen = new HashSet<>();
+        Set<String> shownCategories = new HashSet<>();
 
-        int n = Math.min(topK, scored.size());
-        List<ScoredBag> picks = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            ScoredCandidate c = scored.get(i);
-            picks.add(new ScoredBag(c.bag(), c.score()));
+        for (Map.Entry<String, Integer> e : catSlots.entrySet()) {
+            byCategory.getOrDefault(e.getKey(), List.of()).stream()
+                    .filter(b -> !chosen.contains(b.getId()))
+                    .sorted(Comparator.comparingDouble(affinity).reversed())
+                    .limit(e.getValue())
+                    .forEach(b -> { picks.add(new ScoredBag(b, affinity.applyAsDouble(b))); chosen.add(b.getId()); });
+            shownCategories.add(e.getKey());
         }
+
+        // Discovery: best bag from each not-yet-shown category first (variety), then top up
+        // by affinity. Also absorbs any shortfall when a preferred category lacked bags.
+        if (picks.size() < topK) {
+            Map<String, Bag> bestPerCat = new LinkedHashMap<>();
+            for (Bag b : pool) {
+                if (chosen.contains(b.getId())) continue;
+                String c = b.getCategory() == null ? "" : b.getCategory();
+                Bag cur = bestPerCat.get(c);
+                if (cur == null || affinity.applyAsDouble(b) > affinity.applyAsDouble(cur)) bestPerCat.put(c, b);
+            }
+            bestPerCat.values().stream()
+                    .sorted((a, b) -> {
+                        boolean au = a.getCategory() == null || !shownCategories.contains(a.getCategory());
+                        boolean bu = b.getCategory() == null || !shownCategories.contains(b.getCategory());
+                        if (au != bu) return au ? -1 : 1;               // unseen categories first
+                        return Double.compare(affinity.applyAsDouble(b), affinity.applyAsDouble(a));
+                    })
+                    .forEach(b -> {
+                        if (picks.size() < topK && !chosen.contains(b.getId())) {
+                            picks.add(new ScoredBag(b, affinity.applyAsDouble(b))); chosen.add(b.getId());
+                        }
+                    });
+            if (picks.size() < topK) {   // fewer categories than open slots → fill by affinity
+                pool.stream()
+                        .filter(b -> !chosen.contains(b.getId()))
+                        .sorted(Comparator.comparingDouble(affinity).reversed())
+                        .limit(topK - picks.size())
+                        .forEach(b -> { picks.add(new ScoredBag(b, affinity.applyAsDouble(b))); chosen.add(b.getId()); });
+            }
+        }
+
         return picks;
     }
 
